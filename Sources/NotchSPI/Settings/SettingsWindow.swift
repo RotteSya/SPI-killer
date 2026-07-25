@@ -45,6 +45,9 @@ final class HotkeySettingsViewController: NSViewController {
     private let captureButton = HotkeySettingsViewController.makeRecordButton()
     private let personalityButton = HotkeySettingsViewController.makeRecordButton()
     private let toggleButton = HotkeySettingsViewController.makeRecordButton()
+    private let hint = HotkeySettingsViewController.makeLabel(
+        "", size: 11, weight: .regular, color: .secondaryLabelColor)
+    private var conflictObserver: Any?
 
     override func loadView() {
         let root = FlippedView(frame: NSRect(x: 0, y: 0, width: 420, height: 190))
@@ -59,15 +62,16 @@ final class HotkeySettingsViewController: NSViewController {
                title: L10n.t("显示 / 隐藏", "表示 / 非表示", "Show / hide"),
                button: toggleButton, action: #selector(recordToggle))
 
-        let hint = Self.makeLabel(
-            L10n.t("点击右侧按钮，然后按下新的组合键（需包含 ⌘/⇧/⌥/⌃ 至少一个）。",
-                   "右のボタンをクリックし、新しいキーの組み合わせを押してください（⌘/⇧/⌥/⌃ のいずれかが必要）。",
-                   "Click a button, then press the new combo (must include at least one of ⌘/⇧/⌥/⌃)."),
-            size: 11, weight: .regular, color: .secondaryLabelColor)
         hint.frame = NSRect(x: 20, y: 128, width: 380, height: 40)
         hint.maximumNumberOfLines = 2
         hint.lineBreakMode = .byWordWrapping
         root.addSubview(hint)
+
+        // A combo another app already owns is dead silently — repaint the moment that verdict
+        // changes (re-registration happens whenever any combo is edited).
+        conflictObserver = NotificationCenter.default.addObserver(
+            forName: HotKeyCenter.conflictsDidChange, object: nil, queue: .main
+        ) { [weak self] _ in self?.updateButtons() }
 
         view = root
         updateButtons()
@@ -122,12 +126,36 @@ final class HotkeySettingsViewController: NSViewController {
 
     private func updateButtons() {
         let recordingLabel = L10n.t("按下快捷键…", "キーを押す…", "Press keys…")
-        captureButton.title = recording == "capture" ? recordingLabel : Settings.displayString(capture)
-        personalityButton.title = recording == "personality" ? recordingLabel : Settings.displayString(personality)
-        toggleButton.title = recording == "toggle" ? recordingLabel : Settings.displayString(toggle)
+        let taken = HotKeyCenter.shared.conflicted
+        func paint(_ button: NSButton, _ role: HotkeyRole, _ combo: HotkeyCombo) {
+            if recording == role.rawValue {
+                button.attributedTitle = NSAttributedString(
+                    string: recordingLabel, attributes: [.font: button.font as Any])
+                return
+            }
+            // A taken combo reads in red: the row itself says which keystroke is going nowhere.
+            let color: NSColor = taken.contains(role) ? .systemRed : .labelColor
+            button.attributedTitle = NSAttributedString(
+                string: Settings.displayString(combo),
+                attributes: [.font: button.font as Any, .foregroundColor: color])
+        }
+        paint(captureButton, .capture, capture)
+        paint(personalityButton, .personality, personality)
+        paint(toggleButton, .toggle, toggle)
+        hint.stringValue = taken.isEmpty
+            ? L10n.t("点击右侧按钮，然后按下新的组合键（需包含 ⌘/⇧/⌥/⌃ 至少一个）。",
+                     "右のボタンをクリックし、新しいキーの組み合わせを押してください（⌘/⇧/⌥/⌃ のいずれかが必要）。",
+                     "Click a button, then press the new combo (must include at least one of ⌘/⇧/⌥/⌃).")
+            : L10n.t("红色的组合键没能注册成功（和另一行重复，或被其他 App 占用），按下它不会有反应——点右侧按钮换一个。",
+                     "赤いキーの組み合わせは登録できませんでした（他の行と重複、または他のアプリが使用中）。押しても反応しません — 右のボタンで変更してください。",
+                     "The combo in red could not be registered (it duplicates another row, or another app holds it) — pressing it does nothing. Click the button to pick another.")
+        hint.textColor = taken.isEmpty ? .secondaryLabelColor : .systemRed
     }
 
-    deinit { stop() }
+    deinit {
+        stop()
+        if let conflictObserver { NotificationCenter.default.removeObserver(conflictObserver) }
+    }
 
     private static func makeRecordButton() -> NSButton {
         let b = NSButton(title: "", target: nil, action: nil)

@@ -1018,6 +1018,13 @@ private final class TryItPage: OnboardingPage {
     private let keycaps = KeycapChipView(keys: [], capSize: 44)
     private let hint = onboardingLabel(size: 13, weight: .regular, color: NSColor(white: 1, alpha: 0.65))
     private let subHint = onboardingLabel(size: 12, weight: .regular, color: NSColor(white: 1, alpha: 0.45))
+    private var stuckTimer: Timer?
+    /// Set once the page has waited without the capture hotkey ever being delivered.
+    private var stuck = false
+
+    /// How long to let the page sit before assuming the keystroke is not arriving. Long enough
+    /// that a reader who is simply taking their time is never nagged.
+    private static let stuckAfter: TimeInterval = 15
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -1055,14 +1062,21 @@ private final class TryItPage: OnboardingPage {
         keycaps.frame = NSRect(x: (OnboardingViewController.pageSize.width - w) / 2, y: 214,
                                width: w, height: keycaps.intrinsicContentSize.height)
         // One instruction, one line. The notch demonstrates the rest itself.
-        hint.stringValue = L10n.t(
-            "按下组合键。",
-            "このキーを押すだけ。",
-            "Press these keys.")
-        subHint.stringValue = L10n.t(
-            "之后在任何题目界面都能这样用。\n快捷键、语言、外观，都在刘海右侧的 ⚙ 设置里。",
-            "この先はどんな問題画面でも同じように使えます。\nショートカットや言語、外観はノッチ右側の ⚙ 設定から。",
-            "From now on this works on any question, anywhere. Hotkeys, language,\nappearance — all in ⚙ Settings, at the right edge of the notch.")
+        hint.stringValue = stuck
+            ? L10n.t("按了没反应？这个组合键多半被其他 App 占用了。",
+                     "反応がありませんか？このキーの組み合わせは他のアプリが使用中の可能性があります。",
+                     "Nothing happening? Another app is probably holding this combo.")
+            : L10n.t("按下组合键。",
+                     "このキーを押すだけ。",
+                     "Press these keys.")
+        hint.textColor = stuck ? NSColor.systemOrange : NSColor(white: 1, alpha: 0.65)
+        subHint.stringValue = stuck
+            ? L10n.t("在刘海右侧的 ⚙ 设置 →「快捷键」里换一个组合键，然后回来再试。",
+                     "ノッチ右側の ⚙ 設定 →「ショートカット」で別の組み合わせに変更してから、もう一度お試しください。",
+                     "Pick another combo in ⚙ Settings → Hotkeys, at the right edge of the notch, then come back and try again.")
+            : L10n.t("之后在任何题目界面都能这样用。\n快捷键、语言、外观，都在刘海右侧的 ⚙ 设置里。",
+                     "この先はどんな問題画面でも同じように使えます。\nショートカットや言語、外観はノッチ右側の ⚙ 設定から。",
+                     "From now on this works on any question, anywhere. Hotkeys, language,\nappearance — all in ⚙ Settings, at the right edge of the notch.")
     }
 
     // The hotkey capture must SEE the sample question: SCScreenshotManager honors sharingType
@@ -1077,14 +1091,30 @@ private final class TryItPage: OnboardingPage {
 
     override func pageDidAppear() {
         window?.sharingType = .readWrite
+        rebuildStrings()
+        // A dead hotkey cannot be detected up front: RegisterEventHotKey happily succeeds while
+        // another app keeps the keystroke, and macOS offers no way to ask who won. So this page
+        // watches instead — if nothing has been delivered by the time a willing user would have
+        // pressed, it stops repeating the instruction and says what is probably wrong.
+        stuckTimer?.invalidate()
+        stuckTimer = Timer.scheduledTimer(withTimeInterval: Self.stuckAfter, repeats: false) {
+            [weak self] _ in
+            guard let self, !HotKeyCenter.shared.hasFired(.capture) else { return }
+            self.stuck = true
+            self.rebuildStrings()
+        }
         guard !onboardingReduceMotion() else { return }
         cascadeIn(entranceViews, base: 0.04, step: 0.07)
     }
 
     override func pageWillDisappear() {
         window?.sharingType = ScreenShareGuard.windowSharingType
+        stuckTimer?.invalidate()
+        stuckTimer = nil
         clearEntrance(entranceViews)
     }
+
+    deinit { stuckTimer?.invalidate() }
 }
 
 /// A quiet surface printing a real sample question on the page, so the very first hotkey press

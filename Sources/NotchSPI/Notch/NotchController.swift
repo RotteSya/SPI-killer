@@ -360,13 +360,13 @@ final class NotchController: NSObject {
         let cap = Settings.shared.captureCombo
         let persona = Settings.shared.personalityCombo
         let tog = Settings.shared.toggleCombo
-        HotKeyCenter.shared.register(keyCode: cap.keyCode, modifiers: cap.modifiers) { [weak self] in
+        HotKeyCenter.shared.register(role: .capture, keyCode: cap.keyCode, modifiers: cap.modifiers) { [weak self] in
             self?.runTapped(mode: "tutor")
         }
-        HotKeyCenter.shared.register(keyCode: persona.keyCode, modifiers: persona.modifiers) { [weak self] in
+        HotKeyCenter.shared.register(role: .personality, keyCode: persona.keyCode, modifiers: persona.modifiers) { [weak self] in
             self?.runTapped(mode: "personality")
         }
-        HotKeyCenter.shared.register(keyCode: tog.keyCode, modifiers: tog.modifiers) { [weak self] in
+        HotKeyCenter.shared.register(role: .toggle, keyCode: tog.keyCode, modifiers: tog.modifiers) { [weak self] in
             self?.toggleVisibility()
         }
     }
