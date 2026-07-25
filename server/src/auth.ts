@@ -20,15 +20,48 @@ export async function requireAccount(
   // the admin view actively misleading about who is running what. Clients report their build in
   // `x-app-version`; the write happens ONLY when it actually changed, i.e. once per upgrade,
   // never on the hot path. Best-effort: a failed write must never break a paid request.
-  const reported = req.headers['x-app-version'];
-  const version = (Array.isArray(reported) ? reported[0] : reported)?.trim().slice(0, 32) ?? '';
+  const version = header1(req, 'x-app-version').slice(0, 32);
   if (version !== '' && version !== account.appVersion) {
-    try {
+    await bestEffort(async () => {
       await store.updateAppVersion(token, version);
       account.appVersion = version;
-    } catch {
-      // Ignore: reporting the build is telemetry, not part of the contract.
-    }
+    });
+  }
+
+  // Two client signals that answer the one question usage counts cannot: a device with zero
+  // questions asked — did the user never get that far, or did they try and hit a dead end?
+  //   • `x-onboarded` flips once the onboarding flow was completed.
+  //   • `x-client-event: hotkey` rides the pre-capture warm-up ping, which the client fires the
+  //     instant the hotkey is pressed — BEFORE the screenshot and before the quota gate. So a
+  //     press still counts when the screenshot fails, the permission is missing, or the balance
+  //     is empty. presses > 0 with questions === 0 means the client-side pipeline is broken;
+  //     presses === 0 means the hotkey never reached the app at all.
+  if (!account.onboarded && header1(req, 'x-onboarded') === '1') {
+    await bestEffort(async () => {
+      await store.markOnboarded(token);
+      account.onboarded = true;
+    });
+  }
+  if (header1(req, 'x-client-event') === 'hotkey') {
+    await bestEffort(() => store.recordHotkeyPress(token));
   }
   return { token, account };
+}
+
+/** First value of a header, trimmed. Headers may arrive repeated; only the first is meaningful. */
+function header1(req: FastifyRequest, name: string): string {
+  const raw = req.headers[name];
+  return (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? '';
+}
+
+/**
+ * Run a telemetry write, swallowing any failure. These signals are diagnostics: losing one is
+ * a gap in a chart, while letting it throw would fail a request the user has paid for.
+ */
+async function bestEffort(fn: () => Promise<unknown>): Promise<void> {
+  try {
+    await fn();
+  } catch {
+    // Intentionally ignored.
+  }
 }

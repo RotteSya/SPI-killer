@@ -18,6 +18,8 @@ export interface Account {
   cliEnabled: boolean;
   /** Client build last seen on this device. Written at registration, refreshed on upgrade. */
   appVersion: string | null;
+  /** Whether this device ever finished the onboarding flow (reported by the client). */
+  onboarded: boolean;
 }
 
 export interface RegisteredDevice {
@@ -40,6 +42,15 @@ export interface DeviceSummary {
   createdAt: string; // ISO-8601 UTC
   /** Last balance-changing event (spend, credit, CLI flip). Equals createdAt if never used. */
   updatedAt: string;
+  onboarded: boolean;
+  /**
+   * How many times the hotkey was pressed on this device. Counted from the client's pre-capture
+   * warm-up ping, which fires BEFORE the screenshot and before the quota gate — so it counts
+   * presses that never became questions. `hotkeyPresses > 0` with `totalQuestions === 0` is the
+   * signature of a client-side dead end (dead hotkey is the one case this cannot see: a press
+   * that never reaches the app sends nothing).
+   */
+  hotkeyPresses: number;
 }
 
 export interface TopUpSummary {
@@ -113,6 +124,12 @@ export interface Store {
    * invoke this when the reported build actually differs, so it is a no-op on the hot path.
    */
   updateAppVersion(token: string, appVersion: string): Promise<void>;
+
+  /** Record that this device finished onboarding. Callers invoke only on the false→true edge. */
+  markOnboarded(token: string): Promise<void>;
+
+  /** Count one hotkey press (the client's pre-capture warm-up ping). */
+  recordHotkeyPress(token: string): Promise<void>;
 
   /**
    * Most recent device registrations, newest first (admin console only). Exists to answer one

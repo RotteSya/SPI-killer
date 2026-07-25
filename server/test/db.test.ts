@@ -31,6 +31,7 @@ for (const impl of IMPLEMENTATIONS) {
       totalOutputTokens: 0,
       cliEnabled: false,
       appVersion: '1',
+      onboarded: false,
     });
     assert.equal(await store.getAccount('dev_nope'), null);
     await store.close();
@@ -45,6 +46,31 @@ for (const impl of IMPLEMENTATIONS) {
     assert.equal((await store.listRecentDevices(5))[0]?.appVersion, '2.7');
     // Unknown tokens are a silent no-op, never a throw: this runs inside the auth path.
     await store.updateAppVersion('dev_nope', '9.9');
+    await store.close();
+  });
+
+  test(`[${impl.name}] onboarding + hotkey signals accumulate independently of usage`, async () => {
+    const store = impl.make();
+    const dev = await store.registerDevice({ platform: 'macos', appVersion: '2.7', trialQuestions: 10 });
+    const row = async () => (await store.listRecentDevices(1))[0];
+    assert.equal((await row())?.onboarded, false, 'a fresh device has not onboarded');
+    assert.equal((await row())?.hotkeyPresses, 0);
+
+    await store.markOnboarded(dev.token);
+    await store.markOnboarded(dev.token); // idempotent
+    assert.equal((await store.getAccount(dev.token))?.onboarded, true);
+
+    // Presses are counted even though no question was ever charged — that gap is the signal.
+    await store.recordHotkeyPress(dev.token);
+    await store.recordHotkeyPress(dev.token);
+    assert.equal((await row())?.hotkeyPresses, 2);
+    assert.equal((await row())?.totalQuestions, 0);
+    // Neither signal counts as balance activity, so 最后活跃 keeps meaning what it says.
+    assert.equal((await row())?.updatedAt, (await row())?.createdAt);
+
+    for (const call of [store.markOnboarded('dev_nope'), store.recordHotkeyPress('dev_nope')]) {
+      await call; // unknown tokens are silent no-ops
+    }
     await store.close();
   });
 

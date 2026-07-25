@@ -46,6 +46,11 @@ CREATE TABLE IF NOT EXISTS topups (
 ALTER TABLE topups ADD COLUMN IF NOT EXISTS note TEXT;
 -- Lazy migration for databases created before the per-device CLI switch.
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS cli_enabled BOOLEAN NOT NULL DEFAULT false;
+-- Lazy migration for databases created before client-signal reporting (onboarding completion
+-- and hotkey presses), added to tell "never pressed the hotkey" apart from "pressed and it
+-- silently failed" — the two are indistinguishable from usage counts alone.
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS onboarded BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS hotkey_presses BIGINT NOT NULL DEFAULT 0;
 -- Simple named counters (e.g. download-button clicks on the public site).
 CREATE TABLE IF NOT EXISTS counters (
   name  TEXT PRIMARY KEY,
@@ -59,6 +64,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_topups_reference ON topups(reference);
 interface DeviceRow {
   id: string;
   app_version: string | null;
+  onboarded: boolean;
   balance_questions: string;
   total_questions: string;
   total_input_tokens: string;
@@ -76,6 +82,8 @@ interface DeviceSummaryRow {
   total_questions: string;
   created_at: Date;
   updated_at: Date;
+  onboarded: boolean;
+  hotkey_presses: string;
 }
 
 interface TopUpSummaryRow {
@@ -156,7 +164,7 @@ export class PostgresStore implements Store {
   async getAccount(token: string): Promise<Account | null> {
     await this.ensureSchema();
     const { rows } = await this.pool.query<DeviceRow>(
-      `SELECT id, app_version, balance_questions, total_questions, total_input_tokens,
+      `SELECT id, app_version, onboarded, balance_questions, total_questions, total_input_tokens,
               total_output_tokens, cli_enabled
        FROM devices WHERE token_hash = $1`,
       [hashToken(token)],
@@ -170,6 +178,7 @@ export class PostgresStore implements Store {
       totalOutputTokens: Number(row.total_output_tokens),
       cliEnabled: row.cli_enabled === true,
       appVersion: row.app_version,
+      onboarded: row.onboarded === true,
     };
   }
 
@@ -255,15 +264,32 @@ export class PostgresStore implements Store {
   async updateAppVersion(token: string, appVersion: string): Promise<void> {
     await this.ensureSchema();
     await this.pool.query(
-      `UPDATE devices SET app_version = $1, updated_at = now() WHERE token_hash = $2`,
+      `UPDATE devices SET app_version = $1 WHERE token_hash = $2`,
       [appVersion, hashToken(token)],
+    );
+  }
+
+  async markOnboarded(token: string): Promise<void> {
+    await this.ensureSchema();
+    await this.pool.query(
+      `UPDATE devices SET onboarded = true WHERE token_hash = $1`,
+      [hashToken(token)],
+    );
+  }
+
+  async recordHotkeyPress(token: string): Promise<void> {
+    await this.ensureSchema();
+    await this.pool.query(
+      `UPDATE devices SET hotkey_presses = hotkey_presses + 1 WHERE token_hash = $1`,
+      [hashToken(token)],
     );
   }
 
   async listRecentDevices(limit: number): Promise<DeviceSummary[]> {
     await this.ensureSchema();
     const { rows } = await this.pool.query<DeviceSummaryRow>(
-      `SELECT id, platform, app_version, balance_questions, total_questions, created_at, updated_at
+      `SELECT id, platform, app_version, balance_questions, total_questions, created_at,
+              updated_at, onboarded, hotkey_presses
        FROM devices ORDER BY id DESC LIMIT $1`,
       [limit],
     );
@@ -275,6 +301,8 @@ export class PostgresStore implements Store {
       totalQuestions: Number(r.total_questions),
       createdAt: new Date(r.created_at).toISOString(),
       updatedAt: new Date(r.updated_at).toISOString(),
+      onboarded: r.onboarded === true,
+      hotkeyPresses: Number(r.hotkey_presses),
     }));
   }
 

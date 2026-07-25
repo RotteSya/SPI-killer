@@ -176,6 +176,7 @@ interface ActivityBody {
   devices: Array<{
     id: number; platform: string | null; app_version: string | null;
     balance_questions: number; total_questions: number; created_at: string; updated_at: string;
+    onboarded: boolean; hotkey_presses: number;
   }>;
   topups: Array<{
     device_id: number; questions: number; amount_cents: number; provider: string;
@@ -251,22 +252,70 @@ test('an upgraded client refreshes app_version on its next authenticated request
 
   const after = (await (await activity('admin-secret-xyz')).json()) as ActivityBody;
   assert.equal(after.devices[0]?.app_version, '2.7', 'the stored version follows the upgrade');
-  // The refresh counts as activity, so updated_at moves off created_at.
-  assert.notEqual(after.devices[0]?.updated_at, after.devices[0]?.created_at);
+  // A version refresh is a sign of life, not balance activity: 最后活跃 must not move for it,
+  // or the column silently starts meaning two different things.
+  assert.equal(after.devices[0]?.updated_at, after.devices[0]?.created_at);
 });
 
 test('a missing or unchanged version header leaves the record alone', async () => {
   const token = await register();
   const id = ((await (await activity('admin-secret-xyz')).json()) as ActivityBody).devices[0]?.id;
-  for (const headers of [
+  const cases: Record<string, string>[] = [
     { authorization: `Bearer ${token}` },                            // no header at all
     { authorization: `Bearer ${token}`, 'x-app-version': '2.0' },    // same version
     { authorization: `Bearer ${token}`, 'x-app-version': '   ' },    // blank
-  ]) {
+  ];
+  for (const headers of cases) {
     assert.equal((await fetch(`${base}/v1/account`, { headers })).status, 200);
   }
   const body = (await (await activity('admin-secret-xyz')).json()) as ActivityBody;
   const row = body.devices.find((d) => d.id === id);
   assert.equal(row?.app_version, '2.0');
   assert.equal(row?.updated_at, row?.created_at, 'a no-op reconcile must not touch the row');
+});
+
+test('client signals separate "never pressed" from "pressed and nothing happened"', async () => {
+  const token = await register();
+  const mine = async () => {
+    const body = (await (await activity('admin-secret-xyz', '?limit=50')).json()) as ActivityBody;
+    return body.devices[0];
+  };
+  assert.equal((await mine())?.onboarded, false);
+  assert.equal((await mine())?.hotkey_presses, 0);
+
+  // A plain sync during onboarding: reports the build, but onboarding is not finished yet.
+  await fetch(`${base}/v1/account`, {
+    headers: { authorization: `Bearer ${token}`, 'x-app-version': '2.7', 'x-onboarded': '0' },
+  });
+  assert.equal((await mine())?.onboarded, false, 'x-onboarded: 0 must not set the flag');
+
+  // Onboarding finished.
+  await fetch(`${base}/v1/account`, {
+    headers: { authorization: `Bearer ${token}`, 'x-onboarded': '1' },
+  });
+  assert.equal((await mine())?.onboarded, true);
+
+  // Two hotkey presses whose captures never happened — no question is ever charged.
+  for (let i = 0; i < 2; i++) {
+    const r = await fetch(`${base}/v1/account`, {
+      headers: { authorization: `Bearer ${token}`, 'x-client-event': 'hotkey' },
+    });
+    assert.equal(r.status, 200);
+  }
+  const row = await mine();
+  assert.equal(row?.hotkey_presses, 2);
+  assert.equal(row?.total_questions, 0, 'this is the gap the whole signal exists to show');
+  assert.equal(row?.updated_at, row?.created_at, 'diagnostics are not balance activity');
+});
+
+test('a bad token is still 401 even when it carries client signals', async () => {
+  const res = await fetch(`${base}/v1/account`, {
+    headers: {
+      authorization: 'Bearer dev_' + 'x'.repeat(40),
+      'x-onboarded': '1',
+      'x-client-event': 'hotkey',
+      'x-app-version': '9.9',
+    },
+  });
+  assert.equal(res.status, 401, 'telemetry headers must never soften auth');
 });

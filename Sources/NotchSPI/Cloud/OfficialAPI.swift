@@ -277,11 +277,15 @@ enum OfficialAPI {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
     }
 
-    /// Report the running build on every authenticated request. The server stores it once at
-    /// registration and refreshes it only when it changes, so a device that registered on an old
-    /// version stops being reported as that version forever after it upgrades.
-    private static func addVersionHeader(_ req: inout URLRequest) {
+    /// Diagnostics carried on every authenticated request. Deliberately just two facts about
+    /// THIS install — no identifiers beyond the device token the request already carries:
+    ///   • the running build, so a device stops being reported forever as whatever version it
+    ///     first registered on;
+    ///   • whether onboarding was ever completed, which is what separates "quit during the
+    ///     intro" from "finished it and then nothing happened" on a device with 0 questions.
+    private static func addClientHeaders(_ req: inout URLRequest) {
         req.setValue(appVersion, forHTTPHeaderField: "X-App-Version")
+        req.setValue(Settings.shared.onboardingDone ? "1" : "0", forHTTPHeaderField: "X-Onboarded")
     }
 
     static func makeRegisterRequest(baseURL: String, appVersion: String) -> URLRequest {
@@ -299,7 +303,7 @@ enum OfficialAPI {
     static func makeAccountRequest(baseURL: String, deviceToken: String) -> URLRequest {
         var req = URLRequest(url: endpointURL(base: baseURL, path: "v1/account"))
         req.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
-        addVersionHeader(&req)
+        addClientHeaders(&req)
         req.timeoutInterval = 30
         return req
     }
@@ -312,7 +316,7 @@ enum OfficialAPI {
         req.httpMethod = "POST"
         req.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        addVersionHeader(&req)
+        addClientHeaders(&req)
         req.timeoutInterval = 120
         req.httpBody = try? JSONSerialization.data(withJSONObject: [
             "system": prompt.system,
@@ -342,8 +346,13 @@ enum OfficialAPI {
         Task.detached(priority: .userInitiated) {
             var req: URLRequest
             if let token {
-                // /v1/account touches auth + DB, waking a suspended database as well.
+                // /v1/account touches auth + DB, waking a suspended database as well. It also
+                // doubles as the only record that the hotkey was pressed at all: this fires
+                // before the screenshot and before the quota gate, so a press still registers
+                // when the capture later fails. Without it, "never pressed" and "pressed and it
+                // silently died" are the same empty row.
                 req = makeAccountRequest(baseURL: base, deviceToken: token)
+                req.setValue("hotkey", forHTTPHeaderField: "X-Client-Event")
             } else {
                 req = URLRequest(url: endpointURL(base: base, path: "healthz"))
             }

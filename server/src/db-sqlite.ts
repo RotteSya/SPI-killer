@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS devices (
   total_input_tokens  INTEGER NOT NULL DEFAULT 0,
   total_output_tokens INTEGER NOT NULL DEFAULT 0,
   cli_enabled         INTEGER NOT NULL DEFAULT 0,
+  onboarded           INTEGER NOT NULL DEFAULT 0,
+  hotkey_presses      INTEGER NOT NULL DEFAULT 0,
   created_at          TEXT NOT NULL,
   updated_at          TEXT NOT NULL
 );
@@ -54,6 +56,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_topups_reference ON topups(reference);
 interface DeviceRow {
   id: number;
   app_version: string | null;
+  onboarded: number;
   balance_questions: number;
   total_questions: number;
   total_input_tokens: number;
@@ -75,6 +78,8 @@ export class SqliteStore implements Store {
     // IF NOT EXISTS, so probe the schema first (idempotent on every boot).
     this.ensureColumn('topups', 'note', 'TEXT');
     this.ensureColumn('devices', 'cli_enabled', 'INTEGER NOT NULL DEFAULT 0');
+    this.ensureColumn('devices', 'onboarded', 'INTEGER NOT NULL DEFAULT 0');
+    this.ensureColumn('devices', 'hotkey_presses', 'INTEGER NOT NULL DEFAULT 0');
   }
 
   private ensureColumn(table: string, column: string, definition: string): void {
@@ -107,7 +112,7 @@ export class SqliteStore implements Store {
   private deviceByToken(token: string): DeviceRow | null {
     const row = this.db
       .prepare(
-        `SELECT id, app_version, balance_questions, total_questions, total_input_tokens,
+        `SELECT id, app_version, onboarded, balance_questions, total_questions, total_input_tokens,
                 total_output_tokens, cli_enabled
          FROM devices WHERE token_hash = ?`,
       )
@@ -125,6 +130,7 @@ export class SqliteStore implements Store {
       totalOutputTokens: row.total_output_tokens,
       cliEnabled: row.cli_enabled === 1,
       appVersion: row.app_version,
+      onboarded: row.onboarded === 1,
     };
   }
 
@@ -204,14 +210,25 @@ export class SqliteStore implements Store {
 
   async updateAppVersion(token: string, appVersion: string): Promise<void> {
     this.db
-      .prepare(`UPDATE devices SET app_version = ?, updated_at = ? WHERE token_hash = ?`)
-      .run(appVersion, new Date().toISOString(), hashToken(token));
+      .prepare(`UPDATE devices SET app_version = ? WHERE token_hash = ?`)
+      .run(appVersion, hashToken(token));
+  }
+
+  async markOnboarded(token: string): Promise<void> {
+    this.db.prepare(`UPDATE devices SET onboarded = 1 WHERE token_hash = ?`).run(hashToken(token));
+  }
+
+  async recordHotkeyPress(token: string): Promise<void> {
+    this.db
+      .prepare(`UPDATE devices SET hotkey_presses = hotkey_presses + 1 WHERE token_hash = ?`)
+      .run(hashToken(token));
   }
 
   async listRecentDevices(limit: number): Promise<DeviceSummary[]> {
     const rows = this.db
       .prepare(
-        `SELECT id, platform, app_version, balance_questions, total_questions, created_at, updated_at
+        `SELECT id, platform, app_version, balance_questions, total_questions, created_at,
+                updated_at, onboarded, hotkey_presses
          FROM devices ORDER BY id DESC LIMIT ?`,
       )
       .all(limit) as Array<{
@@ -222,6 +239,8 @@ export class SqliteStore implements Store {
       total_questions: number;
       created_at: string;
       updated_at: string;
+      onboarded: number;
+      hotkey_presses: number;
     }>;
     return rows.map((r) => ({
       id: r.id,
@@ -231,6 +250,8 @@ export class SqliteStore implements Store {
       totalQuestions: r.total_questions,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
+      onboarded: r.onboarded === 1,
+      hotkeyPresses: r.hotkey_presses,
     }));
   }
 

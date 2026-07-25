@@ -18,6 +18,8 @@ interface DeviceRecord {
   cliEnabled: boolean;
   createdAt: string;
   updatedAt: string;
+  onboarded: boolean;
+  hotkeyPresses: number;
 }
 
 export class MemoryStore implements Store {
@@ -46,6 +48,8 @@ export class MemoryStore implements Store {
       cliEnabled: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      onboarded: false,
+      hotkeyPresses: 0,
     });
     return { token, balanceQuestions: input.trialQuestions, id };
   }
@@ -60,6 +64,7 @@ export class MemoryStore implements Store {
       totalOutputTokens: d.totalOutputTokens,
       cliEnabled: d.cliEnabled,
       appVersion: d.appVersion,
+      onboarded: d.onboarded,
     };
   }
 
@@ -124,7 +129,16 @@ export class MemoryStore implements Store {
     const d = this.devices.get(hashToken(token));
     if (!d) return;
     d.appVersion = appVersion;
-    d.updatedAt = new Date().toISOString();
+  }
+
+  async markOnboarded(token: string): Promise<void> {
+    const d = this.devices.get(hashToken(token));
+    if (d) d.onboarded = true;
+  }
+
+  async recordHotkeyPress(token: string): Promise<void> {
+    const d = this.devices.get(hashToken(token));
+    if (d) d.hotkeyPresses += 1;
   }
 
   async listRecentDevices(limit: number): Promise<DeviceSummary[]> {
@@ -139,6 +153,8 @@ export class MemoryStore implements Store {
         totalQuestions: d.totalQuestions,
         createdAt: d.createdAt,
         updatedAt: d.updatedAt,
+        onboarded: d.onboarded,
+        hotkeyPresses: d.hotkeyPresses,
       }));
   }
 

@@ -101,7 +101,8 @@ export function renderAdminPage(_input: AdminPageInput): string {
   <div id="cli-status" class="status"></div>
   <hr>
   <h2>最近活动</h2>
-  <p class="sub">只读。「客户端」是该设备<b>最近一次上报</b>的版本（2.7 起客户端才会上报；更早的设备显示的仍是注册当天的版本）。「最后活跃」只在余额变动时更新，从没用过的设备显示 —。</p>
+  <p class="sub">只读。「客户端」是该设备<b>最近一次上报</b>的版本（2.7 起客户端才会上报；更早的设备显示的仍是注册当天的版本）。「最后活跃」只在余额变动时更新，从没用过的设备显示 —。<br>
+  「按过快捷键」统计的是按下热键那一刻的预热请求，早于截图和额度检查：<b>按过但已用为 0</b>（橙色）说明客户端在截图/权限/网络这一段断了；<b>按键为 0</b> 说明热键压根没送达 App。两者都要 2.7 起的客户端才会上报。</p>
   <div class="btn-row">
     <button id="act-go" type="button">加载最近 50 条</button>
   </div>
@@ -198,9 +199,14 @@ export function renderAdminPage(_input: AdminPageInput): string {
       // updated_at only moves on a balance change, so for an idle device it equals created_at —
       // showing a dash there is more honest than repeating the registration time as "activity".
       const seen = d.updated_at && d.updated_at !== d.created_at ? when(d.updated_at) : '—';
+      // 按键 > 0 while 已用 === 0 means the client pipeline breaks AFTER the hotkey — screenshot,
+      // permission, or network. Flag it separately from a device that never pressed at all.
+      const presses = d.hotkey_presses || 0;
+      const stuck = presses > 0 && d.total_questions === 0;
       return '<tr><td>' + d.id + '</td><td>' + when(d.created_at) + '</td><td>' + seen +
         '</td><td>' + esc(d.platform) + ' ' + esc(d.app_version) + '</td><td>' +
-        d.balance_questions + '</td><td' + (idle ? ' class="warn"' : '') + '>' +
+        (d.onboarded ? '✓' : '—') + '</td><td' + (stuck ? ' class="warn"' : '') + '>' + presses +
+        '</td><td>' + d.balance_questions + '</td><td' + (idle ? ' class="warn"' : '') + '>' +
         d.total_questions + '</td></tr>';
     }).join('');
     const topRows = (j.topups || []).map((t) => {
@@ -212,8 +218,9 @@ export function renderAdminPage(_input: AdminPageInput): string {
     }).join('');
     $('act-out').innerHTML =
       '<h3>最近注册（每条 = 一份免费额度）</h3>' +
-      '<table><tr><th>#</th><th>注册</th><th>最后活跃</th><th>客户端</th><th>余额</th><th>已用</th></tr>' +
-      (devRows || '<tr><td colspan="6">暂无</td></tr>') + '</table>' +
+      '<table><tr><th>#</th><th>注册</th><th>最后活跃</th><th>客户端</th><th>走完引导</th>' +
+      '<th>按过快捷键</th><th>余额</th><th>已用</th></tr>' +
+      (devRows || '<tr><td colspan="8">暂无</td></tr>') + '</table>' +
       '<h3>最近充值 / 加题</h3>' +
       '<table><tr><th>时间</th><th>渠道</th><th>金额</th><th>题数</th><th>设备</th><th>该设备已用</th><th>备注 / 单号</th></tr>' +
       (topRows || '<tr><td colspan="7">暂无</td></tr>') + '</table>';
