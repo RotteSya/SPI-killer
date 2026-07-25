@@ -58,6 +58,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_topups_reference ON topups(reference);
 
 interface DeviceRow {
   id: string;
+  app_version: string | null;
   balance_questions: string;
   total_questions: string;
   total_input_tokens: string;
@@ -74,6 +75,7 @@ interface DeviceSummaryRow {
   balance_questions: string;
   total_questions: string;
   created_at: Date;
+  updated_at: Date;
 }
 
 interface TopUpSummaryRow {
@@ -154,7 +156,8 @@ export class PostgresStore implements Store {
   async getAccount(token: string): Promise<Account | null> {
     await this.ensureSchema();
     const { rows } = await this.pool.query<DeviceRow>(
-      `SELECT id, balance_questions, total_questions, total_input_tokens, total_output_tokens, cli_enabled
+      `SELECT id, app_version, balance_questions, total_questions, total_input_tokens,
+              total_output_tokens, cli_enabled
        FROM devices WHERE token_hash = $1`,
       [hashToken(token)],
     );
@@ -166,6 +169,7 @@ export class PostgresStore implements Store {
       totalInputTokens: Number(row.total_input_tokens),
       totalOutputTokens: Number(row.total_output_tokens),
       cliEnabled: row.cli_enabled === true,
+      appVersion: row.app_version,
     };
   }
 
@@ -248,10 +252,18 @@ export class PostgresStore implements Store {
     });
   }
 
+  async updateAppVersion(token: string, appVersion: string): Promise<void> {
+    await this.ensureSchema();
+    await this.pool.query(
+      `UPDATE devices SET app_version = $1, updated_at = now() WHERE token_hash = $2`,
+      [appVersion, hashToken(token)],
+    );
+  }
+
   async listRecentDevices(limit: number): Promise<DeviceSummary[]> {
     await this.ensureSchema();
     const { rows } = await this.pool.query<DeviceSummaryRow>(
-      `SELECT id, platform, app_version, balance_questions, total_questions, created_at
+      `SELECT id, platform, app_version, balance_questions, total_questions, created_at, updated_at
        FROM devices ORDER BY id DESC LIMIT $1`,
       [limit],
     );
@@ -262,6 +274,7 @@ export class PostgresStore implements Store {
       balanceQuestions: Number(r.balance_questions),
       totalQuestions: Number(r.total_questions),
       createdAt: new Date(r.created_at).toISOString(),
+      updatedAt: new Date(r.updated_at).toISOString(),
     }));
   }
 

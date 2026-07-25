@@ -175,7 +175,7 @@ interface ActivityBody {
   limit: number;
   devices: Array<{
     id: number; platform: string | null; app_version: string | null;
-    balance_questions: number; total_questions: number; created_at: string;
+    balance_questions: number; total_questions: number; created_at: string; updated_at: string;
   }>;
   topups: Array<{
     device_id: number; questions: number; amount_cents: number; provider: string;
@@ -236,4 +236,37 @@ test('activity limit is clamped to a sane range', async () => {
     assert.equal(body.limit, want, `limit for "${q}"`);
     assert.ok(body.devices.length <= want);
   }
+});
+
+test('an upgraded client refreshes app_version on its next authenticated request', async () => {
+  const token = await register(); // registers as "2.0"
+  const before = (await (await activity('admin-secret-xyz')).json()) as ActivityBody;
+  assert.equal(before.devices[0]?.app_version, '2.0');
+
+  // The client now reports a newer build on an ordinary account sync.
+  const r = await fetch(`${base}/v1/account`, {
+    headers: { authorization: `Bearer ${token}`, 'x-app-version': '2.7' },
+  });
+  assert.equal(r.status, 200);
+
+  const after = (await (await activity('admin-secret-xyz')).json()) as ActivityBody;
+  assert.equal(after.devices[0]?.app_version, '2.7', 'the stored version follows the upgrade');
+  // The refresh counts as activity, so updated_at moves off created_at.
+  assert.notEqual(after.devices[0]?.updated_at, after.devices[0]?.created_at);
+});
+
+test('a missing or unchanged version header leaves the record alone', async () => {
+  const token = await register();
+  const id = ((await (await activity('admin-secret-xyz')).json()) as ActivityBody).devices[0]?.id;
+  for (const headers of [
+    { authorization: `Bearer ${token}` },                            // no header at all
+    { authorization: `Bearer ${token}`, 'x-app-version': '2.0' },    // same version
+    { authorization: `Bearer ${token}`, 'x-app-version': '   ' },    // blank
+  ]) {
+    assert.equal((await fetch(`${base}/v1/account`, { headers })).status, 200);
+  }
+  const body = (await (await activity('admin-secret-xyz')).json()) as ActivityBody;
+  const row = body.devices.find((d) => d.id === id);
+  assert.equal(row?.app_version, '2.0');
+  assert.equal(row?.updated_at, row?.created_at, 'a no-op reconcile must not touch the row');
 });

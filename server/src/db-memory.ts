@@ -17,6 +17,7 @@ interface DeviceRecord {
   totalOutputTokens: number;
   cliEnabled: boolean;
   createdAt: string;
+  updatedAt: string;
 }
 
 export class MemoryStore implements Store {
@@ -44,6 +45,7 @@ export class MemoryStore implements Store {
       totalOutputTokens: 0,
       cliEnabled: false,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
     return { token, balanceQuestions: input.trialQuestions, id };
   }
@@ -57,6 +59,7 @@ export class MemoryStore implements Store {
       totalInputTokens: d.totalInputTokens,
       totalOutputTokens: d.totalOutputTokens,
       cliEnabled: d.cliEnabled,
+      appVersion: d.appVersion,
     };
   }
 
@@ -117,6 +120,13 @@ export class MemoryStore implements Store {
     return d.balanceQuestions;
   }
 
+  async updateAppVersion(token: string, appVersion: string): Promise<void> {
+    const d = this.devices.get(hashToken(token));
+    if (!d) return;
+    d.appVersion = appVersion;
+    d.updatedAt = new Date().toISOString();
+  }
+
   async listRecentDevices(limit: number): Promise<DeviceSummary[]> {
     return [...this.devices.values()]
       .sort((a, b) => b.id - a.id)
@@ -128,6 +138,7 @@ export class MemoryStore implements Store {
         balanceQuestions: d.balanceQuestions,
         totalQuestions: d.totalQuestions,
         createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
       }));
   }
 

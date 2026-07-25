@@ -53,6 +53,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_topups_reference ON topups(reference);
 
 interface DeviceRow {
   id: number;
+  app_version: string | null;
   balance_questions: number;
   total_questions: number;
   total_input_tokens: number;
@@ -106,7 +107,8 @@ export class SqliteStore implements Store {
   private deviceByToken(token: string): DeviceRow | null {
     const row = this.db
       .prepare(
-        `SELECT id, balance_questions, total_questions, total_input_tokens, total_output_tokens, cli_enabled
+        `SELECT id, app_version, balance_questions, total_questions, total_input_tokens,
+                total_output_tokens, cli_enabled
          FROM devices WHERE token_hash = ?`,
       )
       .get(hashToken(token)) as DeviceRow | undefined;
@@ -122,6 +124,7 @@ export class SqliteStore implements Store {
       totalInputTokens: row.total_input_tokens,
       totalOutputTokens: row.total_output_tokens,
       cliEnabled: row.cli_enabled === 1,
+      appVersion: row.app_version,
     };
   }
 
@@ -199,10 +202,16 @@ export class SqliteStore implements Store {
     });
   }
 
+  async updateAppVersion(token: string, appVersion: string): Promise<void> {
+    this.db
+      .prepare(`UPDATE devices SET app_version = ?, updated_at = ? WHERE token_hash = ?`)
+      .run(appVersion, new Date().toISOString(), hashToken(token));
+  }
+
   async listRecentDevices(limit: number): Promise<DeviceSummary[]> {
     const rows = this.db
       .prepare(
-        `SELECT id, platform, app_version, balance_questions, total_questions, created_at
+        `SELECT id, platform, app_version, balance_questions, total_questions, created_at, updated_at
          FROM devices ORDER BY id DESC LIMIT ?`,
       )
       .all(limit) as Array<{
@@ -212,6 +221,7 @@ export class SqliteStore implements Store {
       balance_questions: number;
       total_questions: number;
       created_at: string;
+      updated_at: string;
     }>;
     return rows.map((r) => ({
       id: r.id,
@@ -220,6 +230,7 @@ export class SqliteStore implements Store {
       balanceQuestions: r.balance_questions,
       totalQuestions: r.total_questions,
       createdAt: r.created_at,
+      updatedAt: r.updated_at,
     }));
   }
 

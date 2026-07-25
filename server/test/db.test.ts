@@ -30,8 +30,21 @@ for (const impl of IMPLEMENTATIONS) {
       totalInputTokens: 0,
       totalOutputTokens: 0,
       cliEnabled: false,
+      appVersion: '1',
     });
     assert.equal(await store.getAccount('dev_nope'), null);
+    await store.close();
+  });
+
+  test(`[${impl.name}] updateAppVersion replaces the build recorded at registration`, async () => {
+    const store = impl.make();
+    const dev = await store.registerDevice({ platform: 'macos', appVersion: '2.0.1', trialQuestions: 10 });
+    await store.updateAppVersion(dev.token, '2.7');
+    assert.equal((await store.getAccount(dev.token))?.appVersion, '2.7');
+    // Visible in the admin view too — that view is the whole reason this column must not lie.
+    assert.equal((await store.listRecentDevices(5))[0]?.appVersion, '2.7');
+    // Unknown tokens are a silent no-op, never a throw: this runs inside the auth path.
+    await store.updateAppVersion('dev_nope', '9.9');
     await store.close();
   });
 

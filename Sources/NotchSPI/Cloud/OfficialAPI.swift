@@ -271,6 +271,19 @@ enum OfficialAPI {
         return APIKeyRunner.errorMessage(from: data, statusCode: statusCode)
     }
 
+    /// This build's marketing version, or "dev" when running unbundled (`swift run`), where
+    /// there is no Info.plist to read it from.
+    static var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
+    }
+
+    /// Report the running build on every authenticated request. The server stores it once at
+    /// registration and refreshes it only when it changes, so a device that registered on an old
+    /// version stops being reported as that version forever after it upgrades.
+    private static func addVersionHeader(_ req: inout URLRequest) {
+        req.setValue(appVersion, forHTTPHeaderField: "X-App-Version")
+    }
+
     static func makeRegisterRequest(baseURL: String, appVersion: String) -> URLRequest {
         var req = URLRequest(url: endpointURL(base: baseURL, path: "v1/devices"))
         req.httpMethod = "POST"
@@ -286,6 +299,7 @@ enum OfficialAPI {
     static func makeAccountRequest(baseURL: String, deviceToken: String) -> URLRequest {
         var req = URLRequest(url: endpointURL(base: baseURL, path: "v1/account"))
         req.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
+        addVersionHeader(&req)
         req.timeoutInterval = 30
         return req
     }
@@ -298,6 +312,7 @@ enum OfficialAPI {
         req.httpMethod = "POST"
         req.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addVersionHeader(&req)
         req.timeoutInterval = 120
         req.httpBody = try? JSONSerialization.data(withJSONObject: [
             "system": prompt.system,
@@ -343,8 +358,7 @@ enum OfficialAPI {
     @discardableResult
     static func registerIfNeeded() async -> Result<String, OfficialAPIError> {
         if let token = deviceToken { return .success(token) }
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
-        let req = makeRegisterRequest(baseURL: baseURL, appVersion: version)
+        let req = makeRegisterRequest(baseURL: baseURL, appVersion: appVersion)
         do {
             let (data, response) = try await URLSession.shared.data(for: req)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200,

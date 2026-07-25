@@ -16,6 +16,8 @@ export interface Account {
   totalOutputTokens: number;
   /** Per-device switch for the retired CLI channel; flipped manually by the operator. */
   cliEnabled: boolean;
+  /** Client build last seen on this device. Written at registration, refreshed on upgrade. */
+  appVersion: string | null;
 }
 
 export interface RegisteredDevice {
@@ -36,6 +38,8 @@ export interface DeviceSummary {
   balanceQuestions: number;
   totalQuestions: number;
   createdAt: string; // ISO-8601 UTC
+  /** Last balance-changing event (spend, credit, CLI flip). Equals createdAt if never used. */
+  updatedAt: string;
 }
 
 export interface TopUpSummary {
@@ -101,6 +105,14 @@ export interface Store {
    * Returns the value now stored, or null if the token is unknown/invalid. Idempotent.
    */
   setCliEnabled(token: string, enabled: boolean): Promise<boolean | null>;
+
+  /**
+   * Record the client build a device is now running. `app_version` used to be written once at
+   * registration and never again, which made the admin view lie about long-lived devices (a
+   * machine that registered on 2.0.1 and upgraded to 2.6 still read as 2.0.1). Callers only
+   * invoke this when the reported build actually differs, so it is a no-op on the hot path.
+   */
+  updateAppVersion(token: string, appVersion: string): Promise<void>;
 
   /**
    * Most recent device registrations, newest first (admin console only). Exists to answer one

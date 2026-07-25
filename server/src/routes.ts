@@ -464,6 +464,7 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
         balance_questions: d.balanceQuestions,
         total_questions: d.totalQuestions,
         created_at: d.createdAt,
+        updated_at: d.updatedAt,
       })),
       topups: topups.map((t) => ({
         id: t.id,
