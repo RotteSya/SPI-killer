@@ -71,6 +71,13 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
   // The admin grant console exists only when a secret is configured — otherwise /admin 404s.
   const adminEnabled = config.adminToken !== '';
 
+  /** Gate every /admin/* handler: 404 when the console is off, 401 on a bad key. */
+  const requireAdmin = (req: FastifyRequest): void => {
+    if (!adminEnabled) throw new ApiError(404, '未启用');
+    const provided = typeof req.headers['x-admin-token'] === 'string' ? req.headers['x-admin-token'] : '';
+    if (!adminTokenMatches(provided, config.adminToken)) throw new ApiError(401, '管理员密钥无效', 'invalid_token');
+  };
+
   // Best-effort abuse limits (see rateLimit.ts): a per-IP cap on anonymous registration and a
   // per-token cap on concurrent captures. Instantiated once so state lives for the process.
   const registerLimiter = createFixedWindowLimiter(config.deviceRegPerHour, 60 * 60 * 1000);
@@ -138,11 +145,17 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     const lo = Math.max(0, Math.min(config.trialMinQuestions, config.trialMaxQuestions));
     const hi = Math.max(lo, config.trialMaxQuestions);
     const trialQuestions = lo + Math.floor(Math.random() * (hi - lo + 1));
-    const device = await store.registerDevice({
-      platform: str(body.platform, 'unknown').slice(0, 32),
-      appVersion: str(body.app_version, 'unknown').slice(0, 32),
-      trialQuestions,
-    });
+    const platform = str(body.platform, 'unknown').slice(0, 32);
+    const appVersion = str(body.app_version, 'unknown').slice(0, 32);
+    const device = await store.registerDevice({ platform, appVersion, trialQuestions });
+    // Every registration hands out a free grant that costs real model spend, so leave a trail:
+    // the device row id plus the caller's IP is what tells a client-side credential bug (one IP,
+    // one app version, repeated) apart from deliberate free-quota farming. No token is logged —
+    // the row id is enough to look the device up in the admin view.
+    req.log.info(
+      { deviceId: device.id, ip: clientIp(req), platform, appVersion, trialQuestions },
+      'device registered',
+    );
     return reply.send({
       device_token: device.token,
       balance_questions: device.balanceQuestions,
@@ -393,9 +406,7 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
   // amount 0, optional note) for audit and is idempotent on the reference. Grants only ADD
   // questions — there is deliberately no deduct path here.
   app.post('/admin/grant', async (req, reply) => {
-    if (!adminEnabled) throw new ApiError(404, '未启用');
-    const provided = typeof req.headers['x-admin-token'] === 'string' ? req.headers['x-admin-token'] : '';
-    if (!adminTokenMatches(provided, config.adminToken)) throw new ApiError(401, '管理员密钥无效', 'invalid_token');
+    requireAdmin(req);
 
     const body = (req.body ?? {}) as AdminGrantBody;
     const token = str(body.device_token);
@@ -429,13 +440,54 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     return reply.send({ balance_questions: newBalance, questions_granted: questions });
   });
 
+  // GET /admin/activity — READ-ONLY operations view: the most recent device registrations and
+  // the most recent top-ups (with the paying device's platform/version joined in). Same admin
+  // secret as the write endpoints. Answers the two questions the raw platform logs cannot:
+  // "what is a paying customer actually running" and "is this registration burst one broken
+  // client or somebody farming the free grant" (compare each row's total_questions).
+  // Never returns device tokens — only row ids, which cannot be spent.
+  app.get('/admin/activity', async (req, reply) => {
+    requireAdmin(req);
+    const raw = (req.query as { limit?: string } | undefined)?.limit;
+    const parsed = raw !== undefined ? Math.trunc(Number(raw)) : Number.NaN;
+    const limit = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 200) : 50;
+    const [devices, topups] = await Promise.all([
+      store.listRecentDevices(limit),
+      store.listRecentTopups(limit),
+    ]);
+    return reply.header('Cache-Control', 'no-store').send({
+      limit,
+      devices: devices.map((d) => ({
+        id: d.id,
+        platform: d.platform,
+        app_version: d.appVersion,
+        balance_questions: d.balanceQuestions,
+        total_questions: d.totalQuestions,
+        created_at: d.createdAt,
+      })),
+      topups: topups.map((t) => ({
+        id: t.id,
+        device_id: t.deviceId,
+        questions: t.questions,
+        amount_cents: t.amountCents,
+        currency: t.currency,
+        provider: t.provider,
+        reference: t.reference,
+        note: t.note,
+        created_at: t.createdAt,
+        device_platform: t.devicePlatform,
+        device_app_version: t.deviceAppVersion,
+        device_created_at: t.deviceCreatedAt,
+        device_total_questions: t.deviceTotalQuestions,
+      })),
+    });
+  });
+
   // POST /admin/cli — flip the per-device CLI switch, same manual flow (and same admin secret)
   // as question grants: the operator pastes a device token and enables/disables the retired CLI
   // channel for that machine. The client mirrors the flag on its next account sync. Idempotent.
   app.post('/admin/cli', async (req, reply) => {
-    if (!adminEnabled) throw new ApiError(404, '未启用');
-    const provided = typeof req.headers['x-admin-token'] === 'string' ? req.headers['x-admin-token'] : '';
-    if (!adminTokenMatches(provided, config.adminToken)) throw new ApiError(401, '管理员密钥无效', 'invalid_token');
+    requireAdmin(req);
 
     const body = (req.body ?? {}) as AdminCliBody;
     const token = str(body.device_token);

@@ -55,6 +55,13 @@ export function renderAdminPage(_input: AdminPageInput): string {
   button.ghost { background:rgba(255,255,255,.08); color:var(--ink); border:1px solid rgba(255,255,255,.18); }
   code { color:var(--dim); font-size:12px; }
   .hint { color:var(--faint); font-size:12px; margin-top:24px; }
+  h3 { font-size:13px; font-weight:600; color:var(--dim); margin-top:20px; }
+  /* The activity tables are wider than the forms; let them scroll instead of widening the page. */
+  #act-out { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:12px; margin-top:8px; }
+  th, td { text-align:left; padding:6px 8px; white-space:nowrap; border-bottom:1px solid rgba(255,255,255,.08); }
+  th { color:var(--faint); font-weight:600; }
+  td.warn { color:#ffd08a; } /* granted a free pack, spent (almost) none of it */
 </style></head>
 <body>
 <main>
@@ -92,6 +99,14 @@ export function renderAdminPage(_input: AdminPageInput): string {
     </div>
   </form>
   <div id="cli-status" class="status"></div>
+  <hr>
+  <h2>最近活动</h2>
+  <p class="sub">只读。注册记录用于分辨「一台机器反复重新注册」和「有人刷免费额度」——看每行的「已用」：领了额度却几乎没用过的连号，是可疑的。</p>
+  <div class="btn-row">
+    <button id="act-go" type="button">加载最近 50 条</button>
+  </div>
+  <div id="act-status" class="status"></div>
+  <div id="act-out"></div>
 </main>
 <script>
   const $ = (id) => document.getElementById(id);
@@ -168,6 +183,61 @@ export function renderAdminPage(_input: AdminPageInput): string {
   }
   $('cli-on').addEventListener('click', () => setCli(true));
   $('cli-off').addEventListener('click', () => setCli(false));
+
+  // platform / app_version / note are CLIENT-SUPPLIED strings, so everything rendered below goes
+  // through this — an admin page is exactly where stored XSS would hurt most.
+  const esc = (v) => String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const when = (iso) => { const d = new Date(iso); return isNaN(d) ? esc(iso) : esc(d.toLocaleString()); };
+
+  function renderActivity(j) {
+    const devRows = (j.devices || []).map((d) => {
+      // Highlight a device that took a free grant and then barely used it — the shape of
+      // farming (or of a client that re-registers on every launch).
+      const idle = d.total_questions <= 2;
+      return '<tr><td>' + d.id + '</td><td>' + when(d.created_at) + '</td><td>' +
+        esc(d.platform) + ' ' + esc(d.app_version) + '</td><td>' + d.balance_questions +
+        '</td><td' + (idle ? ' class="warn"' : '') + '>' + d.total_questions + '</td></tr>';
+    }).join('');
+    const topRows = (j.topups || []).map((t) => {
+      const money = t.amount_cents > 0 ? t.amount_cents + ' ' + esc(t.currency).toUpperCase() : '—';
+      return '<tr><td>' + when(t.created_at) + '</td><td>' + esc(t.provider) + '</td><td>' + money +
+        '</td><td>' + t.questions + '</td><td>#' + t.device_id + ' ' + esc(t.device_platform) + ' ' +
+        esc(t.device_app_version) + '</td><td>' + t.device_total_questions + '</td><td>' +
+        esc(t.note || t.reference || '') + '</td></tr>';
+    }).join('');
+    $('act-out').innerHTML =
+      '<h3>最近注册（每条 = 一份免费额度）</h3>' +
+      '<table><tr><th>#</th><th>时间</th><th>客户端</th><th>余额</th><th>已用</th></tr>' +
+      (devRows || '<tr><td colspan="5">暂无</td></tr>') + '</table>' +
+      '<h3>最近充值 / 加题</h3>' +
+      '<table><tr><th>时间</th><th>渠道</th><th>金额</th><th>题数</th><th>设备</th><th>该设备已用</th><th>备注 / 单号</th></tr>' +
+      (topRows || '<tr><td colspan="7">暂无</td></tr>') + '</table>';
+  }
+
+  $('act-go').addEventListener('click', async () => {
+    const st = $('act-status');
+    st.className = 'status'; st.textContent = '';
+    const key = $('key').value.trim();
+    if (!key) { st.className='status err'; st.textContent='请填写上方的管理员密钥。'; return; }
+    try { localStorage.setItem(KEY_STORE, key); } catch (e) {}
+    const btn = $('act-go');
+    btn.disabled = true; btn.textContent = '加载中…';
+    try {
+      const r = await fetch('/admin/activity?limit=50', { headers: { 'x-admin-token': key } });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) {
+        renderActivity(j);
+      } else {
+        st.className = 'status err';
+        st.textContent = '失败（' + r.status + '）：' + ((j.error && j.error.message) || '请检查密钥');
+      }
+    } catch (e) {
+      st.className = 'status err'; st.textContent = '网络错误：' + e;
+    } finally {
+      btn.disabled = false; btn.textContent = '加载最近 50 条';
+    }
+  });
 </script>
 </body></html>`;
 }

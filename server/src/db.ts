@@ -21,6 +21,39 @@ export interface Account {
 export interface RegisteredDevice {
   token: string; // plaintext, returned ONCE at registration
   balanceQuestions: number;
+  /** Row id — never sent to the client; logged so a registration burst can be traced. */
+  id: number;
+}
+
+// The admin activity view. Deliberately token-free: rows carry the row id, never the bearer
+// credential (nor its hash), so the operator can read the log without gaining the ability to
+// spend somebody's balance.
+
+export interface DeviceSummary {
+  id: number;
+  platform: string | null;
+  appVersion: string | null;
+  balanceQuestions: number;
+  totalQuestions: number;
+  createdAt: string; // ISO-8601 UTC
+}
+
+export interface TopUpSummary {
+  id: number;
+  deviceId: number;
+  questions: number;
+  amountCents: number;
+  currency: string;
+  provider: string;
+  reference: string | null;
+  note: string | null;
+  createdAt: string; // ISO-8601 UTC
+  // Denormalized device columns — what the buyer is running, and how much they had used
+  // before paying. The whole point of the view is not needing a second lookup.
+  devicePlatform: string | null;
+  deviceAppVersion: string | null;
+  deviceCreatedAt: string;
+  deviceTotalQuestions: number;
 }
 
 export interface Store {
@@ -68,6 +101,16 @@ export interface Store {
    * Returns the value now stored, or null if the token is unknown/invalid. Idempotent.
    */
   setCliEnabled(token: string, enabled: boolean): Promise<boolean | null>;
+
+  /**
+   * Most recent device registrations, newest first (admin console only). Exists to answer one
+   * question: is a burst of registrations one machine re-registering (a client-side credential
+   * bug) or somebody farming the free grant? `totalQuestions` per row separates the two.
+   */
+  listRecentDevices(limit: number): Promise<DeviceSummary[]>;
+
+  /** Most recent top-ups, newest first, with the paying device's columns joined in. */
+  listRecentTopups(limit: number): Promise<TopUpSummary[]>;
 
   /** Atomically increment a named counter (created at 0 if absent) and return the new value. */
   bumpCounter(name: string): Promise<number>;

@@ -39,6 +39,11 @@ test('POST /admin/grant is 404 when ADMIN_TOKEN is not set', async () => {
   assert.equal(res.status, 404);
 });
 
+test('GET /admin/activity is 404 when ADMIN_TOKEN is not set', async () => {
+  const res = await fetch(`${base}/admin/activity`, { headers: { 'x-admin-token': 'anything' } });
+  assert.equal(res.status, 404);
+});
+
 test('POST /admin/cli is 404 when ADMIN_TOKEN is not set', async () => {
   const res = await fetch(`${base}/admin/cli`, {
     method: 'POST',

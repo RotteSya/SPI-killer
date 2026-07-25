@@ -168,3 +168,72 @@ test('cli switch validates the token and the enabled flag', async () => {
     assert.equal(res.status, 400, `enabled=${String(v)} must be rejected`);
   }
 });
+
+// --- Read-only activity view -----------------------------------------------------------------
+
+interface ActivityBody {
+  limit: number;
+  devices: Array<{
+    id: number; platform: string | null; app_version: string | null;
+    balance_questions: number; total_questions: number; created_at: string;
+  }>;
+  topups: Array<{
+    device_id: number; questions: number; amount_cents: number; provider: string;
+    note: string | null; device_platform: string | null; device_app_version: string | null;
+    device_total_questions: number;
+  }>;
+}
+
+function activity(adminToken: string | null, query = ''): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (adminToken !== null) headers['x-admin-token'] = adminToken;
+  return fetch(`${base}/admin/activity${query}`, { headers });
+}
+
+test('activity view requires the admin secret', async () => {
+  assert.equal((await activity(null)).status, 401);
+  assert.equal((await activity('wrong-key')).status, 401);
+});
+
+test('activity view lists registrations and grants, newest first, without leaking tokens', async () => {
+  const token = await register();
+  const res = await activity('admin-secret-xyz');
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as ActivityBody;
+
+  const newest = body.devices[0];
+  assert.ok(newest !== undefined, 'the device just registered must show up');
+  assert.equal(newest.platform, 'macos');
+  assert.equal(newest.app_version, '2.0');
+  assert.equal(newest.balance_questions, 10); // the pinned trial grant
+  assert.equal(newest.total_questions, 0);
+  assert.ok(Number.isFinite(Date.parse(newest.created_at)), 'created_at is a real timestamp');
+
+  // The bearer credential must never appear anywhere in the payload — the whole view is
+  // readable by anyone holding the (weaker, operational) admin key.
+  assert.ok(!JSON.stringify(body).includes(token), 'device tokens must not be exposed');
+
+  // A grant on this device shows up as a top-up row carrying the device's own columns.
+  const granted = await grant(
+    { device_token: token, questions: 7, note: 'activity-test' }, 'admin-secret-xyz');
+  assert.equal(granted.status, 200);
+  const after = (await (await activity('admin-secret-xyz')).json()) as ActivityBody;
+  const row = after.topups[0];
+  assert.ok(row !== undefined);
+  assert.equal(row.provider, 'admin');
+  assert.equal(row.questions, 7);
+  assert.equal(row.amount_cents, 0);
+  assert.equal(row.note, 'activity-test');
+  assert.equal(row.device_id, newest.id);
+  assert.equal(row.device_platform, 'macos');
+  assert.equal(row.device_app_version, '2.0');
+});
+
+test('activity limit is clamped to a sane range', async () => {
+  for (const [q, want] of [['?limit=1', 1], ['?limit=9999', 200], ['?limit=0', 1],
+                           ['?limit=junk', 50], ['', 50]] as const) {
+    const body = (await (await activity('admin-secret-xyz', q)).json()) as ActivityBody;
+    assert.equal(body.limit, want, `limit for "${q}"`);
+    assert.ok(body.devices.length <= want);
+  }
+});

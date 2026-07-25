@@ -1,5 +1,5 @@
 import pg from 'pg';
-import type { Account, RegisteredDevice, Store } from './db.ts';
+import type { Account, DeviceSummary, RegisteredDevice, Store, TopUpSummary } from './db.ts';
 import { hashToken, newToken } from './db.ts';
 
 // Production store: Postgres via the standard `pg` driver. Works with any provider (Neon,
@@ -65,6 +65,33 @@ interface DeviceRow {
   cli_enabled: boolean;
 }
 
+// Admin-view row shapes. pg returns BIGINT as a string (precision safety) and TIMESTAMPTZ as a
+// Date, so both are normalized on the way out.
+interface DeviceSummaryRow {
+  id: string;
+  platform: string | null;
+  app_version: string | null;
+  balance_questions: string;
+  total_questions: string;
+  created_at: Date;
+}
+
+interface TopUpSummaryRow {
+  id: string;
+  device_id: string;
+  questions: string;
+  amount_cents: string;
+  currency: string;
+  provider: string;
+  reference: string | null;
+  note: string | null;
+  created_at: Date;
+  platform: string | null;
+  app_version: string | null;
+  device_created_at: Date;
+  device_total_questions: string;
+}
+
 /** The pg `ssl` option: `false` = plaintext, otherwise a Node TLS options subset. */
 export type PgSSLConfig = false | { rejectUnauthorized: boolean; ca?: string };
 
@@ -116,12 +143,12 @@ export class PostgresStore implements Store {
   }): Promise<RegisteredDevice> {
     await this.ensureSchema();
     const token = newToken();
-    await this.pool.query(
+    const { rows } = await this.pool.query<{ id: string }>(
       `INSERT INTO devices (token_hash, platform, app_version, balance_questions)
-       VALUES ($1, $2, $3, $4)`,
+       VALUES ($1, $2, $3, $4) RETURNING id`,
       [hashToken(token), input.platform, input.appVersion, input.trialQuestions],
     );
-    return { token, balanceQuestions: input.trialQuestions };
+    return { token, balanceQuestions: input.trialQuestions, id: Number(rows[0]?.id ?? 0) };
   }
 
   async getAccount(token: string): Promise<Account | null> {
@@ -219,6 +246,51 @@ export class PostgresStore implements Store {
       );
       return newBalance;
     });
+  }
+
+  async listRecentDevices(limit: number): Promise<DeviceSummary[]> {
+    await this.ensureSchema();
+    const { rows } = await this.pool.query<DeviceSummaryRow>(
+      `SELECT id, platform, app_version, balance_questions, total_questions, created_at
+       FROM devices ORDER BY id DESC LIMIT $1`,
+      [limit],
+    );
+    return rows.map((r) => ({
+      id: Number(r.id),
+      platform: r.platform,
+      appVersion: r.app_version,
+      balanceQuestions: Number(r.balance_questions),
+      totalQuestions: Number(r.total_questions),
+      createdAt: new Date(r.created_at).toISOString(),
+    }));
+  }
+
+  async listRecentTopups(limit: number): Promise<TopUpSummary[]> {
+    await this.ensureSchema();
+    const { rows } = await this.pool.query<TopUpSummaryRow>(
+      `SELECT t.id, t.device_id, t.questions, t.amount_cents, t.currency, t.provider,
+              t.reference, t.note, t.created_at,
+              d.platform, d.app_version, d.created_at AS device_created_at,
+              d.total_questions AS device_total_questions
+       FROM topups t JOIN devices d ON d.id = t.device_id
+       ORDER BY t.id DESC LIMIT $1`,
+      [limit],
+    );
+    return rows.map((r) => ({
+      id: Number(r.id),
+      deviceId: Number(r.device_id),
+      questions: Number(r.questions),
+      amountCents: Number(r.amount_cents),
+      currency: r.currency,
+      provider: r.provider,
+      reference: r.reference,
+      note: r.note,
+      createdAt: new Date(r.created_at).toISOString(),
+      devicePlatform: r.platform,
+      deviceAppVersion: r.app_version,
+      deviceCreatedAt: new Date(r.device_created_at).toISOString(),
+      deviceTotalQuestions: Number(r.device_total_questions),
+    }));
   }
 
   async bumpCounter(name: string): Promise<number> {

@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { Account, RegisteredDevice, Store } from './db.ts';
+import type { Account, DeviceSummary, RegisteredDevice, Store, TopUpSummary } from './db.ts';
 import { hashToken, newToken } from './db.ts';
 
 // Local/self-hosted store: SQLite via the Node built-in driver. Kept in its own module so
@@ -90,13 +90,17 @@ export class SqliteStore implements Store {
   }): Promise<RegisteredDevice> {
     const token = newToken();
     const now = new Date().toISOString();
-    this.db
+    const result = this.db
       .prepare(
         `INSERT INTO devices (token_hash, platform, app_version, balance_questions, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
       )
       .run(hashToken(token), input.platform, input.appVersion, input.trialQuestions, now, now);
-    return { token, balanceQuestions: input.trialQuestions };
+    return {
+      token,
+      balanceQuestions: input.trialQuestions,
+      id: Number(result.lastInsertRowid),
+    };
   }
 
   private deviceByToken(token: string): DeviceRow | null {
@@ -193,6 +197,72 @@ export class SqliteStore implements Store {
         .run(dev.id, input.questions, input.amountCents, input.currency, input.provider, input.reference, input.note ?? null, now);
       return newBalance;
     });
+  }
+
+  async listRecentDevices(limit: number): Promise<DeviceSummary[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT id, platform, app_version, balance_questions, total_questions, created_at
+         FROM devices ORDER BY id DESC LIMIT ?`,
+      )
+      .all(limit) as Array<{
+      id: number;
+      platform: string | null;
+      app_version: string | null;
+      balance_questions: number;
+      total_questions: number;
+      created_at: string;
+    }>;
+    return rows.map((r) => ({
+      id: r.id,
+      platform: r.platform,
+      appVersion: r.app_version,
+      balanceQuestions: r.balance_questions,
+      totalQuestions: r.total_questions,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async listRecentTopups(limit: number): Promise<TopUpSummary[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT t.id, t.device_id, t.questions, t.amount_cents, t.currency, t.provider,
+                t.reference, t.note, t.created_at,
+                d.platform, d.app_version, d.created_at AS device_created_at,
+                d.total_questions AS device_total_questions
+         FROM topups t JOIN devices d ON d.id = t.device_id
+         ORDER BY t.id DESC LIMIT ?`,
+      )
+      .all(limit) as Array<{
+      id: number;
+      device_id: number;
+      questions: number;
+      amount_cents: number;
+      currency: string;
+      provider: string;
+      reference: string | null;
+      note: string | null;
+      created_at: string;
+      platform: string | null;
+      app_version: string | null;
+      device_created_at: string;
+      device_total_questions: number;
+    }>;
+    return rows.map((r) => ({
+      id: r.id,
+      deviceId: r.device_id,
+      questions: r.questions,
+      amountCents: r.amount_cents,
+      currency: r.currency,
+      provider: r.provider,
+      reference: r.reference,
+      note: r.note,
+      createdAt: r.created_at,
+      devicePlatform: r.platform,
+      deviceAppVersion: r.app_version,
+      deviceCreatedAt: r.device_created_at,
+      deviceTotalQuestions: r.device_total_questions,
+    }));
   }
 
   async bumpCounter(name: string): Promise<number> {
