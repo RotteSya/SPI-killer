@@ -38,6 +38,9 @@ export class MemoryStore implements Store {
   }): Promise<RegisteredDevice> {
     const token = newToken();
     const id = this.nextId++;
+    // One clock read for both columns: a fresh device must satisfy updatedAt === createdAt, and
+    // two separate reads can straddle a millisecond boundary and fake balance activity.
+    const now = new Date().toISOString();
     this.devices.set(hashToken(token), {
       id,
       tokenHash: hashToken(token),
@@ -48,8 +51,8 @@ export class MemoryStore implements Store {
       totalInputTokens: 0,
       totalOutputTokens: 0,
       cliEnabled: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       onboarded: false,
       hotkeyPresses: 0,
     });
