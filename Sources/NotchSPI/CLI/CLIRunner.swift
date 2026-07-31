@@ -20,7 +20,11 @@ enum CLIRunner {
             "\(home)/.cargo/bin", "\(home)/.bun/bin", "\(home)/.deno/bin",
             "\(home)/.volta/bin", "\(home)/.asdf/shims",
             "/opt/homebrew/lib/node_modules/.bin", "/usr/local/lib/node_modules/.bin",
-            // Desktop-app bundle that ships a usable macOS codex CLI:
+            // Desktop-app bundles that ship a self-contained macOS codex CLI. Codex.app was folded
+            // into ChatGPT.app, so the standalone bundle disappears on update — keep both paths so
+            // either install still resolves.
+            "/Applications/ChatGPT.app/Contents/Resources",
+            "\(home)/Applications/ChatGPT.app/Contents/Resources",
             "/Applications/Codex.app/Contents/Resources",
             "\(home)/Applications/Codex.app/Contents/Resources",
             "\(home)/.claude/local",
@@ -32,9 +36,25 @@ enum CLIRunner {
         return dirs
     }
 
+    /// Directories holding the interpreter a CLI shim may need. An npm-installed `codex` is a
+    /// `#!/usr/bin/env node` script, and a GUI app inherits launchd's bare PATH
+    /// (/usr/bin:/bin:/usr/sbin:/sbin), so without these it dies with
+    /// `env: node: No such file or directory` — found on disk, yet unrunnable. Homebrew's
+    /// versioned node formulas (node@24) are keg-only and never linked into `bin`, so the `opt`
+    /// dirs have to be listed explicitly.
+    static func interpreterDirs() -> [String] {
+        var dirs: [String] = []
+        for prefix in ["/opt/homebrew/opt", "/usr/local/opt"] {
+            guard let entries = try? FileManager.default.contentsOfDirectory(atPath: prefix) else { continue }
+            let nodes = entries.filter { $0 == "node" || $0.hasPrefix("node@") }.sorted(by: >)
+            dirs.append(contentsOf: nodes.map { "\(prefix)/\($0)/bin" })
+        }
+        return dirs
+    }
+
     static func augmentedEnv() -> [String: String] {
         var env = ProcessInfo.processInfo.environment
-        let extra = candidateDirs().joined(separator: ":")
+        let extra = (candidateDirs() + interpreterDirs()).joined(separator: ":")
         env["PATH"] = extra + ":" + (env["PATH"] ?? "")
         return env
     }
@@ -47,13 +67,11 @@ enum CLIRunner {
         return dir
     }
 
-    private static func findInDirs(_ bin: String) -> String? {
+    private static func findInDirs(_ bin: String) -> [String] {
         let fm = FileManager.default
-        for d in candidateDirs() {
-            let p = "\(d)/\(bin)"
-            if fm.isExecutableFile(atPath: p) { return p }
-        }
-        return nil
+        return candidateDirs()
+            .map { "\($0)/\(bin)" }
+            .filter { fm.isExecutableFile(atPath: $0) }
     }
 
     private static func findViaLoginShell(_ bins: [String]) -> [String: String] {
@@ -143,13 +161,29 @@ enum CLIRunner {
         )
     }
 
+    /// Sitting on disk is not proof of a working CLI: an npm-installed shim whose interpreter is
+    /// unreachable still looks executable but exits 127. Probe candidates in order and keep the
+    /// first that actually answers `--version`, so a broken install falls through to a working one
+    /// (e.g. the self-contained binary inside the desktop app bundle).
+    private static func firstRunnable(
+        _ paths: [String], versionArgs: [String], auth: (String) -> Bool?
+    ) -> CLIInfo? {
+        for p in paths {
+            let v = runCapture(p, versionArgs)
+            guard v.code == 0 else { continue }
+            let version = (v.out + "\n" + v.err).split(separator: "\n").first
+                .map { String($0).trimmingCharacters(in: .whitespaces) }
+            return CLIInfo(installed: true, path: p, version: version, loggedIn: auth(p))
+        }
+        return nil
+    }
+
     private static func detectOne(bin: String, versionArgs: [String], auth: (String) -> Bool?) -> CLIInfo {
-        var path = findInDirs(bin)
-        if path == nil { path = findViaLoginShell([bin])[bin] }
-        guard let p = path else { return CLIInfo(installed: false, path: nil, version: nil, loggedIn: nil) }
-        let v = runCapture(p, versionArgs)
-        let version = (v.out + "\n" + v.err).split(separator: "\n").first.map { String($0).trimmingCharacters(in: .whitespaces) }
-        return CLIInfo(installed: true, path: p, version: version, loggedIn: auth(p))
+        let inDirs = findInDirs(bin)
+        if let info = firstRunnable(inDirs, versionArgs: versionArgs, auth: auth) { return info }
+        if let viaShell = findViaLoginShell([bin])[bin], !inDirs.contains(viaShell),
+           let info = firstRunnable([viaShell], versionArgs: versionArgs, auth: auth) { return info }
+        return CLIInfo(installed: false, path: nil, version: nil, loggedIn: nil)
     }
 
     private static func matches(_ text: String, _ pattern: String) -> Bool {
