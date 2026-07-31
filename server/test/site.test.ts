@@ -45,8 +45,17 @@ test('GET / renders the Japanese site by default with live pricing and legal sec
   assert.match(html, /プライバシーポリシー/);                // privacy
   assert.match(html, /返金・キャンセルポリシー/);            // refunds
   assert.match(html, /raysyadesu@gmail\.com/);              // contact
-  assert.match(html, /href="\/dl"/);                        // download CTA → counted redirect
-  assert.match(html, /releases\/latest/);                   // GitHub Releases link still present
+  assert.match(html, /href="\/dl"/);                        // download CTA → our own counted endpoint
+});
+
+test('the site never links a visitor to where the app is hosted or built', async () => {
+  // The product is distributed from this origin only: /dl streams the DMG and /update reports
+  // the version. A stray github.com href would leak the source repo straight into the UI, so
+  // this asserts the absence across every rendered language, not just the default one.
+  for (const lang of ['ja', 'zh', 'en']) {
+    const html = await (await fetch(`${base}/?lang=${lang}`)).text();
+    assert.doesNotMatch(html, /github\.com|api\.github\.com/i, `${lang} page links to GitHub`);
+  }
 });
 
 test('?lang switches the site language; the JP disclosure stays present', async () => {

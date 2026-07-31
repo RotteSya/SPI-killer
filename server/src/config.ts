@@ -108,6 +108,14 @@ export const config = {
   // feature simply does not exist unless an operator sets ADMIN_TOKEN, so it is safe by default.
   adminToken: envStr('ADMIN_TOKEN', ''),
 
+  // ---- Where the app itself is distributed from --------------------------------------------
+  // The notarized DMG and its release metadata. Both are INTERNAL: GET /dl streams the bytes and
+  // GET /update relays the version JSON, so no user-facing surface — site, alert, or redirect —
+  // ever names the host these come from. Overridable so the origin can move (or point at a local
+  // fixture in tests) without a code change.
+  dmgUrl: envStr('DMG_URL', 'https://github.com/RotteSya/notch-SPI/releases/latest/download/NotchSPI.dmg'),
+  releaseApiUrl: envStr('RELEASE_API_URL', 'https://api.github.com/repos/RotteSya/notch-SPI/releases/latest'),
+
   // ---- Best-effort rate limits (see rateLimit.ts) -----------------------------------------
   // Defense in depth against free-quota farming and parallel-capture balance abuse. In-memory
   // and per-instance, so treat a platform WAF as the real hard limit. Set a knob to 0 to disable.

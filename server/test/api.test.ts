@@ -14,6 +14,15 @@ process.env.PACKS_JSON = JSON.stringify([{ id: 'pack100', questions: 100, amount
 process.env.ALLOW_STUB_TOPUP = '1';
 process.env.LOG_LEVEL = 'silent';
 
+// /dl and /update proxy an upstream release host. Point both at inline data: URLs so the suite
+// exercises the real handlers — including that neither one leaks the upstream location — while
+// staying entirely offline and independent of what is actually published.
+export const DMG_FIXTURE_BODY = 'not-a-real-dmg';
+process.env.DMG_URL = `data:application/octet-stream,${encodeURIComponent(DMG_FIXTURE_BODY)}`;
+process.env.RELEASE_API_URL = `data:application/json,${encodeURIComponent(
+  JSON.stringify({ tag_name: 'v9.9', body: 'Fixture notes' }),
+)}`;
+
 const { buildApp } = await import('../src/index.ts');
 
 let app: FastifyInstance;
@@ -185,12 +194,28 @@ test('top-up page renders localized HTML with the pack catalog', async () => {
   assert.match(en, /Top Up Questions/);
 });
 
-test('GET /dl counts the click and 302s to the GitHub DMG; /stats reports the tally', async () => {
+test('GET /dl counts the click and streams the DMG from this origin; /stats reports the tally', async () => {
   const before = (await (await fetch(`${base}/stats`)).json()) as { download_clicks: number };
   const res = await fetch(`${base}/dl`, { redirect: 'manual' });
-  assert.equal(res.status, 302);
-  assert.match(res.headers.get('location') ?? '', /github\.com\/RotteSya\/notch-SPI\/releases\/latest\/download\/NotchSPI\.dmg/);
+  assert.equal(res.status, 200);
+  // Deliberately NOT a redirect: a 302 would put the upstream host in the user's address bar and
+  // download list. The bytes must come back from us, with no Location leaking where they live.
+  assert.equal(res.headers.get('location'), null);
+  assert.match(res.headers.get('content-disposition') ?? '', /filename="NotchSPI\.dmg"/);
   assert.match(res.headers.get('cache-control') ?? '', /no-store/);
+  assert.equal(await res.text(), DMG_FIXTURE_BODY);
   const after = (await (await fetch(`${base}/stats`)).json()) as { download_clicks: number };
   assert.equal(after.download_clicks, before.download_clicks + 1);
+});
+
+test('GET /update reports the latest version without exposing the upstream release host', async () => {
+  const res = await fetch(`${base}/update`);
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { version: string; tag: string; notes: string };
+  assert.equal(body.version, '9.9'); // "v9.9" from the fixture, normalized server-side
+  assert.equal(body.tag, 'v9.9');
+  assert.equal(body.notes, 'Fixture notes');
+  // The client composes its own download link from the base URL it already knows, so the relay
+  // never hands out an upstream URL.
+  assert.doesNotMatch(JSON.stringify(body), /github\.com/i);
 });

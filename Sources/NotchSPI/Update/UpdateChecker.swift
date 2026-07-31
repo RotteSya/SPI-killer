@@ -1,16 +1,24 @@
 import AppKit
 
-/// Lightweight "check for updates" against the GitHub Releases API.
+/// Lightweight "check for updates" against our own service.
 ///
-/// NotchSPI ships as a notarized `NotchSPI.dmg` attached to GitHub releases tagged `vX.Y`, so the
-/// newest release's tag is the canonical latest version. That makes a plain JSON GET enough — no
-/// Sparkle, no appcast, no EdDSA keys, no extra dependency or hosting. We compare the latest tag to
-/// the running app's `CFBundleShortVersionString` and, if newer, send the user to the release page.
+/// NotchSPI ships as a notarized `NotchSPI.dmg`. `GET /update` reports the newest published
+/// version as `{ version, tag, notes }` and `GET /dl` streams that DMG — both served by the
+/// official service, which reads the release storage server-side. Keeping both behind our own
+/// origin means no part of the app links a user out to where the code is hosted. It also stays a
+/// plain JSON GET: no Sparkle, no appcast, no EdDSA keys, no extra dependency.
+///
+/// We compare the reported version to the running app's `CFBundleShortVersionString` and, if
+/// newer, offer to open the download.
 enum UpdateChecker {
-    static let repo = "RotteSya/notch-SPI"
-    private static let latestURL = URL(string: "https://api.github.com/repos/\(repo)/releases/latest")!
-    /// Fallback page if the API is unreachable or a release has no `html_url`.
-    static let releasesPage = URL(string: "https://github.com/\(repo)/releases/latest")!
+    /// Both endpoints resolve against the configured base, so an `official.baseURL` override
+    /// (staging / self-hosted) moves the update check with it.
+    private static var latestURL: URL { OfficialAPI.endpointURL(base: OfficialAPI.baseURL, path: "update") }
+    /// Where "前往下载" goes — streams the DMG straight from the service.
+    static var downloadURL: URL { OfficialAPI.endpointURL(base: OfficialAPI.baseURL, path: "dl") }
+    /// Fallback when the check itself fails: the product site, which carries the download button.
+    /// A page degrades better than a binary stream when the network is already misbehaving.
+    static var sitePage: URL { URL(string: OfficialAPI.baseURL) ?? downloadURL }
 
     private static let lastCheckKey = "lastUpdateCheckAt"
     private static let skipVersionKey = "skipUpdateVersion"
@@ -32,8 +40,7 @@ enum UpdateChecker {
     struct Release {
         let version: String   // normalized numeric core, e.g. "1.6"
         let tag: String       // raw tag, e.g. "v1.6"
-        let pageURL: URL      // release html_url
-        let notes: String     // release body / changelog
+        let notes: String     // changelog for this release
     }
 
     enum CheckResult {
@@ -81,8 +88,7 @@ enum UpdateChecker {
     /// Fetch the latest release and compare to the running version. `completion` runs on the main thread.
     static func check(completion: @escaping (CheckResult) -> Void) {
         var req = URLRequest(url: latestURL)
-        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        req.setValue("NotchSPI", forHTTPHeaderField: "User-Agent") // GitHub rejects requests without a UA
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
         req.timeoutInterval = 15
         req.cachePolicy = .reloadIgnoringLocalCacheData
 
@@ -92,18 +98,20 @@ enum UpdateChecker {
             if let error { finish(.failed(error.localizedDescription)); return }
             guard let http = response as? HTTPURLResponse else { finish(.failed(L10n.t("无网络响应", "ネットワーク応答なし", "No network response"))); return }
             guard http.statusCode == 200, let data else {
-                finish(.failed("GitHub HTTP \(http.statusCode)")); return
+                finish(.failed("HTTP \(http.statusCode)")); return
             }
             guard
                 let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-                let tag = obj["tag_name"] as? String
+                let version = obj["version"] as? String
             else { finish(.failed(L10n.t("无法解析更新信息", "更新情報を解析できません", "Could not parse update info"))); return }
 
-            let latest = normalize(tag)
-            let pageURL = (obj["html_url"] as? String).flatMap(URL.init(string:)) ?? releasesPage
-            let notes = (obj["body"] as? String) ?? ""
+            // `version` is already normalized server-side; normalize again so a hand-edited or
+            // older-format response ("v2.6") still compares correctly.
+            let latest = normalize(version)
+            let tag = (obj["tag"] as? String) ?? "v\(latest)"
+            let notes = (obj["notes"] as? String) ?? ""
             if isNewer(latest, than: normalize(currentVersion)) {
-                finish(.updateAvailable(Release(version: latest, tag: tag, pageURL: pageURL, notes: notes)))
+                finish(.updateAvailable(Release(version: latest, tag: tag, notes: notes)))
             } else {
                 finish(.upToDate(current: currentVersion))
             }
@@ -154,7 +162,7 @@ enum UpdateChecker {
         if let appLogo { alert.icon = appLogo }
         alert.alertStyle = .informational
         alert.messageText = L10n.t("发现新版本 NotchSPI \(r.version)", "新しいバージョン NotchSPI \(r.version)", "NotchSPI \(r.version) is available")
-        var info = L10n.t("当前版本 \(currentVersion)，最新版本 \(r.version)。是否前往下载页面更新？", "現在 \(currentVersion)、最新 \(r.version)。ダウンロードページを開きますか？", "You have \(currentVersion); the latest is \(r.version). Open the download page?")
+        var info = L10n.t("当前版本 \(currentVersion)，最新版本 \(r.version)。是否立即下载更新？", "現在 \(currentVersion)、最新 \(r.version)。今すぐダウンロードしますか？", "You have \(currentVersion); the latest is \(r.version). Download it now?")
         let notes = r.notes.trimmingCharacters(in: .whitespacesAndNewlines)
         if !notes.isEmpty { info += "\n\n" + L10n.t("更新内容：", "更新内容：", "What is new:") + "\n\(notes)" }
         alert.informativeText = String(info.prefix(800))
@@ -164,7 +172,7 @@ enum UpdateChecker {
 
         switch alert.runModal() {
         case .alertFirstButtonReturn:
-            NSWorkspace.shared.open(r.pageURL)
+            NSWorkspace.shared.open(downloadURL)
         case .alertThirdButtonReturn:
             UserDefaults.standard.set(r.version, forKey: skipVersionKey)
         default:
@@ -189,11 +197,11 @@ enum UpdateChecker {
         if let appLogo { alert.icon = appLogo }
         alert.alertStyle = .warning
         alert.messageText = L10n.t("检查更新失败", "更新の確認に失敗", "Update check failed")
-        alert.informativeText = L10n.t("无法获取更新信息：\(message)\n\n你也可以直接打开发布页查看。", "更新情報を取得できません：\(message)\n\nリリースページを直接開くこともできます。", "Could not fetch update info: \(message)\n\nYou can also open the releases page directly.")
-        alert.addButton(withTitle: L10n.t("打开发布页", "リリースページを開く", "Open Releases Page"))
+        alert.informativeText = L10n.t("无法获取更新信息：\(message)\n\n你也可以打开官网自行下载。", "更新情報を取得できません：\(message)\n\n公式サイトから直接ダウンロードすることもできます。", "Could not fetch update info: \(message)\n\nYou can also download it from the website.")
+        alert.addButton(withTitle: L10n.t("打开官网", "サイトを開く", "Open Website"))
         alert.addButton(withTitle: L10n.ok)
         if alert.runModal() == .alertFirstButtonReturn {
-            NSWorkspace.shared.open(releasesPage)
+            NSWorkspace.shared.open(sitePage)
         }
     }
 }

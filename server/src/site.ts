@@ -7,13 +7,9 @@ import { formatMoney, escapeHtml, type PageLang } from './payments.ts';
 // below). One self-contained page: inline CSS, inline SVG logo, zero external assets.
 // Pricing renders from the LIVE pack catalog so the site can never drift from checkout.
 
-const GITHUB = 'https://github.com/RotteSya/notch-SPI';
-// The real DMG asset on GitHub's "latest release". The /dl endpoint (routes.ts) redirects here.
-export const DOWNLOAD_URL = `${GITHUB}/releases/latest/download/NotchSPI.dmg`;
-const RELEASES = `${GITHUB}/releases/latest`;
-// Download buttons point at our own /dl endpoint so each click is tallied server-side before a
-// 302 to DOWNLOAD_URL. GitHub's asset counter stays the ground truth for completed downloads;
-// this measures clicks on the site's download buttons (visible via GET /stats).
+// Every download button targets our own /dl endpoint, which tallies the click and then streams
+// the DMG back from this origin (see routes.ts; the upstream location lives in config, not here).
+// No link on this page may point off-site to where the app is built or hosted.
 const DOWNLOAD = '/dl';
 const CONTACT_EMAIL = 'raysyadesu@gmail.com';
 
@@ -381,7 +377,6 @@ export function renderLandingPage(input: SiteInput): string {
   }
   .dl:hover { transform:translateY(-2px); box-shadow:0 12px 40px rgba(122,160,255,.35); }
   .ctasub { font-size:12.5px; color:var(--faint); }
-  .gh { font-size:13px; color:var(--dim); }
 
   /* CSS mockup: a MacBook-ish top edge with the notch panel expanded */
   .mock { margin:56px auto 0; max-width:760px; }
@@ -480,7 +475,6 @@ export function renderLandingPage(input: SiteInput): string {
   <div class="cta">
     <a class="dl" href="${DOWNLOAD}">${s.heroCTA}</a>
     <div class="ctasub">${s.heroCTASub}</div>
-    <a class="gh" href="${RELEASES}">GitHub Releases →</a>
   </div>
 
   <div class="mock">
@@ -549,7 +543,6 @@ export function renderLandingPage(input: SiteInput): string {
   <div>${s.reqNote}</div>
   <div style="margin-top:8px">
     ${s.footerContact}: <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> ·
-    <a href="${GITHUB}">GitHub</a> ·
     <a href="#tokushoho">特定商取引法に基づく表記</a>
   </div>
   <div style="margin-top:10px">© 2026 NotchSPI (SHE LINGZHAO)</div>

@@ -10,7 +10,7 @@ import { requireAccount } from './auth.ts';
 import { findPack } from './pricing.ts';
 import { isValidTokenShape, normalizeLang } from './payments.ts';
 import { verifyStripeSignature, createCheckoutSession, type StripeEvent } from './stripe.ts';
-import { renderLandingPage, resolveSiteLang, DOWNLOAD_URL } from './site.ts';
+import { renderLandingPage, resolveSiteLang } from './site.ts';
 import { renderAdminPage } from './admin.ts';
 import { createFixedWindowLimiter, createConcurrencyLimiter, clientIp } from './rateLimit.ts';
 
@@ -121,17 +121,64 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
       .send(html);
   });
 
-  // GET /dl — tally a download-button click, then 302 to the real GitHub DMG. Counting is
-  // best-effort: a DB hiccup must never block the download, so a failure is logged and ignored.
-  // Browser prefetch can inflate this slightly; GitHub's own asset counter stays the ground
-  // truth for completed downloads — this measures clicks on the site's download buttons.
+  // GET /dl — tally a download-button click, then stream the DMG back from this origin.
+  //
+  // Deliberately a proxy and NOT a 302: a redirect would put the GitHub asset URL in the user's
+  // address bar and download list, and nothing user-facing is allowed to point at GitHub. The
+  // repo stays the release pipeline's storage, invisible to the people downloading the app.
+  //
+  // Counting is best-effort: a DB hiccup must never block the download, so a failure is logged
+  // and ignored. Browser prefetch can inflate this slightly — it measures button clicks, not
+  // completed downloads.
   app.get('/dl', async (req, reply) => {
     try {
       await store.bumpCounter('download_clicks');
     } catch (err) {
       req.log.error({ err }, 'download counter bump failed');
     }
-    return reply.header('Cache-Control', 'no-store').redirect(DOWNLOAD_URL, 302);
+
+    const upstream = await fetch(config.dmgUrl, { redirect: 'follow' });
+    if (!upstream.ok || !upstream.body) {
+      req.log.error({ status: upstream.status }, 'DMG fetch failed');
+      return reply.code(502).type('text/plain; charset=utf-8').send('Download temporarily unavailable.');
+    }
+
+    // Content-Length lets the browser show a real progress bar; it is absent on a chunked
+    // upstream, in which case we simply omit it rather than buffering the whole file to measure.
+    const len = upstream.headers.get('content-length');
+    if (len) reply.header('Content-Length', len);
+    return reply
+      .header('Cache-Control', 'no-store')
+      .header('Content-Disposition', 'attachment; filename="NotchSPI.dmg"')
+      .type('application/x-apple-diskimage')
+      .send(upstream.body);
+  });
+
+  // GET /update — release metadata for the in-app "check for updates", relayed from GitHub so the
+  // client never talks to (or links to) github.com. Shape is our own, not GitHub's:
+  //   { version: "2.6", tag: "v2.6", notes: "…" }
+  // No download URL is returned: the client already knows this origin (it just called it) and
+  // composes `<baseURL>/dl` itself, which keeps the response independent of proxy headers.
+  // Cached for 10 minutes — releases change a few times a month, and this keeps the
+  // unauthenticated GitHub API well clear of its 60-requests/hour/IP limit.
+  app.get('/update', async (req, reply) => {
+    const upstream = await fetch(config.releaseApiUrl, {
+      headers: { accept: 'application/vnd.github+json', 'user-agent': 'NotchSPI' },
+    });
+    if (!upstream.ok) {
+      req.log.error({ status: upstream.status }, 'release lookup failed');
+      return reply.code(502).send(errorBody('Could not read the latest release.', 'upstream_error'));
+    }
+    const rel = (await upstream.json()) as { tag_name?: unknown; body?: unknown };
+    const tag = typeof rel.tag_name === 'string' ? rel.tag_name : '';
+    if (!tag) {
+      return reply.code(502).send(errorBody('Latest release has no tag.', 'upstream_error'));
+    }
+    return reply.header('Cache-Control', 'public, max-age=600').send({
+      version: tag.replace(/^[vV]/, ''),
+      tag,
+      notes: typeof rel.body === 'string' ? rel.body : '',
+    });
   });
 
   // GET /stats — public, read-only tally of download-button clicks.
