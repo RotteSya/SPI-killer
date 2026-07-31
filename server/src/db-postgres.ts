@@ -1,5 +1,7 @@
 import pg from 'pg';
-import type { Account, DeviceSummary, RegisteredDevice, Store, TopUpSummary } from './db.ts';
+import type {
+  Account, DeviceSummary, RegisteredDevice, ReserveResult, Store, TopUpSummary,
+} from './db.ts';
 import { hashToken, newToken } from './db.ts';
 
 // Production store: Postgres via the standard `pg` driver. Works with any provider (Neon,
@@ -138,10 +140,21 @@ export class PostgresStore implements Store {
     });
   }
 
-  /** Lazily create the schema once per process; all public methods await this. */
+  /**
+   * Lazily create the schema once per process; all public methods await this. A FAILED attempt
+   * must not be cached: a warm serverless instance whose first request lost the connection would
+   * otherwise hold a permanently rejected promise and 500 every later request — captures,
+   * account reads, and Stripe webhooks alike — until the platform happened to recycle it.
+   */
   private ensureSchema(): Promise<void> {
     if (!this.ready) {
-      this.ready = this.pool.query(SCHEMA).then(() => undefined);
+      this.ready = this.pool.query(SCHEMA).then(
+        () => undefined,
+        (err: unknown) => {
+          this.ready = null; // let the next caller retry
+          throw err;
+        },
+      );
     }
     return this.ready;
   }
@@ -192,37 +205,61 @@ export class PostgresStore implements Store {
     return rows[0] ? rows[0].cli_enabled === true : null;
   }
 
-  async chargeForUsage(input: {
+  async reserveQuestions(input: { token: string; questions: number }): Promise<ReserveResult> {
+    await this.ensureSchema();
+    // One statement does the test and the deduction, so concurrent captures serialize on the
+    // row lock and only those with enough balance succeed. No read-modify-write window.
+    const { rows } = await this.pool.query<{ balance_questions: string }>(
+      `UPDATE devices SET balance_questions = balance_questions - $1, updated_at = now()
+       WHERE token_hash = $2 AND balance_questions >= $1
+       RETURNING balance_questions`,
+      [input.questions, hashToken(input.token)],
+    );
+    const row = rows[0];
+    if (row) return { ok: true, balanceQuestions: Number(row.balance_questions) };
+    // Zero rows means either an unknown token or an empty balance; only the cold path pays for
+    // telling them apart, and the client needs the distinction (401 re-register vs 402 top-up).
+    const probe = await this.pool.query(`SELECT 1 FROM devices WHERE token_hash = $1`, [
+      hashToken(input.token),
+    ]);
+    return { ok: false, reason: (probe.rowCount ?? 0) > 0 ? 'insufficient_quota' : 'unknown_token' };
+  }
+
+  async settleReservation(input: {
     token: string;
     questions: number;
     inputTokens: number;
     outputTokens: number;
     model: string;
-  }): Promise<number | null> {
+  }): Promise<void> {
     await this.ensureSchema();
-    return this.tx(async (client) => {
-      const { rows } = await client.query<DeviceRow>(
-        `SELECT id, balance_questions FROM devices WHERE token_hash = $1 FOR UPDATE`,
-        [hashToken(input.token)],
+    await this.tx(async (client) => {
+      const { rows } = await client.query<{ id: string }>(
+        `UPDATE devices SET total_questions = total_questions + $1,
+           total_input_tokens = total_input_tokens + $2,
+           total_output_tokens = total_output_tokens + $3,
+           updated_at = now()
+         WHERE token_hash = $4 RETURNING id`,
+        [input.questions, input.inputTokens, input.outputTokens, hashToken(input.token)],
       );
       const dev = rows[0];
-      if (!dev) return null;
-      const newBalance = Number(dev.balance_questions) - input.questions;
-      await client.query(
-        `UPDATE devices SET balance_questions = $1,
-           total_questions = total_questions + $2,
-           total_input_tokens = total_input_tokens + $3,
-           total_output_tokens = total_output_tokens + $4,
-           updated_at = now() WHERE id = $5`,
-        [newBalance, input.questions, input.inputTokens, input.outputTokens, dev.id],
-      );
+      if (!dev) return;
       await client.query(
         `INSERT INTO usage_events (device_id, questions, input_tokens, output_tokens, model)
          VALUES ($1, $2, $3, $4, $5)`,
         [dev.id, input.questions, input.inputTokens, input.outputTokens, input.model],
       );
-      return newBalance;
     });
+  }
+
+  async releaseReservation(input: { token: string; questions: number }): Promise<number | null> {
+    await this.ensureSchema();
+    const { rows } = await this.pool.query<{ balance_questions: string }>(
+      `UPDATE devices SET balance_questions = balance_questions + $1, updated_at = now()
+       WHERE token_hash = $2 RETURNING balance_questions`,
+      [input.questions, hashToken(input.token)],
+    );
+    return rows[0] ? Number(rows[0].balance_questions) : null;
   }
 
   async credit(input: {

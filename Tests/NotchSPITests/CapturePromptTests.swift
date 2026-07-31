@@ -71,10 +71,10 @@ final class CapturePromptTests: XCTestCase {
         XCTAssertTrue(claudeCLI.joined(separator: " ").contains(prompt.task))
         XCTAssertTrue(claudeCLI.joined(separator: " ").contains("/tmp/a.jpg"))
 
-        let direct = APIKeyRunner.makeRequest(
+        let direct = try XCTUnwrap(APIKeyRunner.makeRequest(
             proto: .anthropic, endpoint: APIKeyRunner.anthropicEndpoint,
             apiKey: "key", model: "model", prompt: prompt, imageBase64: "QUJD"
-        )
+        ))
         let directBody = try JSONSerialization.jsonObject(with: direct.httpBody!) as! [String: Any]
         XCTAssertEqual(directBody["system"] as? String, prompt.system)
         let messages = directBody["messages"] as! [[String: Any]]

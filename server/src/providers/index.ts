@@ -4,34 +4,52 @@ import { MockProvider } from './mock.ts';
 import { AnthropicProvider } from './anthropic.ts';
 import { OpenAIProvider } from './openai.ts';
 
-// Build the configured provider once at boot. A real vendor selected without a key falls back
-// to the mock provider with a warning, so the server always boots and stays testable rather
-// than crash-looping on a missing secret.
-export function makeProvider(config: Config, warn: (msg: string) => void): Provider {
+/**
+ * Build the configured provider once at boot.
+ *
+ * A real vendor selected WITHOUT a key still falls back to the mock so the server boots and
+ * `/healthz` stays reachable to diagnose it — but that fallback is now marked `degraded`, and
+ * the capture route refuses to serve (and never charges) while it is set. The mock streams
+ * plausible-looking text, so an emptied `ANTHROPIC_API_KEY` used to bill paying users a real
+ * question for a canned Chinese placeholder, with nothing failing loudly enough to notice.
+ * An intentional `OFFICIAL_PROVIDER=mock` is not degraded and serves normally.
+ */
+export function makeProvider(
+  config: Config,
+  warn: (msg: string) => void,
+): { provider: Provider; degraded: string | null } {
   switch (config.provider) {
     case 'anthropic':
       if (!config.anthropicKey) {
-        warn('OFFICIAL_PROVIDER=anthropic but ANTHROPIC_API_KEY is empty — using mock provider.');
-        return new MockProvider();
+        const why = 'OFFICIAL_PROVIDER=anthropic but ANTHROPIC_API_KEY is empty';
+        warn(`${why} — captures are DISABLED until it is set.`);
+        return { provider: new MockProvider(), degraded: why };
       }
-      return new AnthropicProvider(
-        config.anthropicKey,
-        config.anthropicBaseURL,
-        config.model,
-        config.maxTokens,
-      );
+      return {
+        provider: new AnthropicProvider(
+          config.anthropicKey,
+          config.anthropicBaseURL,
+          config.model,
+          config.maxTokens,
+        ),
+        degraded: null,
+      };
     case 'openai':
       if (!config.openaiKey) {
-        warn('OFFICIAL_PROVIDER=openai but OPENAI_API_KEY is empty — using mock provider.');
-        return new MockProvider();
+        const why = 'OFFICIAL_PROVIDER=openai but OPENAI_API_KEY is empty';
+        warn(`${why} — captures are DISABLED until it is set.`);
+        return { provider: new MockProvider(), degraded: why };
       }
-      return new OpenAIProvider(
-        config.openaiKey,
-        config.openaiBaseURL,
-        config.model,
-        config.maxTokens,
-      );
+      return {
+        provider: new OpenAIProvider(
+          config.openaiKey,
+          config.openaiBaseURL,
+          config.model,
+          config.maxTokens,
+        ),
+        degraded: null,
+      };
     default:
-      return new MockProvider();
+      return { provider: new MockProvider(), degraded: null };
   }
 }

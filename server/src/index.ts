@@ -33,12 +33,23 @@ export async function buildApp(overrides: { provider?: Provider } = {}) {
   if (storeKind === 'memory') {
     app.log.warn('storage: in-memory fallback — data is EPHEMERAL; set POSTGRES_URL for production');
   }
-  const provider = overrides.provider ?? makeProvider(config, (msg) => app.log.warn(msg));
+  // A test-supplied provider is always taken at face value; only the config-driven path can be
+  // degraded (a real vendor named without its key).
+  const built = overrides.provider
+    ? { provider: overrides.provider, degraded: null }
+    : makeProvider(config, (msg) => app.log.warn(msg));
   const payment: PaymentProvider =
     config.paymentProvider === 'stripe' && config.stripeSecretKey !== ''
       ? new StripePaymentProvider()
       : new StubPaymentProvider();
-  registerRoutes(app, { config, store, storeKind, provider, payment });
+  // Selling question packs while the webhook that credits them cannot be verified means taking
+  // money and never delivering. Loud at boot, and visible in /healthz.
+  if (config.paymentProvider === 'stripe' && config.stripeSecretKey !== '' && config.stripeWebhookSecret === '') {
+    app.log.error('STRIPE_WEBHOOK_SECRET is empty — purchases will be charged but NEVER credited');
+  }
+  registerRoutes(app, {
+    config, store, storeKind, provider: built.provider, providerDegraded: built.degraded, payment,
+  });
   app.addHook('onClose', async () => store.close());
   return app;
 }

@@ -86,8 +86,17 @@ enum CLIRunner {
         return map
     }
 
+    /// Run a short-lived probe (`--version`, `auth status`) and collect both streams.
+    ///
+    /// Both pipes are drained CONCURRENTLY and the child is given a deadline. Reading stdout to
+    /// EOF first — the previous shape — deadlocks as soon as a child fills its 64 KB stderr
+    /// buffer: it blocks writing stderr, so it never closes stdout, so neither side can move.
+    /// This runs inside `detect()`'s `withCheckedContinuation`, so a deadlock meant the
+    /// continuation never resumed and the capture path stayed wedged until the app was relaunched.
     @discardableResult
-    private static func runCapture(_ binPath: String, _ args: [String]) -> (code: Int32, out: String, err: String) {
+    private static func runCapture(
+        _ binPath: String, _ args: [String], timeout: TimeInterval = 8
+    ) -> (code: Int32, out: String, err: String) {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: binPath)
         p.arguments = args
@@ -98,10 +107,40 @@ enum CLIRunner {
         p.standardError = e
         p.standardInput = FileHandle.nullDevice
         do { try p.run() } catch { return (-1, "", "\(error)") }
-        let out = String(data: o.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        let err = String(data: e.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+
+        let lock = NSLock()
+        var outData = Data()
+        var errData = Data()
+        let group = DispatchGroup()
+        group.enter()
+        DispatchQueue.global(qos: .userInitiated).async {
+            let d = o.fileHandleForReading.readDataToEndOfFile()
+            lock.lock(); outData = d; lock.unlock()
+            group.leave()
+        }
+        group.enter()
+        DispatchQueue.global(qos: .userInitiated).async {
+            let d = e.fileHandleForReading.readDataToEndOfFile()
+            lock.lock(); errData = d; lock.unlock()
+            group.leave()
+        }
+
+        if group.wait(timeout: .now() + timeout) == .timedOut {
+            // Terminating closes the child's pipe ends, which unblocks both drains.
+            p.terminate()
+            if group.wait(timeout: .now() + 2) == .timedOut {
+                kill(p.processIdentifier, SIGKILL)
+                _ = group.wait(timeout: .now() + 2)
+            }
+        }
         p.waitUntilExit()
-        return (p.terminationStatus, out, err)
+        lock.lock()
+        defer { lock.unlock() }
+        return (
+            p.terminationStatus,
+            String(data: outData, encoding: .utf8) ?? "",
+            String(data: errData, encoding: .utf8) ?? ""
+        )
     }
 
     private static func detectOne(bin: String, versionArgs: [String], auth: (String) -> Bool?) -> CLIInfo {

@@ -1,4 +1,6 @@
-import type { Account, DeviceSummary, RegisteredDevice, Store, TopUpSummary } from './db.ts';
+import type {
+  Account, DeviceSummary, RegisteredDevice, ReserveResult, Store, TopUpSummary,
+} from './db.ts';
 import { hashToken, newToken } from './db.ts';
 
 // Pure-JS in-memory store. Used as the EPHEMERAL fallback on serverless platforms when no
@@ -75,19 +77,37 @@ export class MemoryStore implements Store {
     return enabled;
   }
 
-  async chargeForUsage(input: {
+  async reserveQuestions(input: { token: string; questions: number }): Promise<ReserveResult> {
+    const d = this.devices.get(hashToken(input.token));
+    if (!d) return { ok: false, reason: 'unknown_token' };
+    // Single-threaded JS: no statement can interleave between the guard and the deduction, so
+    // this matches the SQL backends' atomicity without any locking of its own.
+    if (d.balanceQuestions < input.questions) return { ok: false, reason: 'insufficient_quota' };
+    d.balanceQuestions -= input.questions;
+    d.updatedAt = new Date().toISOString();
+    return { ok: true, balanceQuestions: d.balanceQuestions };
+  }
+
+  async settleReservation(input: {
     token: string;
     questions: number;
     inputTokens: number;
     outputTokens: number;
     model: string;
-  }): Promise<number | null> {
+  }): Promise<void> {
     const d = this.devices.get(hashToken(input.token));
-    if (!d) return null;
-    d.balanceQuestions -= input.questions;
+    if (!d) return;
     d.totalQuestions += input.questions;
     d.totalInputTokens += input.inputTokens;
     d.totalOutputTokens += input.outputTokens;
+    d.updatedAt = new Date().toISOString();
+  }
+
+  async releaseReservation(input: { token: string; questions: number }): Promise<number | null> {
+    const d = this.devices.get(hashToken(input.token));
+    if (!d) return null;
+    d.balanceQuestions += input.questions;
+    d.updatedAt = new Date().toISOString();
     return d.balanceQuestions;
   }
 

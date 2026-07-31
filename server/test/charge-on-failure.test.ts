@@ -19,12 +19,38 @@ process.env.CAPTURE_CONCURRENCY_PER_TOKEN = '1000';
 const { buildApp } = await import('../src/index.ts');
 
 // Scripted provider whose behavior is flipped per test via `mode`.
-let mode: 'throw' | 'empty' | 'ok' = 'ok';
+let mode: 'throw' | 'empty' | 'ok' | 'slow' | 'answerThenStall' = 'ok';
+
+/** Comfortably past the route's MIN_BILLABLE_CHARS — a complete answer, not a false start. */
+const LONG_ANSWER = 'x'.repeat(400);
+
+/** Resolve after `ms`, or reject the moment the client goes away — what a real vendor client does. */
+function sleepHonoringAbort(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    signal.addEventListener('abort', () => {
+      clearTimeout(timer);
+      reject(new Error('aborted'));
+    });
+  });
+}
+
 const provider: Provider = {
   name: 'scripted',
-  async stream(_req: CaptureRequest, onDelta: (t: string) => void): Promise<Usage> {
+  async stream(_req: CaptureRequest, onDelta: (t: string) => void, signal: AbortSignal): Promise<Usage> {
     if (mode === 'throw') throw new Error('vendor exploded');
-    if (mode === 'ok') onDelta('hello');
+    if (mode === 'slow') {
+      // Hold the quota reservation open long enough for another request to race it.
+      await sleepHonoringAbort(120, signal);
+      onDelta('hello');
+    } else if (mode === 'answerThenStall') {
+      // Deliver a full answer, then keep the stream open. Models the client reading the answer
+      // and closing the connection rather than waiting for the trailing usage frame.
+      onDelta(LONG_ANSWER);
+      await sleepHonoringAbort(2_000, signal);
+    } else if (mode === 'ok') {
+      onDelta('hello');
+    }
     // 'empty' resolves with usage but never emits a delta (e.g. a content-filter block).
     return { inputTokens: 5, outputTokens: 7 };
   },
@@ -102,4 +128,72 @@ test('a normal answer charges exactly one question', async () => {
   const acct = await balance(token);
   assert.equal(acct.balance_questions, 2);
   assert.equal(acct.total_questions, 1);
+});
+
+test('a client that hangs up before receiving an answer gets its question back', async () => {
+  const token = await register();
+  mode = 'slow';
+  const ctrl = new AbortController();
+  const inflight = fetch(`${base}/v1/captures`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ system: 's', task: 't', image_base64: 'QUJD', image_media_type: 'image/jpeg' }),
+    signal: ctrl.signal,
+  });
+  // Walk away while the vendor is still working. The question was already held at this point,
+  // so the refund path in the route's `finally` is the only thing that gives it back.
+  setTimeout(() => ctrl.abort(), 40);
+  await assert.rejects(inflight);
+  await new Promise((r) => setTimeout(r, 300)); // let the server finish its cleanup
+
+  const acct = await balance(token);
+  assert.equal(acct.balance_questions, 3, 'an abandoned attempt must not cost a question');
+  assert.equal(acct.total_questions, 0);
+});
+
+test('a client that hangs up AFTER getting its answer still pays for it', async () => {
+  const token = await register();
+  mode = 'answerThenStall';
+  const ctrl = new AbortController();
+  // Node flushes the response headers with the FIRST body write, so this resolves as soon as the
+  // answer delta goes out — unlike the no-answer case above, where the promise is still pending
+  // when the abort lands. Read the stream, then walk away mid-answer.
+  const res = await fetch(`${base}/v1/captures`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ system: 's', task: 't', image_base64: 'QUJD', image_media_type: 'image/jpeg' }),
+    signal: ctrl.signal,
+  });
+  assert.equal(res.status, 200);
+  // The answer is already on screen; the client just stops listening. Refunding here would make
+  // `curl --max-time 2` in a loop a free-answer tap, since the useful text arrives first.
+  ctrl.abort();
+  await new Promise((r) => setTimeout(r, 300));
+
+  const acct = await balance(token);
+  assert.equal(acct.balance_questions, 2, 'a delivered answer costs a question even unacknowledged');
+  assert.equal(acct.total_questions, 1);
+});
+
+test('captures racing on the last question cannot overspend it', async () => {
+  const token = await register();
+  mode = 'slow';
+  // Burn the grant down to a single question, then fire four captures at once. Under the old
+  // read-then-charge order every one of them passed the same stale balance check and the balance
+  // landed at -3; the answers were generated and the vendor billed for all four.
+  mode = 'ok';
+  await capture(token);
+  await capture(token);
+  assert.equal((await balance(token)).balance_questions, 1);
+
+  mode = 'slow';
+  const bodies = await Promise.all([capture(token), capture(token), capture(token), capture(token)]);
+  const charged = bodies.filter((b) => b.includes('"questions_charged":1')).length;
+  const refused = bodies.filter((b) => b.includes('insufficient_quota')).length;
+  assert.equal(charged, 1, 'exactly one racer may spend the last question');
+  assert.equal(refused, 3);
+
+  const acct = await balance(token);
+  assert.equal(acct.balance_questions, 0, 'the balance must never go negative');
+  assert.equal(acct.total_questions, 3);
 });

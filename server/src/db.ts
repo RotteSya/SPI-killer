@@ -71,6 +71,14 @@ export interface TopUpSummary {
   deviceTotalQuestions: number;
 }
 
+/**
+ * Outcome of a quota hold. `balanceQuestions` is the balance AFTER the hold, which is exactly
+ * what the client's `usage` event reports — no second read, so no window for it to drift.
+ */
+export type ReserveResult =
+  | { ok: true; balanceQuestions: number }
+  | { ok: false; reason: 'unknown_token' | 'insufficient_quota' };
+
 export interface Store {
   registerDevice(input: {
     platform: string;
@@ -82,18 +90,34 @@ export interface Store {
   getAccount(token: string): Promise<Account | null>;
 
   /**
-   * Atomically deduct `questions`, add to lifetime totals, and append a usage row.
-   * Returns the new question balance, or null if the token is invalid. The balance may go
-   * negative when a capture was already in flight as it hit zero; the pre-request gate stops
-   * the NEXT capture — honest accounting over silent clamping.
+   * Place a HOLD on `questions` before the answer is generated — a single atomic statement that
+   * both tests the balance and deducts it, so N concurrent captures on a balance of 1 produce
+   * exactly one winner. Reading the balance and deducting it separately (the previous design)
+   * let every racer pass the same stale check and drove the balance negative once per racer.
+   *
+   * A hold is provisional: `settleReservation` makes it permanent, `releaseReservation` gives
+   * it back. Exactly one of the two must run for every successful reservation.
    */
-  chargeForUsage(input: {
+  reserveQuestions(input: { token: string; questions: number }): Promise<ReserveResult>;
+
+  /**
+   * Turn a hold into a permanent charge: accumulate lifetime totals and append the usage row.
+   * The balance already moved at reservation time, so this never touches it.
+   */
+  settleReservation(input: {
     token: string;
     questions: number;
     inputTokens: number;
     outputTokens: number;
     model: string;
-  }): Promise<number | null>;
+  }): Promise<void>;
+
+  /**
+   * Return an unused hold to the balance (the vendor failed, or produced no answer). Returns the
+   * restored balance, or null if the token is unknown. Never charges — "失败不扣题" is enforced
+   * here rather than by declining to charge, so the refund is auditable.
+   */
+  releaseReservation(input: { token: string; questions: number }): Promise<number | null>;
 
   /**
    * Credit a purchased question pack — IDEMPOTENT on `reference`: a second call with the same

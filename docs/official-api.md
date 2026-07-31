@@ -92,6 +92,14 @@ data: [DONE]
   "insufficient_quota"`）。
 - 同一令牌并发截图超过 `CAPTURE_CONCURRENCY_PER_TOKEN`（默认 3）：返回 HTTP `429`
   `rate_limited`（在流开始前，仍是通用 JSON 错误格式）。
+- 服务端未配置好模型厂商 Key（`OFFICIAL_PROVIDER` 指定了真实厂商但对应 Key 为空）：返回
+  HTTP `503` `upstream_error`，**不扣题**。此时 `GET /healthz` 同样返回 503 并带
+  `provider_error` 字段说明缺哪个变量。客户端无需特殊处理——`upstream_error` 是已知错误码。
+
+**扣题时序（服务端实现约定）：** 采用「预扣 — 结算」。请求进入时用一条原子 SQL
+（`WHERE balance_questions >= n`）先扣住 1 题，流结束后确认为答案则结算，失败则退回。
+对客户端而言语义与「失败不扣题」完全一致，但并发请求无法把余额扣成负数。唯一的行为差异：
+客户端在收到足量答案文本后主动断开连接，这一题仍然计费（答案已送达）。
 
 ## GET /topup?device=\<token\>&lang=\<zh|ja|en\> — 题包购买网页（非 API）
 

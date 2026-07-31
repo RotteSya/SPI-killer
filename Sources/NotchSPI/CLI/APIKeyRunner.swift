@@ -28,6 +28,9 @@ enum APIKeyRunner {
 
     /// Build the streaming HTTP request for the chosen protocol/endpoint. The screenshot travels
     /// inline as base64 JPEG (ScreenCapture always writes JPEG), so no file paths leak to the vendor.
+    /// Returns nil when `endpoint` is not a usable URL. It comes from a free-text settings field
+    /// (设置 → 高级 → 自定义端点), so a stray space or a full-width character typed by an IME used
+    /// to crash the app on the next hotkey press — this is user input, not a compile-time constant.
     static func makeRequest(
         proto: APIWireProtocol,
         endpoint: String,
@@ -35,9 +38,10 @@ enum APIKeyRunner {
         model: String,
         prompt: CapturePrompt,
         imageBase64: String
-    ) -> URLRequest {
+    ) -> URLRequest? {
+        guard let url = URL(string: endpoint), url.scheme != nil, url.host != nil else { return nil }
         let userText = "Analyze the attached screenshot image, then \(prompt.task)"
-        var req = URLRequest(url: URL(string: endpoint)!)
+        var req = URLRequest(url: url)
         let body: [String: Any]
         if proto == .anthropic {
             req.setValue(apiKey, forHTTPHeaderField: "x-api-key")
@@ -164,12 +168,20 @@ enum APIKeyRunner {
                 await MainActor.run { onDone(false, L10n.t("无法读取截图文件", "スクリーンショットを読み込めません", "Could not read the screenshot file")) }
                 return
             }
-            let request = makeRequest(
+            guard let request = makeRequest(
                 proto: proto, endpoint: endpoint, apiKey: apiKey,
                 model: model,
                 prompt: prompt,
                 imageBase64: imageData.base64EncodedString()
-            )
+            ) else {
+                await MainActor.run {
+                    onDone(false, L10n.t(
+                        "接口地址无效，请在「设置 → 高级」中检查自定义端点。",
+                        "エンドポイントURLが不正です。「設定 → 詳細」で確認してください。",
+                        "That endpoint URL isn't valid — check the custom endpoint in Settings → Advanced."))
+                }
+                return
+            }
             #if DEBUG
             print("[NotchSPI] direct API run \(model) → \(request.url?.host ?? "?")")
             #endif

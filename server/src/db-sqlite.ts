@@ -1,7 +1,9 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { Account, DeviceSummary, RegisteredDevice, Store, TopUpSummary } from './db.ts';
+import type {
+  Account, DeviceSummary, RegisteredDevice, ReserveResult, Store, TopUpSummary,
+} from './db.ts';
 import { hashToken, newToken } from './db.ts';
 
 // Local/self-hosted store: SQLite via the Node built-in driver. Kept in its own module so
@@ -143,35 +145,61 @@ export class SqliteStore implements Store {
     return enabled;
   }
 
-  async chargeForUsage(input: {
+  async reserveQuestions(input: { token: string; questions: number }): Promise<ReserveResult> {
+    // Test and deduct in one statement (same contract as PostgresStore): a balance guard in the
+    // WHERE clause is what makes concurrent captures on a balance of 1 produce one winner.
+    const row = this.db
+      .prepare(
+        `UPDATE devices SET balance_questions = balance_questions - ?, updated_at = ?
+         WHERE token_hash = ? AND balance_questions >= ?
+         RETURNING balance_questions`,
+      )
+      .get(input.questions, new Date().toISOString(), hashToken(input.token), input.questions) as
+      | { balance_questions: number }
+      | undefined;
+    if (row) return { ok: true, balanceQuestions: row.balance_questions };
+    const exists = this.deviceByToken(input.token) !== null;
+    return { ok: false, reason: exists ? 'insufficient_quota' : 'unknown_token' };
+  }
+
+  async settleReservation(input: {
     token: string;
     questions: number;
     inputTokens: number;
     outputTokens: number;
     model: string;
-  }): Promise<number | null> {
-    return this.tx(() => {
+  }): Promise<void> {
+    this.tx(() => {
       const dev = this.deviceByToken(input.token);
-      if (!dev) return null;
+      if (!dev) return;
       const now = new Date().toISOString();
-      const newBalance = dev.balance_questions - input.questions;
       this.db
         .prepare(
-          `UPDATE devices SET balance_questions = ?,
-             total_questions = total_questions + ?,
+          `UPDATE devices SET total_questions = total_questions + ?,
              total_input_tokens = total_input_tokens + ?,
              total_output_tokens = total_output_tokens + ?,
              updated_at = ? WHERE id = ?`,
         )
-        .run(newBalance, input.questions, input.inputTokens, input.outputTokens, now, dev.id);
+        .run(input.questions, input.inputTokens, input.outputTokens, now, dev.id);
       this.db
         .prepare(
           `INSERT INTO usage_events (device_id, questions, input_tokens, output_tokens, model, created_at)
            VALUES (?, ?, ?, ?, ?, ?)`,
         )
         .run(dev.id, input.questions, input.inputTokens, input.outputTokens, input.model, now);
-      return newBalance;
     });
+  }
+
+  async releaseReservation(input: { token: string; questions: number }): Promise<number | null> {
+    const row = this.db
+      .prepare(
+        `UPDATE devices SET balance_questions = balance_questions + ?, updated_at = ?
+         WHERE token_hash = ? RETURNING balance_questions`,
+      )
+      .get(input.questions, new Date().toISOString(), hashToken(input.token)) as
+      | { balance_questions: number }
+      | undefined;
+    return row ? row.balance_questions : null;
   }
 
   async credit(input: {

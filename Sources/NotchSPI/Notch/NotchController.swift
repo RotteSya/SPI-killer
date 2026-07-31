@@ -10,6 +10,11 @@ final class NotchController: NSObject {
     private var hovering = false
     private var pinned = false
     private var running = false
+    /// Guarantees `running` always comes back — see `beginRun()`.
+    private var runWatchdog: Timer?
+    /// Bumped for every capture, so a run abandoned by the watchdog can't reach back in and
+    /// clobber the state of the one the user started afterwards.
+    private var runGeneration: UInt64 = 0
     private var visible = true
     private var collapseWork: DispatchWorkItem?
     private var settingsController: MainSettingsWindowController?
@@ -754,7 +759,8 @@ final class NotchController: NSObject {
         )
         let personalityRun = sessionToken.map { PersonalityCaptureRun(token: $0, prompt: prompt) }
 
-        running = true
+        beginRun()
+        let generation = runGeneration
         pinned = true
         if !visible { visible = true; panel.orderFrontRegardless() }
         model.answer = ""
@@ -877,7 +883,9 @@ final class NotchController: NSObject {
             let briefRun = snapshot.mode != "personality" && snapshot.depth == "brief"
             // Shared by both channels so CLI mode and direct-API mode render identically.
             let onDelta: (String) -> Void = { [weak self] delta in
-                guard let self else { return }
+                // A run the watchdog gave up on may still be streaming; its output must not land
+                // in the panel the user is now watching.
+                guard let self, self.runGeneration == generation else { return }
                 if let personalityRun { personalityRun.append(delta, to: self.model) }
                 else { self.model.answer += delta }
                 self.model.status = .streaming
@@ -887,7 +895,9 @@ final class NotchController: NSObject {
                 self.resizeToFit()
             }
             let onDone: (Bool, String) -> Void = { [weak self] ok, stderr in
-                guard let self else { return }
+                // Same guard as onDelta: a timed-out run must not reset `running` or overwrite the
+                // status of the capture the user started after it.
+                guard let self, self.runGeneration == generation else { return }
                 if !ok, case .cli = snapshot.channel {
                     // The failure may mean the CLI was uninstalled or logged out since the
                     // cached probe — drop the cache so the next press re-checks.
@@ -948,7 +958,7 @@ final class NotchController: NSObject {
                     self.model.statusText += " · " + L10n.statusCopied
                 }
                 self.resizeToFit()
-                self.running = false
+                self.endRun()
                 self.pinned = false
                 try? FileManager.default.removeItem(atPath: shot.path)
                 self.scheduleCollapseAfterAnswer()
@@ -1036,6 +1046,40 @@ final class NotchController: NSObject {
         return true
     }
 
+    /// Hard deadline for one capture, comfortably past the 120 s request timeout.
+    ///
+    /// `running` makes the hotkey a deliberate no-op while a capture is in flight, so any await
+    /// in the pipeline that never returns — a ScreenCaptureKit enumeration blocked on a busy
+    /// WindowServer, a CLI probe, a stream held open by URLSession's week-long resource timeout —
+    /// used to disable the app silently and permanently. The user sees nothing at all: no panel,
+    /// no error, no log. This timer is what makes that state impossible.
+    private static let runDeadline: TimeInterval = 150
+
+    private func beginRun() {
+        running = true
+        runGeneration &+= 1
+        runWatchdog?.invalidate()
+        runWatchdog = Timer.scheduledTimer(withTimeInterval: Self.runDeadline, repeats: false) {
+            [weak self] _ in
+            // Scheduled from the main actor, so it fires on the main run loop; assumeIsolated
+            // states that rather than deferring the recovery by a hop.
+            MainActor.assumeIsolated {
+                guard let self, self.running else { return }
+                self.runGeneration &+= 1 // orphan the stuck run's callbacks
+                self.finishError(L10n.t(
+                    "这次讲题超时了，没有消耗额度。请再按一次快捷键重试。",
+                    "今回はタイムアウトしました(質問数は消費されていません)。もう一度ショートカットを押してください。",
+                    "That attempt timed out and wasn't charged. Press the hotkey again to retry."))
+            }
+        }
+    }
+
+    private func endRun() {
+        runWatchdog?.invalidate()
+        runWatchdog = nil
+        running = false
+    }
+
     private func finishError(_ msg: String) {
         // Personality answer storage is reserved for the untouched model protocol stream. Local
         // capture/preflight errors belong in status, never in the choice body or future context.
@@ -1044,7 +1088,7 @@ final class NotchController: NSObject {
         model.status = .error
         model.statusText = model.mode == "personality" ? msg : L10n.statusError
         resizeToFit()
-        running = false
+        endRun()
         pinned = false
         if !hovering {
             let delay = Appearance.collapseDelay

@@ -37,7 +37,15 @@ curl -N -X POST localhost:8787/v1/captures -H "Authorization: Bearer dev_…" \
   -d '{"system":"你是老师","task":"讲解","image_base64":"<JPEG base64>","image_media_type":"image/jpeg"}'
 ```
 
-`npm test` 跑单元 + HTTP 集成测试（35 个用例，覆盖题包目录、SSE 解析、扣题原子性、401/402、充值恢复）。
+`npm test` 跑单元 + HTTP 集成测试（112 个用例，覆盖题包目录、SSE 解析、扣题原子性与并发双花、
+401/402/503、充值恢复、厂商 Key 缺失时拒绝服务）。
+
+存储层测试默认只跑 SQLite 和内存两个后端。生产用的 `PostgresStore` 需要一个真实数据库，
+指向一个**一次性**库即可让同一套用例也跑在它上面（该套件会 TRUNCATE 所有表，库名必须含 `test`）：
+
+```sh
+TEST_POSTGRES_URL='postgres://…/notchspi_test?sslmode=disable' npm test
+```
 `npm run typecheck` 做类型检查。
 
 ## 端点（对齐契约）

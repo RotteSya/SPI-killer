@@ -35,12 +35,20 @@ enum KeychainStore {
         return value
     }
 
-    /// Upsert; nil or empty deletes the item. Delete-then-add keeps it idempotent.
-    static func write(_ value: String?, account: String) {
+    /// Upsert; nil or empty deletes the item. Returns whether the Keychain now holds exactly what
+    /// was asked for.
+    ///
+    /// Callers use the result to decide whether it is safe to destroy the value's other copy —
+    /// the device token is the only key to purchased quota, so a write that failed (locked
+    /// keychain, denied ACL after a re-sign, full keychain) must never be mistaken for a write
+    /// that succeeded. Update-in-place is tried first: the old delete-then-add left a window with
+    /// no item at all, and turned a failed add into silent, permanent loss of the secret.
+    @discardableResult
+    static func write(_ value: String?, account: String) -> Bool {
         #if DEBUG
         if ephemeral != nil {
             ephemeral?[account] = (value?.isEmpty ?? true) ? nil : value
-            return
+            return true
         }
         #endif
         let base: [String: Any] = [
@@ -48,11 +56,18 @@ enum KeychainStore {
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
         ]
-        SecItemDelete(base as CFDictionary)
-        guard let value, !value.isEmpty, let data = value.data(using: .utf8) else { return }
+        guard let value, !value.isEmpty, let data = value.data(using: .utf8) else {
+            let status = SecItemDelete(base as CFDictionary)
+            return status == errSecSuccess || status == errSecItemNotFound
+        }
+        let updated = SecItemUpdate(
+            base as CFDictionary,
+            [kSecValueData as String: data] as CFDictionary)
+        if updated == errSecSuccess { return true }
+        guard updated == errSecItemNotFound else { return false }
         var add = base
         add[kSecValueData as String] = data
         add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(add as CFDictionary, nil)
+        return SecItemAdd(add as CFDictionary, nil) == errSecSuccess
     }
 }

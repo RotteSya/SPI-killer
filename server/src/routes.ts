@@ -5,7 +5,7 @@ import type { Store } from './db.ts';
 import type { Provider, CaptureRequest } from './providers/types.ts';
 import type { PaymentProvider, PageBanner, PageMode } from './payments.ts';
 import type { StoreKind } from './storage.ts';
-import { ApiError, errorBody, beginSSE, SSE_DONE } from './http.ts';
+import { ApiError, errorBody, beginSSE, SSE_DONE, type StreamEvent } from './http.ts';
 import { requireAccount } from './auth.ts';
 import { findPack } from './pricing.ts';
 import { isValidTokenShape, normalizeLang } from './payments.ts';
@@ -19,6 +19,8 @@ export interface AppContext {
   store: Store;
   storeKind: StoreKind;
   provider: Provider;
+  /** Non-null when a real vendor was configured without its key; captures refuse to run. */
+  providerDegraded: string | null;
   payment: PaymentProvider;
 }
 
@@ -57,6 +59,21 @@ function str(v: unknown, fallback = ''): string {
   return typeof v === 'string' ? v : fallback;
 }
 
+// Capture input bounds. The prompt cap is generous next to the client's own prompts (a few KB)
+// but small enough that a crafted request cannot turn a one-question price into a six-figure
+// token bill. The image cap is ~8 MB of base64, comfortably above the client's ~1568px JPEG.
+const MAX_PROMPT_CHARS = 32_000;
+const MAX_IMAGE_B64_CHARS = 8 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
+/**
+ * How much delivered text makes a disconnected stream count as an answer the user received.
+ * Below it, a hang-up is treated as a failed attempt and refunded; above it, the answer was on
+ * screen and the question is charged. Chosen to sit above a false start (a greeting, the first
+ * reasoning tokens) and well below any complete answer this product produces.
+ */
+const MIN_BILLABLE_CHARS = 200;
+
 /** Constant-time compare of a caller-supplied admin token against the configured secret. */
 function adminTokenMatches(provided: string, expected: string): boolean {
   if (!provided || !expected) return false;
@@ -66,7 +83,7 @@ function adminTokenMatches(provided: string, expected: string): boolean {
 }
 
 export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
-  const { config, store, storeKind, provider, payment } = ctx;
+  const { config, store, storeKind, provider, providerDegraded, payment } = ctx;
   const stripeLive = payment.name === 'stripe' && config.stripeSecretKey !== '';
   // The admin grant console exists only when a secret is configured — otherwise /admin 404s.
   const adminEnabled = config.adminToken !== '';
@@ -123,13 +140,19 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     return reply.header('Cache-Control', 'no-store').send({ download_clicks: downloadClicks });
   });
 
-  app.get('/healthz', async () => ({
-    ok: true,
-    provider: provider.name,
-    db: storeKind,
-    payments: stripeLive ? 'stripe' : config.allowStubTopUp ? 'stub' : 'disabled',
-    webhook: stripeLive ? (config.stripeWebhookSecret !== '' ? 'configured' : 'MISSING_SECRET') : 'n/a',
-  }));
+  app.get('/healthz', async (_req, reply) => {
+    const body = {
+      ok: providerDegraded === null,
+      provider: provider.name,
+      // Present only when broken, so a healthy deployment's output is unchanged.
+      ...(providerDegraded === null ? {} : { provider_error: providerDegraded }),
+      db: storeKind,
+      payments: stripeLive ? 'stripe' : config.allowStubTopUp ? 'stub' : 'disabled',
+      webhook: stripeLive ? (config.stripeWebhookSecret !== '' ? 'configured' : 'MISSING_SECRET') : 'n/a',
+    };
+    // 503 so an uptime check pages on a misconfigured deploy instead of reporting it healthy.
+    return reply.code(providerDegraded === null ? 200 : 503).send(body);
+  });
 
   // POST /v1/devices — anonymous registration, grants the free question quota. No auth, so a
   // per-IP cap keeps this from being a free-quota faucet (best-effort; see rateLimit.ts).
@@ -175,8 +198,19 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
   });
 
   // POST /v1/captures — streamed answer; one successful capture costs one question. Auth.
+  //
+  // Billing is RESERVE-then-SETTLE. The question is held against the balance in one atomic
+  // statement before the vendor is called, and only converted into a charge once an answer has
+  // actually been delivered; anything else refunds the hold. The previous order (stream first,
+  // charge at the very end) had two holes: concurrent captures all passed the same stale balance
+  // check, and a client that hung up mid-stream took the failure path and got its answer free.
   app.post('/v1/captures', async (req, reply) => {
-    const { token, account } = await requireAccount(req, store);
+    const { token } = await requireAccount(req, store);
+    // Refuse rather than bill a real question for the mock provider's canned placeholder.
+    if (providerDegraded !== null) {
+      req.log.error({ providerDegraded }, 'capture refused: model provider is not configured');
+      throw new ApiError(503, '答案生成服务暂时不可用，本次未消耗额度', 'upstream_error');
+    }
     const body = (req.body ?? {}) as CaptureBody;
 
     const captureReq: CaptureRequest = {
@@ -190,76 +224,128 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     if (!captureReq.system) throw new ApiError(400, '缺少 system 提示词');
     if (!captureReq.task) throw new ApiError(400, '缺少 task 文本');
     if (!captureReq.imageBase64) throw new ApiError(400, '缺少截图数据');
-
-    // Pre-request gate: no questions left is refused as JSON 402 BEFORE any streaming.
-    if (account.balanceQuestions <= 0) {
-      throw new ApiError(402, '额度已用完，请充值后继续', 'insufficient_quota');
+    // Size caps. One capture costs the user exactly one question no matter how large the prompt,
+    // so an unbounded text leg is an unbounded vendor bill for a fixed price. The image leg is
+    // additionally pinned to a media type the vendors actually accept.
+    if (captureReq.system.length > MAX_PROMPT_CHARS) throw new ApiError(400, 'system 提示词过长');
+    if (captureReq.task.length > MAX_PROMPT_CHARS) throw new ApiError(400, 'task 文本过长');
+    if (captureReq.imageBase64.length > MAX_IMAGE_B64_CHARS) throw new ApiError(400, '截图数据过大');
+    if (!ALLOWED_IMAGE_TYPES.has(captureReq.imageMediaType)) {
+      throw new ApiError(400, '不支持的图片格式');
     }
 
-    // Concurrency cap: stop one token from opening several streams at once to drive its balance
-    // deeply negative in parallel. Refused as JSON 429 BEFORE hijacking the socket.
+    // Concurrency cap: stop one token from opening several streams at once. Refused as JSON 429
+    // BEFORE hijacking the socket, and before the hold, so a burst can't churn the database.
     if (!captureLimiter.tryAcquire(token)) {
       throw new ApiError(429, '同一设备的并发请求过多，请等上一题完成后再试', 'rate_limited');
     }
 
-    // Take over the socket for manual SSE writing.
-    reply.hijack();
-    const send = beginSSE(reply);
+    // From here every exit path must release the concurrency slot.
+    let balanceAfterHold: number;
+    try {
+      const hold = await store.reserveQuestions({ token, questions: 1 });
+      if (!hold.ok) {
+        throw hold.reason === 'insufficient_quota'
+          ? new ApiError(402, '额度已用完，请充值后继续', 'insufficient_quota')
+          : new ApiError(401, '设备令牌无效', 'invalid_token');
+      }
+      balanceAfterHold = hold.balanceQuestions;
+    } catch (err) {
+      captureLimiter.release(token);
+      throw err;
+    }
 
-    // Abort the upstream call only on a real client disconnect. We listen on the RESPONSE
-    // socket (not req.raw, whose 'close' fires as soon as the request body is fully read) and
-    // guard with `done` so our own end() doesn't trigger an abort.
+    // Take over the socket for manual SSE writing. hijack() only tells Fastify not to reply, so
+    // it cannot fail; everything after it CAN — writeHead throws on a socket whose peer went away
+    // during the reservation round trip above — and a throw there would strand the hold, silently
+    // costing the user a question. So the hold and the try/finally that settles it are adjacent,
+    // with nothing fallible in between.
+    reply.hijack();
+
+    const model = `${provider.name}:${config.model}`;
     const abort = new AbortController();
+    let settled = false;
+    let deliveredChars = 0;
     let done = false;
-    reply.raw.on('close', () => {
-      if (!done) abort.abort();
-    });
+    let send: (event: StreamEvent) => void = () => {};
+    const settle = async (inputTokens: number, outputTokens: number): Promise<void> => {
+      await store.settleReservation({ token, questions: 1, inputTokens, outputTokens, model });
+      settled = true;
+    };
 
     try {
-      // A question is charged ONLY for an answer that actually produced text. A vendor can
-      // resolve an HTTP-200 stream with no deltas (empty completion / content-filter block);
-      // billing that would break the product's "失败不扣题" promise.
-      let sawDelta = false;
+      const rawSend = beginSSE(reply);
+      // Once the peer is gone the socket is destroyed, and a raw write to it surfaces as an
+      // asynchronous 'error' with no listener — which would take down the whole warm instance and
+      // every request sharing it. Terminal writes are therefore always best-effort.
+      send = (event: StreamEvent): void => {
+        if (reply.raw.writableEnded || reply.raw.destroyed) return;
+        try {
+          rawSend(event);
+        } catch {
+          /* peer vanished mid-write */
+        }
+      };
+
+      // Abort the upstream call only on a real client disconnect. We listen on the RESPONSE
+      // socket (not req.raw, whose 'close' fires as soon as the request body is fully read) and
+      // guard with `done` so our own end() doesn't trigger an abort.
+      reply.raw.on('close', () => {
+        if (!done) abort.abort();
+      });
+
       const usage = await provider.stream(
         captureReq,
         (text) => {
-          if (text.length > 0) sawDelta = true;
+          deliveredChars += text.length;
           send({ type: 'delta', text });
         },
         abort.signal,
       );
-      if (!sawDelta) {
-        send({ type: 'error', error: { message: '答案生成服务未返回内容，本次未消耗额度，请重试', code: 'upstream_error' } });
-      } else {
-        const newBalance = await store.chargeForUsage({
-          token,
-          questions: 1,
-          inputTokens: usage.inputTokens,
-          outputTokens: usage.outputTokens,
-          model: `${provider.name}:${config.model}`,
+      // A vendor can resolve an HTTP-200 stream with no deltas (empty completion, content-filter
+      // block). That is not an answer, so it is not a charge.
+      if (deliveredChars === 0) {
+        send({
+          type: 'error',
+          error: { message: '答案生成服务未返回内容，本次未消耗额度，请重试', code: 'upstream_error' },
         });
-        if (newBalance === null) {
-          // Token vanished mid-request (deleted); report as a stream error, no charge applied.
-          send({ type: 'error', error: { message: '设备令牌无效', code: 'invalid_token' } });
-        } else {
-          send({
-            type: 'usage',
-            input_tokens: usage.inputTokens,
-            output_tokens: usage.outputTokens,
-            questions_charged: 1,
-            balance_questions: newBalance,
-          });
-          reply.raw.write(SSE_DONE);
-        }
+      } else {
+        await settle(usage.inputTokens, usage.outputTokens);
+        send({
+          type: 'usage',
+          input_tokens: usage.inputTokens,
+          output_tokens: usage.outputTokens,
+          questions_charged: 1,
+          balance_questions: balanceAfterHold,
+        });
+        if (!reply.raw.writableEnded && !reply.raw.destroyed) reply.raw.write(SSE_DONE);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : '模型服务错误';
-      // On failure we do NOT charge — a broken answer never costs a question.
-      send({ type: 'error', error: { message, code: 'upstream_error' } });
+      // A client that walked away AFTER receiving a usable answer keeps the charge: it was
+      // delivered, and refunding it would make `curl --max-time 2` in a loop a free-answer tap.
+      // A vendor failure always refunds, so "失败不扣题" still holds for every real failure.
+      if (abort.signal.aborted && deliveredChars >= MIN_BILLABLE_CHARS) {
+        // Token counts are unknown on this path (the vendor never reported usage); the question
+        // count is what bills, so it stays exact and only the lifetime token stats under-count.
+        await settle(0, 0).catch((e: unknown) => {
+          req.log.error({ err: e }, 'settle failed after a delivered answer; hold will be refunded');
+        });
+        req.log.info({ deliveredChars }, 'client disconnected after a delivered answer; charge kept');
+      } else {
+        const message = err instanceof Error ? err.message : '模型服务错误';
+        send({ type: 'error', error: { message, code: 'upstream_error' } });
+      }
     } finally {
       done = true;
+      if (!settled) {
+        // Refund the hold. If this throws, the user is short exactly one question and the log
+        // line is the record an operator needs to make it right via /admin/grant.
+        await store
+          .releaseReservation({ token, questions: 1 })
+          .catch((e: unknown) => req.log.error({ err: e }, 'quota hold refund FAILED'));
+      }
       captureLimiter.release(token);
-      reply.raw.end();
+      if (!reply.raw.writableEnded && !reply.raw.destroyed) reply.raw.end();
     }
   });
 
@@ -327,11 +413,20 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     }
 
     const event = (req.body ?? {}) as StripeEvent;
-    if (event.type !== 'checkout.session.completed') {
+    // Card payments settle inside `checkout.session.completed`. Delayed-notification methods
+    // (konbini, bank transfer, boleto — any of which the Dashboard may enable, since the session
+    // deliberately does not pin payment_method_types) deliver that event as `unpaid` and settle
+    // later via `async_payment_succeeded`. Listening only for the first meant the customer paid
+    // and was never credited. Both events carry the same session id, so the reference-based
+    // idempotency below still makes a double delivery a no-op.
+    if (event.type !== 'checkout.session.completed' &&
+        event.type !== 'checkout.session.async_payment_succeeded') {
       return reply.send({ received: true }); // acknowledge everything else
     }
     const session = event.data?.object;
     if (!session?.id || session.payment_status !== 'paid') {
+      // The `completed`-but-unpaid half of a delayed method: nothing owed yet, and
+      // `async_payment_succeeded` will arrive when it settles.
       return reply.send({ received: true });
     }
     const token = session.metadata?.device_token ?? '';

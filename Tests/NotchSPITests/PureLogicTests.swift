@@ -90,12 +90,12 @@ final class PromptsSelectionTests: XCTestCase {
 
 /// The direct-API channel's pure request-building and SSE-parsing logic. No network, no keychain.
 final class APIKeyRunnerTests: XCTestCase {
-    func testAnthropicRequestShape() {
-        let req = APIKeyRunner.makeRequest(
+    func testAnthropicRequestShape() throws {
+        let req = try XCTUnwrap(APIKeyRunner.makeRequest(
             proto: .anthropic, endpoint: APIKeyRunner.anthropicEndpoint,
             apiKey: "sk-ant-test", model: "claude-opus-4-8",
             prompt: CapturePrompt(system: "SYS", task: "tutor me on the problem it shows."),
-            imageBase64: "QUJD")
+            imageBase64: "QUJD"))
         XCTAssertEqual(req.url?.absoluteString, APIKeyRunner.anthropicEndpoint)
         XCTAssertEqual(req.value(forHTTPHeaderField: "x-api-key"), "sk-ant-test")
         XCTAssertEqual(req.value(forHTTPHeaderField: "anthropic-version"), "2023-06-01")
@@ -105,11 +105,11 @@ final class APIKeyRunnerTests: XCTestCase {
         XCTAssertEqual(body["stream"] as? Bool, true)
     }
 
-    func testOpenAIRequestShape() {
-        let req = APIKeyRunner.makeRequest(
+    func testOpenAIRequestShape() throws {
+        let req = try XCTUnwrap(APIKeyRunner.makeRequest(
             proto: .openai, endpoint: APIKeyRunner.openAIEndpoint,
             apiKey: "sk-oai-test", model: "gpt-5",
-            prompt: CapturePrompt(system: "SYS", task: "answer."), imageBase64: "QUJD")
+            prompt: CapturePrompt(system: "SYS", task: "answer."), imageBase64: "QUJD"))
         XCTAssertEqual(req.url?.absoluteString, APIKeyRunner.openAIEndpoint)
         XCTAssertEqual(req.value(forHTTPHeaderField: "Authorization"), "Bearer sk-oai-test")
         let body = try! JSONSerialization.jsonObject(with: req.httpBody!) as! [String: Any]
@@ -119,14 +119,27 @@ final class APIKeyRunnerTests: XCTestCase {
     /// Any OpenAI-compatible provider works by pointing the same `.openai` path at its base URL —
     /// this is what makes the whole preset list (Gemini, Grok, Qwen, GLM, Kimi, OpenRouter, custom)
     /// possible without a per-vendor client.
-    func testOpenAICompatibleCustomEndpoint() {
+    func testOpenAICompatibleCustomEndpoint() throws {
         let endpoint = "https://openrouter.ai/api/v1/chat/completions"
-        let req = APIKeyRunner.makeRequest(
+        let req = try XCTUnwrap(APIKeyRunner.makeRequest(
             proto: .openai, endpoint: endpoint,
             apiKey: "sk-or-test", model: "openai/gpt-4o",
-            prompt: CapturePrompt(system: "SYS", task: "answer."), imageBase64: "QUJD")
+            prompt: CapturePrompt(system: "SYS", task: "answer."), imageBase64: "QUJD"))
         XCTAssertEqual(req.url?.absoluteString, endpoint)
         XCTAssertEqual(req.value(forHTTPHeaderField: "Authorization"), "Bearer sk-or-test")
+    }
+
+    /// The endpoint is free text from 设置 → 高级. A value URL(string:) rejects used to be force
+    /// unwrapped, so a stray space or a full-width character typed by an IME crashed the app on
+    /// the next hotkey press. Malformed input must produce nil and a guided error instead.
+    func testMalformedCustomEndpointIsRejectedInsteadOfCrashing() {
+        for bad in ["", "not a url", "https://exa mple.com/v1", "／／full-width", "v1/chat"] {
+            XCTAssertNil(
+                APIKeyRunner.makeRequest(
+                    proto: .openai, endpoint: bad, apiKey: "k", model: "m",
+                    prompt: CapturePrompt(system: "SYS", task: "answer."), imageBase64: "QUJD"),
+                "endpoint \(bad.debugDescription) must not build a request")
+        }
     }
 
     func testAnthropicDeltaParsing() {
@@ -508,8 +521,76 @@ final class L10nTests: XCTestCase {
     }
 }
 
+/// The single-flight gate in front of anonymous device registration.
+///
+/// `POST /v1/devices` carries no idempotency key, so every concurrent registration used to mint a
+/// SEPARATE server device row with its own free grant. Only the last one written to the Keychain
+/// survived on the client; the rest became ghost rows — registered, funded, never used — which an
+/// operator reads as "new devices that never asked a question". Onboarding alone had three entry
+/// points that could overlap, and a cold serverless start widened the window to seconds.
+///
+/// Tested against the primitive rather than the network so it is deterministic and never touches
+/// the real device token.
+final class RegistrationGateTests: XCTestCase {
+    /// Counts how many times the underlying registration body actually ran.
+    private actor Calls {
+        private(set) var count = 0
+        func bump() { count += 1 }
+    }
+
+    func testConcurrentCallersShareOneRegistration() async {
+        let gate = RegistrationGate()
+        let calls = Calls()
+        await withTaskGroup(of: String?.self) { group in
+            for _ in 0..<8 {
+                group.addTask {
+                    let r = await gate.run {
+                        await calls.bump()
+                        // Hold the window open so every sibling arrives while this one is running.
+                        try? await Task.sleep(nanoseconds: 60_000_000)
+                        return .success("dev_shared")
+                    }
+                    return try? r.get()
+                }
+            }
+            for await token in group {
+                XCTAssertEqual(token, "dev_shared", "every caller must receive the shared result")
+            }
+        }
+        let count = await calls.count
+        XCTAssertEqual(count, 1, "8 concurrent callers must produce exactly ONE registration")
+    }
+
+    /// The gate collapses overlap only — it must not turn into a one-shot latch, or a device whose
+    /// first attempt failed offline could never register again.
+    func testASubsequentCallStartsAFreshAttempt() async {
+        let gate = RegistrationGate()
+        let calls = Calls()
+        for _ in 0..<3 {
+            _ = await gate.run {
+                await calls.bump()
+                return .failure(OfficialAPIError(message: "offline"))
+            }
+        }
+        let count = await calls.count
+        XCTAssertEqual(count, 3, "sequential retries must each make their own attempt")
+    }
+}
+
 /// Keychain-backed secret storage and the one-time migration off plaintext UserDefaults.
 final class KeychainStoreTests: XCTestCase {
+    /// A write whose status was discarded used to let callers delete the value's only other copy
+    /// on the assumption it had landed. The device token is the sole key to purchased quota, so
+    /// the result is now the signal that deleting the plaintext copy is safe.
+    func testWriteReportsWhetherTheKeychainAcceptedIt() {
+        let account = "test.keychain.\(UUID().uuidString)"
+        XCTAssertTrue(KeychainStore.write("secret-1", account: account), "a fresh add must report success")
+        XCTAssertTrue(KeychainStore.write("secret-2", account: account), "an in-place update must report success")
+        XCTAssertEqual(KeychainStore.read(account), "secret-2")
+        XCTAssertTrue(KeychainStore.write(nil, account: account), "a delete must report success")
+        XCTAssertTrue(KeychainStore.write(nil, account: account), "deleting an absent item is not a failure")
+    }
+
     func testWriteReadDeleteRoundTrip() {
         let account = "test.keychain.\(UUID().uuidString)"
         XCTAssertNil(KeychainStore.read(account))

@@ -75,7 +75,9 @@ cd server && npm ci
 DB_PATH=':memory:' OFFICIAL_PROVIDER=mock ALLOW_STUB_TOPUP=1 npm start
 ```
 
-Boots with a key-free mock provider; `npm test` runs 35 unit + HTTP integration tests.
+Boots with a key-free mock provider; `npm test` runs 112 unit + HTTP integration tests.
+Set `TEST_POSTGRES_URL` (a throwaway database) to run the store suite against the production
+Postgres backend as well.
 See [`server/README.md`](server/README.md) and [`docs/official-api.md`](docs/official-api.md).
 
 ## Notes

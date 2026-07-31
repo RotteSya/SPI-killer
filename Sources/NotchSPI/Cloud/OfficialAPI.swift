@@ -13,6 +13,36 @@ struct OfficialAPIError: Error, Equatable {
     }
 }
 
+/// Collapses overlapping device registrations into a single network round trip.
+///
+/// `registerIfNeeded()` is a check-then-act sequence: it reads `deviceToken`, and only seconds
+/// later — after a full HTTP round trip — writes it back. Onboarding alone has three entry points
+/// that can occupy that window at once (the window's `loadView`, the gift page appearing, and the
+/// "registration still in flight" retry branch), and a cold serverless start widens it to seconds.
+/// Since `POST /v1/devices` carries no idempotency key, every overlapping call minted a SEPARATE
+/// server device row with its OWN free grant. Only the last write survived on the client; the rest
+/// became ghosts — registered, funded, and never used — which is what an operator reads as
+/// "new devices that never asked a question".
+///
+/// Callers that arrive while a registration is running now await that same attempt instead of
+/// starting another.
+actor RegistrationGate {
+    static let shared = RegistrationGate()
+    private var inFlight: Task<Result<String, OfficialAPIError>, Never>?
+
+    func run(
+        _ body: @escaping @Sendable () async -> Result<String, OfficialAPIError>
+    ) async -> Result<String, OfficialAPIError> {
+        if let existing = inFlight { return await existing.value }
+        let task = Task(operation: body)
+        inFlight = task
+        let result = await task.value
+        // Clear only our own task: a follower resuming later must not wipe out a newer attempt.
+        if inFlight == task { inFlight = nil }
+        return result
+    }
+}
+
 /// Client for the NotchSPI 官方服务（题数额度制 — the account balance is a number of questions;
 /// one successful capture costs one question). The server side holds the vendor API keys,
 /// proxies the model call, meters per question, and deducts quota; this client only registers
@@ -51,13 +81,22 @@ enum OfficialAPI {
             if let v = KeychainStore.read("official.deviceToken") { return v }
             let legacy = d.string(forKey: "official.deviceToken") ?? ""
             guard !legacy.isEmpty else { return nil }
-            KeychainStore.write(legacy, account: "official.deviceToken")
-            d.removeObject(forKey: "official.deviceToken")
+            // Drop the plaintext copy only once the Keychain provably holds the token. A locked
+            // keychain or a denied ACL would otherwise destroy the sole key to purchased quota.
+            if KeychainStore.write(legacy, account: "official.deviceToken") {
+                d.removeObject(forKey: "official.deviceToken")
+            }
             return legacy
         }
         set {
-            KeychainStore.write(newValue, account: "official.deviceToken")
-            d.removeObject(forKey: "official.deviceToken") // never leave a plaintext copy behind
+            if KeychainStore.write(newValue, account: "official.deviceToken") {
+                d.removeObject(forKey: "official.deviceToken") // no plaintext copy left behind
+            } else if let newValue, !newValue.isEmpty {
+                // The Keychain refused the write. A plaintext fallback is a smaller harm than
+                // losing a credential the user may have paid to fill: the getter above migrates
+                // it back into the Keychain — and deletes it — on the first read that succeeds.
+                d.set(newValue, forKey: "official.deviceToken")
+            }
             notifyAccountChanged()
         }
     }
@@ -367,6 +406,16 @@ enum OfficialAPI {
     @discardableResult
     static func registerIfNeeded() async -> Result<String, OfficialAPIError> {
         if let token = deviceToken { return .success(token) }
+        // Serialized: concurrent callers share one round trip instead of each minting a device
+        // row of its own (see RegistrationGate). The re-check inside the gate catches the caller
+        // that was queued behind an attempt which has just succeeded.
+        return await RegistrationGate.shared.run {
+            if let token = deviceToken { return .success(token) }
+            return await performRegistration()
+        }
+    }
+
+    private static func performRegistration() async -> Result<String, OfficialAPIError> {
         let req = makeRegisterRequest(baseURL: baseURL, appVersion: appVersion)
         do {
             let (data, response) = try await URLSession.shared.data(for: req)

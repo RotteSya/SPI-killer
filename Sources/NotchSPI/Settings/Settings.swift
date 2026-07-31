@@ -143,16 +143,22 @@ final class Settings {
             return v.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         let legacy = (d.string(forKey: account) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if !legacy.isEmpty {
-            KeychainStore.write(legacy, account: account)
+        // Remove the plaintext copy only on a confirmed Keychain write; a failed one would
+        // otherwise silently discard a key the user has to go find and paste again.
+        if !legacy.isEmpty, KeychainStore.write(legacy, account: account) {
             d.removeObject(forKey: account)
         }
         return legacy
     }
 
     func setAPIKey(_ key: String, for cli: String) {
-        KeychainStore.write(key.trimmingCharacters(in: .whitespacesAndNewlines), account: "apiKey.\(cli)")
-        d.removeObject(forKey: "apiKey.\(cli)") // never leave a plaintext copy behind
+        let account = "apiKey.\(cli)"
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        if KeychainStore.write(trimmed, account: account) {
+            d.removeObject(forKey: account) // never leave a plaintext copy behind
+        } else if !trimmed.isEmpty {
+            d.set(trimmed, forKey: account) // see OfficialAPI.deviceToken: recoverable > lost
+        }
     }
 
     func usesCustomKey(for cli: String) -> Bool { !apiKey(for: cli).isEmpty }
