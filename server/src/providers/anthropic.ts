@@ -32,14 +32,14 @@ export class AnthropicProvider implements Provider {
         {
           role: 'user',
           content: [
-            {
+            ...req.images.map((img) => ({
               type: 'image',
               source: {
                 type: 'base64',
-                media_type: req.imageMediaType,
-                data: req.imageBase64,
+                media_type: img.mediaType,
+                data: img.base64,
               },
-            },
+            })),
             { type: 'text', text: req.task },
           ],
         },

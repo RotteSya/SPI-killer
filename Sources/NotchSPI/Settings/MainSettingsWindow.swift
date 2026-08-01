@@ -603,7 +603,7 @@ private final class HotkeysPageController: NSViewController, SettingsPage {
 
         embedded.onChange = { [weak self] in self?.onChange?() }
         addChild(embedded)
-        embedded.view.frame = NSRect(x: 36, y: 92, width: 420, height: 228)
+        embedded.view.frame = NSRect(x: 36, y: 92, width: 420, height: 266)
         root.addSubview(embedded.view)
 
         view = root

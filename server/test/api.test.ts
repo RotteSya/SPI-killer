@@ -116,6 +116,46 @@ test('missing image is 400 before streaming', async () => {
   assert.equal(res.status, 400);
 });
 
+test('images_base64 (上下文追问) streams and charges exactly one question', async () => {
+  const token = await register();
+  const res = await fetch(`${base}/v1/captures`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      system: '你是老师',
+      task: '结合第一张图讲解第二张图',
+      images_base64: ['T0xE', 'TkVX'], // context first, fresh capture last
+      image_media_type: 'image/jpeg',
+    }),
+  });
+  assert.equal(res.status, 200);
+  const text = await res.text();
+  assert.match(text, /"questions_charged":1/); // two images, still one question
+  const acct = await account(token);
+  assert.equal(acct.balance_questions, 1);
+});
+
+test('malformed or oversized images_base64 is 400 before streaming', async () => {
+  const token = await register();
+  const post = async (images: unknown): Promise<number> => {
+    const res = await fetch(`${base}/v1/captures`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ system: 's', task: 't', images_base64: images, image_media_type: 'image/jpeg' }),
+    });
+    void (await res.text());
+    return res.status;
+  };
+  assert.equal(await post('not-an-array'), 400);
+  assert.equal(await post([1, 2]), 400);       // non-string entries
+  assert.equal(await post([]), 400);           // empty list = no image
+  assert.equal(await post(['QUJD', '']), 400); // empty entry
+  assert.equal(await post(['QUJD', 'QUJD', 'QUJD', 'QUJD', 'QUJD']), 400); // over the count cap
+  // None of the rejected requests may have burned quota.
+  const acct = await account(token);
+  assert.equal(acct.balance_questions, 2);
+});
+
 test('missing system or task is 400 (contract-required fields)', async () => {
   const token = await register();
   const missingSystem = await fetch(`${base}/v1/captures`, {

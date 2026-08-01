@@ -34,6 +34,8 @@ interface CaptureBody {
   task?: unknown;
   image_base64?: unknown;
   image_media_type?: unknown;
+  /** 上下文追问: ordered image list (context first, fresh capture last). Wins over image_base64. */
+  images_base64?: unknown;
 }
 interface StubTopUpBody {
   device_token?: unknown;
@@ -64,6 +66,10 @@ function str(v: unknown, fallback = ''): string {
 // token bill. The image cap is ~8 MB of base64, comfortably above the client's ~1568px JPEG.
 const MAX_PROMPT_CHARS = 32_000;
 const MAX_IMAGE_B64_CHARS = 8 * 1024 * 1024;
+// One capture still costs one question regardless of image count, so the array length is what
+// bounds the vendor bill per question. The client sends at most 2 (context + fresh shot);
+// 4 leaves headroom without changing the price model materially.
+const MAX_IMAGES_PER_CAPTURE = 4;
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 /**
@@ -260,24 +266,42 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     }
     const body = (req.body ?? {}) as CaptureBody;
 
+    // Image list: `images_base64` (ordered, context first) wins when present; the legacy
+    // single `image_base64` remains the wire shape for plain captures and old clients.
+    const mediaType = str(body.image_media_type, 'image/jpeg');
+    let imagesBase64: string[];
+    if (body.images_base64 !== undefined) {
+      if (!Array.isArray(body.images_base64) || body.images_base64.some((v) => typeof v !== 'string')) {
+        throw new ApiError(400, 'images_base64 必须是字符串数组');
+      }
+      imagesBase64 = body.images_base64 as string[];
+    } else {
+      const single = str(body.image_base64);
+      imagesBase64 = single === '' ? [] : [single];
+    }
+
     const captureReq: CaptureRequest = {
       system: str(body.system),
       task: str(body.task),
-      imageBase64: str(body.image_base64),
-      imageMediaType: str(body.image_media_type, 'image/jpeg'),
+      images: imagesBase64.map((base64) => ({ base64, mediaType })),
     };
-    // Contract requires system, task, and image. Validate up front (JSON 400) rather than
-    // streaming with empty prompts and failing mid-stream inside the vendor call.
+    // Contract requires system, task, and at least one image. Validate up front (JSON 400)
+    // rather than streaming with empty prompts and failing mid-stream inside the vendor call.
     if (!captureReq.system) throw new ApiError(400, '缺少 system 提示词');
     if (!captureReq.task) throw new ApiError(400, '缺少 task 文本');
-    if (!captureReq.imageBase64) throw new ApiError(400, '缺少截图数据');
+    if (captureReq.images.length === 0 || captureReq.images.some((img) => img.base64 === '')) {
+      throw new ApiError(400, '缺少截图数据');
+    }
     // Size caps. One capture costs the user exactly one question no matter how large the prompt,
-    // so an unbounded text leg is an unbounded vendor bill for a fixed price. The image leg is
-    // additionally pinned to a media type the vendors actually accept.
+    // so an unbounded text leg — or an unbounded image list — is an unbounded vendor bill for a
+    // fixed price. The image leg is additionally pinned to a media type the vendors accept.
     if (captureReq.system.length > MAX_PROMPT_CHARS) throw new ApiError(400, 'system 提示词过长');
     if (captureReq.task.length > MAX_PROMPT_CHARS) throw new ApiError(400, 'task 文本过长');
-    if (captureReq.imageBase64.length > MAX_IMAGE_B64_CHARS) throw new ApiError(400, '截图数据过大');
-    if (!ALLOWED_IMAGE_TYPES.has(captureReq.imageMediaType)) {
+    if (captureReq.images.length > MAX_IMAGES_PER_CAPTURE) throw new ApiError(400, '截图数量过多');
+    if (captureReq.images.some((img) => img.base64.length > MAX_IMAGE_B64_CHARS)) {
+      throw new ApiError(400, '截图数据过大');
+    }
+    if (!ALLOWED_IMAGE_TYPES.has(mediaType)) {
       throw new ApiError(400, '不支持的图片格式');
     }
 

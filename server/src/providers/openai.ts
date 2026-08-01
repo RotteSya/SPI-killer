@@ -23,7 +23,6 @@ export class OpenAIProvider implements Provider {
     onDelta: (text: string) => void,
     signal: AbortSignal,
   ): Promise<Usage> {
-    const dataURI = `data:${req.imageMediaType};base64,${req.imageBase64}`;
     const body = {
       model: this.model,
       max_tokens: this.maxTokens,
@@ -35,7 +34,10 @@ export class OpenAIProvider implements Provider {
           role: 'user',
           content: [
             { type: 'text', text: req.task },
-            { type: 'image_url', image_url: { url: dataURI } },
+            ...req.images.map((img) => ({
+              type: 'image_url',
+              image_url: { url: `data:${img.mediaType};base64,${img.base64}` },
+            })),
           ],
         },
       ],

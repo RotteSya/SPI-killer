@@ -21,10 +21,11 @@ export class MockProvider implements Provider {
       onDelta(chunk);
       await new Promise((r) => setTimeout(r, 5));
     }
-    // Synthetic but deterministic: roughly proportional to the base64 image + prompt size.
+    // Synthetic but deterministic: roughly proportional to the base64 image(s) + prompt size.
+    const imageChars = req.images.reduce((sum, img) => sum + img.base64.length, 0);
     const inputTokens = Math.max(
       1,
-      Math.round((req.imageBase64.length / 4 + req.system.length + req.task.length) / 4),
+      Math.round((imageChars / 4 + req.system.length + req.task.length) / 4),
     );
     const outputTokens = Math.max(1, Math.round([...answer].length / 2));
     return { inputTokens, outputTokens };

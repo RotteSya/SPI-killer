@@ -207,7 +207,13 @@ final class Settings {
     // MARK: - Hotkeys
 
     private static let defaultCapture = HotkeyCombo(keyCode: UInt32(kVK_ANSI_1), modifiers: UInt32(cmdKey | shiftKey), label: "1")
-    private static let defaultPersonality = HotkeyCombo(keyCode: UInt32(kVK_ANSI_2), modifiers: UInt32(cmdKey | shiftKey), label: "2")
+    // ⌘⇧2 was the personality combo until the 上下文追问 remap; personality moved to ⌘⇧3.
+    // Users who explicitly recorded a combo keep their stored value (see `combo(_:_:)`).
+    private static let defaultContext = HotkeyCombo(keyCode: UInt32(kVK_ANSI_2), modifiers: UInt32(cmdKey | shiftKey), label: "2")
+    // ⌘⇧9, NOT ⌘⇧3: the 3–6 row is owned by the system screenshot shortcuts, which swallow
+    // the event after RegisterEventHotKey "succeeds" (same invisible-by-design dead combo as
+    // documented for auto mode below).
+    private static let defaultPersonality = HotkeyCombo(keyCode: UInt32(kVK_ANSI_9), modifiers: UInt32(cmdKey | shiftKey), label: "9")
     private static let defaultToggle = HotkeyCombo(keyCode: UInt32(kVK_Space), modifiers: UInt32(cmdKey | shiftKey), label: "Space")
     // ⌘⇧0: the 3–6 row is owned by the system screenshot shortcuts, which swallow the
     // event after RegisterEventHotKey "succeeds" — an invisible-by-design dead combo.
@@ -218,6 +224,13 @@ final class Settings {
     var captureCombo: HotkeyCombo {
         get { combo("capture", Settings.defaultCapture) }
         set { setCombo("capture", newValue) }
+    }
+    /// Capture-and-ask WITH context (上下文追问): the new shot travels together with the last
+    /// ⌘⇧1 shot (see `ScreenshotCacheManager`), so a question whose passage scrolled away can
+    /// still be answered.
+    var contextCombo: HotkeyCombo {
+        get { combo("context", Settings.defaultContext) }
+        set { setCombo("context", newValue) }
     }
     /// Capture-and-personality-test (性格测试作答). The mode for this capture, by hotkey.
     var personalityCombo: HotkeyCombo {

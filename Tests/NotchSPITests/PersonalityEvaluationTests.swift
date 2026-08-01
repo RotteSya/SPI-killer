@@ -660,18 +660,18 @@ final class PersonalityEvaluationTests: XCTestCase {
             switch channel {
             case .official:
                 OfficialAPI.run(
-                    imagePath: imagePath, prompt: run.prompt,
+                    imagePaths: [imagePath], prompt: run.prompt,
                     onDelta: onDelta, onDone: onDone
                 )
             case .cli(let id, let path):
                 CLIRunner.run(
-                    cliId: id, binPath: path, imagePath: imagePath, prompt: run.prompt,
+                    cliId: id, binPath: path, imagePaths: [imagePath], prompt: run.prompt,
                     onDelta: onDelta, onDone: onDone
                 )
             case .customKey(let provider, let endpoint, let model, let apiKey):
                 APIKeyRunner.run(
                     proto: provider.proto, endpoint: endpoint, apiKey: apiKey, model: model,
-                    imagePath: imagePath, prompt: run.prompt,
+                    imagePaths: [imagePath], prompt: run.prompt,
                     onDelta: onDelta, onDone: onDone
                 )
             }

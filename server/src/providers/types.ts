@@ -3,11 +3,16 @@
 // route turns into a charge. Providers throw on failure; the route emits an SSE error event
 // and does not charge.
 
+export interface CaptureImage {
+  base64: string;
+  mediaType: string;
+}
+
+/** `images` order is meaningful: context shot(s) first, the fresh capture last. */
 export interface CaptureRequest {
   system: string;
   task: string;
-  imageBase64: string;
-  imageMediaType: string;
+  images: CaptureImage[];
 }
 
 export interface Usage {

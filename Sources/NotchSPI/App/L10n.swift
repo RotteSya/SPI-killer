@@ -161,6 +161,9 @@ enum L10n {
     static var statusContextCleared: String {
         t("连续题上下文已清空", "連続質問のコンテキストを消去しました", "Questionnaire context cleared")
     }
+    static var statusContextAttached: String {
+        t("已附上次截图", "前回のキャプチャを添付", "Previous shot attached")
+    }
     static var statusContextNotSaved: String {
         t("连续题上下文未保存", "連続質問のコンテキストを保存できませんでした", "Questionnaire context wasn't saved")
     }

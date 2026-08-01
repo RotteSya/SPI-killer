@@ -37,15 +37,20 @@ enum APIKeyRunner {
         apiKey: String,
         model: String,
         prompt: CapturePrompt,
-        imageBase64: String
+        imagesBase64: [String]
     ) -> URLRequest? {
         guard let url = URL(string: endpoint), url.scheme != nil, url.host != nil else { return nil }
-        let userText = "Analyze the attached screenshot image, then \(prompt.task)"
+        let userText = Prompts.analyzeTaskText(prompt.task, imageCount: imagesBase64.count)
         var req = URLRequest(url: url)
         let body: [String: Any]
         if proto == .anthropic {
             req.setValue(apiKey, forHTTPHeaderField: "x-api-key")
             req.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+            var content: [[String: Any]] = imagesBase64.map {
+                ["type": "image",
+                 "source": ["type": "base64", "media_type": "image/jpeg", "data": $0]]
+            }
+            content.append(["type": "text", "text": userText])
             body = [
                 "model": model,
                 "max_tokens": 8192,
@@ -53,25 +58,21 @@ enum APIKeyRunner {
                 "system": prompt.system,
                 "messages": [[
                     "role": "user",
-                    "content": [
-                        ["type": "image",
-                         "source": ["type": "base64", "media_type": "image/jpeg", "data": imageBase64]],
-                        ["type": "text", "text": userText],
-                    ],
+                    "content": content,
                 ]],
             ]
         } else {
             req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            var content: [[String: Any]] = [["type": "text", "text": userText]]
+            content.append(contentsOf: imagesBase64.map {
+                ["type": "image_url", "image_url": ["url": "data:image/jpeg;base64,\($0)"]]
+            })
             body = [
                 "model": model,
                 "stream": true,
                 "messages": [
                     ["role": "system", "content": prompt.system],
-                    ["role": "user", "content": [
-                        ["type": "text", "text": userText],
-                        ["type": "image_url",
-                         "image_url": ["url": "data:image/jpeg;base64,\(imageBase64)"]],
-                    ]],
+                    ["role": "user", "content": content],
                 ],
             ]
         }
@@ -157,14 +158,17 @@ enum APIKeyRunner {
         endpoint: String,
         apiKey: String,
         model: String,
-        imagePath: String,
+        imagePaths: [String],
         prompt: CapturePrompt,
         onDelta: @escaping (String) -> Void,
         onDone: @escaping (_ ok: Bool, _ stderr: String) -> Void
     ) {
         Task.detached(priority: .userInitiated) {
-            // File read + base64 of a multi-MB screenshot stays off the main thread.
-            guard let imageData = FileManager.default.contents(atPath: imagePath) else {
+            // File read + base64 of multi-MB screenshots stays off the main thread.
+            let imagesBase64 = imagePaths.compactMap {
+                FileManager.default.contents(atPath: $0)?.base64EncodedString()
+            }
+            guard imagesBase64.count == imagePaths.count else {
                 await MainActor.run { onDone(false, L10n.t("无法读取截图文件", "スクリーンショットを読み込めません", "Could not read the screenshot file")) }
                 return
             }
@@ -172,7 +176,7 @@ enum APIKeyRunner {
                 proto: proto, endpoint: endpoint, apiKey: apiKey,
                 model: model,
                 prompt: prompt,
-                imageBase64: imageData.base64EncodedString()
+                imagesBase64: imagesBase64
             ) else {
                 await MainActor.run {
                     onDone(false, L10n.t(

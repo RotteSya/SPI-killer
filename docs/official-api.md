@@ -74,6 +74,22 @@
 }
 ```
 
+上下文追问（⌘⇧2，双图）追加可选字段 `images_base64`（有序数组：老上下文图在前、
+新截图在后，单张上限与 `image_base64` 相同，数量上限 4，仍只扣 1 题）。该字段存在
+时优先于 `image_base64`；客户端同时把**最后一张**（当前题目）放进 `image_base64`，
+这样尚未升级的服务端也能退化为单图作答而不是拿错图：
+
+```json
+{
+  "system": "…",
+  "task": "…",
+  "image_base64": "<新截图 base64>",
+  "images_base64": ["<老上下文图 base64>", "<新截图 base64>"],
+  "image_media_type": "image/jpeg",
+  "stream": true
+}
+```
+
 服务端选择模型、调用厂商 API、成功后扣 1 题。响应为 `text/event-stream`，事件均为
 `data: <json>` 行：
 

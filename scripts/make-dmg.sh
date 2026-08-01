@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.."  # -> native/
 
 APP_NAME="NotchSPI"
 BUNDLE_ID="com.rottesya.notchspi"
-VERSION="2.8"
+VERSION="2.9"
 ICON_FILE="NotchSPI.icns"
 OUT="dist"
 STAGING="$OUT/staging"

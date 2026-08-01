@@ -347,9 +347,12 @@ enum OfficialAPI {
         return req
     }
 
+    /// `imagesBase64` order is meaningful: context shot(s) first, the fresh capture last.
+    /// `image_base64` always carries the LAST image so a server that predates `images_base64`
+    /// still answers the current question (degraded to context-less, never wrong-image).
     static func makeCaptureRequest(
         baseURL: String, deviceToken: String,
-        prompt: CapturePrompt, imageBase64: String
+        prompt: CapturePrompt, imagesBase64: [String]
     ) -> URLRequest {
         var req = URLRequest(url: endpointURL(base: baseURL, path: "v1/captures"))
         req.httpMethod = "POST"
@@ -357,13 +360,15 @@ enum OfficialAPI {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         addClientHeaders(&req)
         req.timeoutInterval = 120
-        req.httpBody = try? JSONSerialization.data(withJSONObject: [
+        var payload: [String: Any] = [
             "system": prompt.system,
-            "task": "Analyze the attached screenshot image, then \(prompt.task)",
-            "image_base64": imageBase64,
+            "task": Prompts.analyzeTaskText(prompt.task, imageCount: imagesBase64.count),
+            "image_base64": imagesBase64.last ?? "",
             "image_media_type": "image/jpeg",
             "stream": true,
-        ])
+        ]
+        if imagesBase64.count > 1 { payload["images_base64"] = imagesBase64 }
+        req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
         return req
     }
 
@@ -475,7 +480,7 @@ enum OfficialAPI {
     /// `onDelta` / `onDone` fire on the main queue. Metered usage from the stream's `usage`
     /// event updates the local quota mirror automatically.
     static func run(
-        imagePath: String,
+        imagePaths: [String],
         prompt: CapturePrompt,
         onDelta: @escaping (String) -> Void,
         onDone: @escaping (_ ok: Bool, _ stderr: String) -> Void
@@ -489,8 +494,11 @@ enum OfficialAPI {
             return
         }
         Task.detached(priority: .userInitiated) {
-            // File read + base64 of a multi-MB screenshot stays off the main thread.
-            guard let imageData = FileManager.default.contents(atPath: imagePath) else {
+            // File read + base64 of multi-MB screenshots stays off the main thread.
+            let imagesBase64 = imagePaths.compactMap {
+                FileManager.default.contents(atPath: $0)?.base64EncodedString()
+            }
+            guard imagesBase64.count == imagePaths.count else {
                 await MainActor.run {
                     onDone(false, L10n.t("无法读取截图文件", "スクリーンショットを読み込めません", "Couldn't read the screenshot file"))
                 }
@@ -499,7 +507,7 @@ enum OfficialAPI {
             let request = makeCaptureRequest(
                 baseURL: baseURL, deviceToken: token,
                 prompt: prompt,
-                imageBase64: imageData.base64EncodedString()
+                imagesBase64: imagesBase64
             )
             #if DEBUG
             print("[NotchSPI] official API run → \(request.url?.host ?? "?")")

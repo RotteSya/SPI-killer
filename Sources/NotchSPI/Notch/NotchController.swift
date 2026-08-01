@@ -378,6 +378,7 @@ final class NotchController: NSObject {
     private func registerHotkeys() {
         HotKeyCenter.shared.unregisterAll()
         let cap = Settings.shared.captureCombo
+        let ctx = Settings.shared.contextCombo
         let persona = Settings.shared.personalityCombo
         let tog = Settings.shared.toggleCombo
         let auto = Settings.shared.autoModeCombo
@@ -388,10 +389,18 @@ final class NotchController: NSObject {
             if self.autoEngine.isActive { self.stopAutoSession(.captureHotkey) }
             else { self.runTapped(mode: "tutor") }
         }
+        // Personality registers BEFORE context: a user who explicitly recorded personality on
+        // ⌘⇧2 (its pre-remap default, now context's default) keeps their working combo, and the
+        // context row shows the in-process conflict in red until they pick another.
         HotKeyCenter.shared.register(role: .personality, keyCode: persona.keyCode, modifiers: persona.modifiers) { [weak self] in
             guard let self else { return }
             if self.autoEngine.isActive { self.stopAutoSession(.captureHotkey) }
             self.runTapped(mode: "personality")
+        }
+        HotKeyCenter.shared.register(role: .context, keyCode: ctx.keyCode, modifiers: ctx.modifiers) { [weak self] in
+            guard let self else { return }
+            if self.autoEngine.isActive { self.stopAutoSession(.captureHotkey) }
+            self.runTapped(mode: "tutor", withContext: true)
         }
         HotKeyCenter.shared.register(role: .toggle, keyCode: tog.keyCode, modifiers: tog.modifiers) { [weak self] in
             self?.toggleVisibility()
@@ -895,13 +904,30 @@ final class NotchController: NSObject {
 
     // MARK: - Pipeline: capture → channel → stream
 
-    private func runTapped(mode: String) {
+    /// `withContext` (tutor mode only): send the remembered ⌘⇧1 shot together with the fresh
+    /// capture, so a question whose passage has scrolled away still gets its context.
+    private func runTapped(mode: String, withContext: Bool = false) {
         guard !running else { return }
         // The hotkey selects the mode for this capture, so the user never switches modes by hand:
-        // ⌘⇧1 → tutor, ⌘⇧2 → personality. Set it first so every downstream read agrees.
+        // ⌘⇧1/⌘⇧2 → tutor, ⌘⇧9 → personality. Set it first so every downstream read agrees.
         if Settings.shared.mode != mode {
             Settings.shared.mode = mode
             refreshModeLabels()
+        }
+        // 上下文追问 needs a remembered shot; refuse BEFORE capturing so a doomed run costs
+        // neither a screenshot flash nor a question. The message names the CURRENT combos —
+        // the user may have rebound either row.
+        let contextImagePath = withContext ? ScreenshotCacheManager.shared.contextPath : nil
+        if withContext, contextImagePath == nil {
+            if !visible { visible = true; panel.orderFrontRegardless() }
+            setExpanded(true)
+            let capKey = Settings.displayString(Settings.shared.captureCombo)
+            let ctxKey = Settings.displayString(Settings.shared.contextCombo)
+            finishError(L10n.t(
+                "还没有可引用的上下文截图。请先用 \(capKey) 截取包含正文的画面，再按 \(ctxKey) 追问。",
+                "参照できるコンテキストのスクリーンショットがまだありません。先に \(capKey) で本文を含む画面をキャプチャしてから、\(ctxKey) で質問してください。",
+                "No context screenshot to attach yet. Capture the passage with \(capKey) first, then press \(ctxKey) to ask with context."))
+            return
         }
         var contextClearedForRun = false
         if mode != "personality" {
@@ -934,13 +960,18 @@ final class NotchController: NSObject {
         } else {
             sessionToken = nil
         }
-        let prompt = Prompts.capturePrompt(
+        var prompt = Prompts.capturePrompt(
             mode: snapshot.mode,
             depth: snapshot.depth,
             personaName: snapshot.personaName,
             personaText: snapshot.personaText,
             sessionContext: sessionToken?.contextBlock ?? ""
         )
+        // Context runs keep the tutor system prompt (depth contract, FINAL line) and swap only
+        // the task line, which explains the two-image order to the model.
+        if contextImagePath != nil {
+            prompt = CapturePrompt(system: prompt.system, task: Prompts.contextTask)
+        }
         let personalityRun = sessionToken.map { PersonalityCaptureRun(token: $0, prompt: prompt) }
 
         beginRun()
@@ -1060,6 +1091,9 @@ final class NotchController: NSObject {
                 return
             }
 
+            // Order is the transport contract everywhere: context shot first, fresh capture last.
+            let imagePaths = (contextImagePath.map { [$0] } ?? []) + [shot.path]
+
             let statusVerb = snapshot.mode == "personality" ? L10n.statusAnswering : L10n.statusExplaining
             // Brief runs narrate their two phases: scratch work streams as 推理中…, and the
             // moment the FINAL marker lands the line flips to 作答中… — the status text tells
@@ -1120,6 +1154,9 @@ final class NotchController: NSObject {
                         self.model.status = .idle
                     }
                     self.model.statusText = ok ? L10n.statusDone : L10n.statusError
+                    if ok, contextImagePath != nil {
+                        self.model.statusText += " · " + L10n.statusContextAttached
+                    }
                     if contextClearedForRun {
                         self.model.statusText += " · " + L10n.statusContextCleared
                     }
@@ -1144,7 +1181,13 @@ final class NotchController: NSObject {
                 self.resizeToFit()
                 self.endRun()
                 self.pinned = false
-                try? FileManager.default.removeItem(atPath: shot.path)
+                if snapshot.mode == "tutor", contextImagePath == nil {
+                    // A plain tutor shot becomes the next 上下文追问's context instead of being
+                    // deleted — even after a transport failure, the image itself is valid context.
+                    ScreenshotCacheManager.shared.store(shot.path)
+                } else {
+                    try? FileManager.default.removeItem(atPath: shot.path)
+                }
                 self.scheduleCollapseAfterAnswer()
                 self.autoRunCompleted(ok: ok)
             }
@@ -1156,19 +1199,19 @@ final class NotchController: NSObject {
                     return
                 }
                 CLIRunner.run(
-                    cliId: snapshot.cliID, binPath: binPath, imagePath: shot.path, prompt: prompt,
+                    cliId: snapshot.cliID, binPath: binPath, imagePaths: imagePaths, prompt: prompt,
                     onDelta: onDelta, onDone: onDone
                 )
             case .customKey(let apiKey):
                 APIKeyRunner.run(
                     proto: snapshot.provider.proto, endpoint: snapshot.apiEndpoint,
                     apiKey: apiKey, model: snapshot.apiModel,
-                    imagePath: shot.path, prompt: prompt,
+                    imagePaths: imagePaths, prompt: prompt,
                     onDelta: onDelta, onDone: onDone
                 )
             case .official:
                 OfficialAPI.run(
-                    imagePath: shot.path, prompt: prompt,
+                    imagePaths: imagePaths, prompt: prompt,
                     onDelta: onDelta, onDone: onDone
                 )
             }

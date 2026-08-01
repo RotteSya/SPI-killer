@@ -240,14 +240,17 @@ enum CLIRunner {
 
     /// Final argv for one frozen prompt. Kept pure so channel parity and argument ordering are
     /// testable without spawning either CLI (`--image` is variadic in Codex, so prompt order is
-    /// significant).
+    /// significant). `imagePaths` order is meaningful: context shot(s) first, fresh capture last.
     static func makeArguments(
-        cliId: String, prompt: CapturePrompt, imagePath: String
+        cliId: String, prompt: CapturePrompt, imagePaths: [String]
     ) -> [String] {
         if cliId == "claude" {
-            let text = prompt.system
-                + "\n\nThe screenshot is saved at this path: \(imagePath)\nOpen and read that image file, then "
-                + prompt.task
+            let pathsClause = imagePaths.count > 1
+                ? "The screenshots are saved at these paths, in order:\n"
+                    + imagePaths.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
+                    + "\nOpen and read those image files in order, then "
+                : "The screenshot is saved at this path: \(imagePaths.first ?? "")\nOpen and read that image file, then "
+            let text = prompt.system + "\n\n" + pathsClause + prompt.task
             return [
                 "-p", text,
                 "--allowedTools", "Read",
@@ -256,8 +259,10 @@ enum CLIRunner {
                 "--output-format", "stream-json", "--verbose", "--include-partial-messages",
             ]
         }
-        let text = prompt.system + "\n\nAnalyze the attached screenshot image, then " + prompt.task
-        return ["exec", "--sandbox", "read-only", "--skip-git-repo-check", text, "-i", imagePath]
+        let text = prompt.system + "\n\n"
+            + Prompts.analyzeTaskText(prompt.task, imageCount: imagePaths.count)
+        return ["exec", "--sandbox", "read-only", "--skip-git-repo-check", text]
+            + imagePaths.flatMap { ["-i", $0] }
     }
 
     /// Spawn the chosen CLI read-only and stream text via onDelta. Callbacks fire
@@ -265,13 +270,13 @@ enum CLIRunner {
     static func run(
         cliId: String,
         binPath: String,
-        imagePath: String,
+        imagePaths: [String],
         prompt: CapturePrompt,
         onDelta: @escaping (String) -> Void,
         onDone: @escaping (_ ok: Bool, _ stderr: String) -> Void
     ) {
         let isClaude = (cliId == "claude")
-        let args = makeArguments(cliId: cliId, prompt: prompt, imagePath: imagePath)
+        let args = makeArguments(cliId: cliId, prompt: prompt, imagePaths: imagePaths)
 
         let wd = workDir()
         let p = Process()

@@ -4,7 +4,7 @@ import Carbon.HIToolbox
 /// What a combo is bound to. Also the identity under which a failed registration is remembered,
 /// so the UI can point at the row that is actually dead.
 enum HotkeyRole: String {
-    case capture, personality, toggle, autoMode
+    case capture, context, personality, toggle, autoMode
 }
 
 /// Global hotkeys via Carbon RegisterEventHotKey (no Accessibility permission needed).

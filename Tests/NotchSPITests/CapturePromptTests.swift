@@ -58,14 +58,14 @@ final class CapturePromptTests: XCTestCase {
             task: "TASK with the identical context marker SESSION_CONTEXT_DATA"
         )
         let codexCLI = CLIRunner.makeArguments(
-            cliId: "codex", prompt: prompt, imagePath: "/tmp/a.jpg"
+            cliId: "codex", prompt: prompt, imagePaths: ["/tmp/a.jpg"]
         )
         XCTAssertTrue(codexCLI.joined(separator: " ").contains(prompt.system))
         XCTAssertTrue(codexCLI.joined(separator: " ").contains(prompt.task))
         XCTAssertEqual(codexCLI.suffix(2), ["-i", "/tmp/a.jpg"])
 
         let claudeCLI = CLIRunner.makeArguments(
-            cliId: "claude", prompt: prompt, imagePath: "/tmp/a.jpg"
+            cliId: "claude", prompt: prompt, imagePaths: ["/tmp/a.jpg"]
         )
         XCTAssertTrue(claudeCLI.joined(separator: " ").contains(prompt.system))
         XCTAssertTrue(claudeCLI.joined(separator: " ").contains(prompt.task))
@@ -73,7 +73,7 @@ final class CapturePromptTests: XCTestCase {
 
         let direct = try XCTUnwrap(APIKeyRunner.makeRequest(
             proto: .anthropic, endpoint: APIKeyRunner.anthropicEndpoint,
-            apiKey: "key", model: "model", prompt: prompt, imageBase64: "QUJD"
+            apiKey: "key", model: "model", prompt: prompt, imagesBase64: ["QUJD"]
         ))
         let directBody = try JSONSerialization.jsonObject(with: direct.httpBody!) as! [String: Any]
         XCTAssertEqual(directBody["system"] as? String, prompt.system)
@@ -83,7 +83,7 @@ final class CapturePromptTests: XCTestCase {
 
         let official = OfficialAPI.makeCaptureRequest(
             baseURL: "https://example.com", deviceToken: "device",
-            prompt: prompt, imageBase64: "QUJD"
+            prompt: prompt, imagesBase64: ["QUJD"]
         )
         let officialBody = try JSONSerialization.jsonObject(with: official.httpBody!) as! [String: Any]
         XCTAssertEqual(officialBody["system"] as? String, prompt.system)

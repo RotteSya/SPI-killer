@@ -95,7 +95,7 @@ final class APIKeyRunnerTests: XCTestCase {
             proto: .anthropic, endpoint: APIKeyRunner.anthropicEndpoint,
             apiKey: "sk-ant-test", model: "claude-opus-4-8",
             prompt: CapturePrompt(system: "SYS", task: "tutor me on the problem it shows."),
-            imageBase64: "QUJD"))
+            imagesBase64: ["QUJD"]))
         XCTAssertEqual(req.url?.absoluteString, APIKeyRunner.anthropicEndpoint)
         XCTAssertEqual(req.value(forHTTPHeaderField: "x-api-key"), "sk-ant-test")
         XCTAssertEqual(req.value(forHTTPHeaderField: "anthropic-version"), "2023-06-01")
@@ -109,7 +109,7 @@ final class APIKeyRunnerTests: XCTestCase {
         let req = try XCTUnwrap(APIKeyRunner.makeRequest(
             proto: .openai, endpoint: APIKeyRunner.openAIEndpoint,
             apiKey: "sk-oai-test", model: "gpt-5",
-            prompt: CapturePrompt(system: "SYS", task: "answer."), imageBase64: "QUJD"))
+            prompt: CapturePrompt(system: "SYS", task: "answer."), imagesBase64: ["QUJD"]))
         XCTAssertEqual(req.url?.absoluteString, APIKeyRunner.openAIEndpoint)
         XCTAssertEqual(req.value(forHTTPHeaderField: "Authorization"), "Bearer sk-oai-test")
         let body = try! JSONSerialization.jsonObject(with: req.httpBody!) as! [String: Any]
@@ -124,7 +124,7 @@ final class APIKeyRunnerTests: XCTestCase {
         let req = try XCTUnwrap(APIKeyRunner.makeRequest(
             proto: .openai, endpoint: endpoint,
             apiKey: "sk-or-test", model: "openai/gpt-4o",
-            prompt: CapturePrompt(system: "SYS", task: "answer."), imageBase64: "QUJD"))
+            prompt: CapturePrompt(system: "SYS", task: "answer."), imagesBase64: ["QUJD"]))
         XCTAssertEqual(req.url?.absoluteString, endpoint)
         XCTAssertEqual(req.value(forHTTPHeaderField: "Authorization"), "Bearer sk-or-test")
     }
@@ -137,7 +137,7 @@ final class APIKeyRunnerTests: XCTestCase {
             XCTAssertNil(
                 APIKeyRunner.makeRequest(
                     proto: .openai, endpoint: bad, apiKey: "k", model: "m",
-                    prompt: CapturePrompt(system: "SYS", task: "answer."), imageBase64: "QUJD"),
+                    prompt: CapturePrompt(system: "SYS", task: "answer."), imagesBase64: ["QUJD"]),
                 "endpoint \(bad.debugDescription) must not build a request")
         }
     }
@@ -356,13 +356,32 @@ final class OfficialAPITests: XCTestCase {
     func testCaptureRequestShape() {
         let req = OfficialAPI.makeCaptureRequest(
             baseURL: "https://api.notchspi.app", deviceToken: "dev_123",
-            prompt: CapturePrompt(system: "SYS", task: "tutor me."), imageBase64: "QUJD")
+            prompt: CapturePrompt(system: "SYS", task: "tutor me."), imagesBase64: ["QUJD"])
         XCTAssertEqual(req.url?.absoluteString, "https://api.notchspi.app/v1/captures")
         XCTAssertEqual(req.value(forHTTPHeaderField: "Authorization"), "Bearer dev_123")
         let body = try! JSONSerialization.jsonObject(with: req.httpBody!) as! [String: Any]
         XCTAssertEqual(body["system"] as? String, "SYS")
         XCTAssertEqual(body["stream"] as? Bool, true)
         XCTAssertEqual(body["image_media_type"] as? String, "image/jpeg")
+        // Single image: legacy field only, so the wire shape is unchanged from pre-context builds.
+        XCTAssertEqual(body["image_base64"] as? String, "QUJD")
+        XCTAssertNil(body["images_base64"])
+    }
+
+    /// 上下文追问: both images travel in order (context first, fresh capture last), and the
+    /// legacy single-image field carries the LAST image so an old server still answers the
+    /// current question rather than the stale context.
+    func testCaptureRequestTwoImageShape() {
+        let req = OfficialAPI.makeCaptureRequest(
+            baseURL: "https://api.notchspi.app", deviceToken: "dev_123",
+            prompt: CapturePrompt(system: "SYS", task: Prompts.contextTask),
+            imagesBase64: ["OLD", "NEW"])
+        let body = try! JSONSerialization.jsonObject(with: req.httpBody!) as! [String: Any]
+        XCTAssertEqual(body["images_base64"] as? [String], ["OLD", "NEW"])
+        XCTAssertEqual(body["image_base64"] as? String, "NEW")
+        XCTAssertEqual(body["task"] as? String,
+                       Prompts.analyzeTaskText(Prompts.contextTask, imageCount: 2))
+        XCTAssertTrue((body["task"] as? String)?.contains("2 attached screenshot images") == true)
     }
 }
 

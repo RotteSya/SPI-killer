@@ -251,27 +251,31 @@ final class HotkeySettingsViewController: NSViewController {
     var onChange: (() -> Void)?
 
     private var capture = Settings.shared.captureCombo
+    private var context = Settings.shared.contextCombo
     private var personality = Settings.shared.personalityCombo
     private var toggle = Settings.shared.toggleCombo
     private var autoMode = Settings.shared.autoModeCombo
-    private var recording: String?          // "capture" | "personality" | "toggle" | "autoMode" | nil
+    private var recording: String?          // "capture" | "context" | "personality" | "toggle" | "autoMode" | nil
     private var monitor: Any?
 
     private let captureControl = HotkeyRecorderControl(combo: Settings.shared.captureCombo)
+    private let contextControl = HotkeyRecorderControl(combo: Settings.shared.contextCombo)
     private let personalityControl = HotkeyRecorderControl(combo: Settings.shared.personalityCombo)
     private let toggleControl = HotkeyRecorderControl(combo: Settings.shared.toggleCombo)
     private let autoControl = HotkeyRecorderControl(combo: Settings.shared.autoModeCombo)
-    private let rowYs: [CGFloat] = [8, 46, 84, 122]
+    private let rowYs: [CGFloat] = [8, 46, 84, 122, 160]
     private let hint = HotkeySettingsViewController.makeLabel(
         "", size: 11, weight: .regular, color: .secondaryLabelColor)
     private var conflictObserver: Any?
 
     override func loadView() {
-        let root = FlippedView(frame: NSRect(x: 0, y: 0, width: 420, height: 228))
+        let root = FlippedView(frame: NSRect(x: 0, y: 0, width: 420, height: 266))
 
         let rows: [(String, HotkeyRecorderControl, String)] = [
             (L10n.t("截屏讲题（学习辅导）", "解説キャプチャ（学習）", "Capture & tutor"),
              captureControl, "capture"),
+            (L10n.t("上下文追问（附上次截图）", "文脈つき質問（前回のキャプチャを添付）", "Ask with context (last shot attached)"),
+             contextControl, "context"),
             (L10n.t("截屏作答（性格测试）", "回答キャプチャ（性格検査）", "Capture & answer (personality)"),
              personalityControl, "personality"),
             (L10n.t("显示 / 隐藏", "表示 / 非表示", "Show / hide"),
@@ -288,7 +292,7 @@ final class HotkeySettingsViewController: NSViewController {
             root.addSubview(control)
         }
 
-        hint.frame = NSRect(x: 20, y: 166, width: 380, height: 40)
+        hint.frame = NSRect(x: 20, y: 204, width: 380, height: 40)
         hint.maximumNumberOfLines = 2
         hint.lineBreakMode = .byWordWrapping
         root.addSubview(hint)
@@ -330,6 +334,9 @@ final class HotkeySettingsViewController: NSViewController {
             case "capture":
                 self.capture = combo
                 Settings.shared.captureCombo = combo
+            case "context":
+                self.context = combo
+                Settings.shared.contextCombo = combo
             case "personality":
                 self.personality = combo
                 Settings.shared.personalityCombo = combo
@@ -356,9 +363,10 @@ final class HotkeySettingsViewController: NSViewController {
         let taken = HotKeyCenter.shared.conflicted
         let rows: [(HotkeyRecorderControl, HotkeyRole, HotkeyCombo, CGFloat)] = [
             (captureControl, .capture, capture, rowYs[0]),
-            (personalityControl, .personality, personality, rowYs[1]),
-            (toggleControl, .toggle, toggle, rowYs[2]),
-            (autoControl, .autoMode, autoMode, rowYs[3]),
+            (contextControl, .context, context, rowYs[1]),
+            (personalityControl, .personality, personality, rowYs[2]),
+            (toggleControl, .toggle, toggle, rowYs[3]),
+            (autoControl, .autoMode, autoMode, rowYs[4]),
         ]
         for (control, role, combo, y) in rows {
             control.combo = combo

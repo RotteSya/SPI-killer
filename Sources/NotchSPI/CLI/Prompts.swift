@@ -78,6 +78,22 @@ enum Prompts {
         return base + "\n\n" + clause + "\n\n" + finalLineClause
     }
 
+    // MARK: - 上下文追问 (two-image runs)
+
+    /// Task line for a context run: the first image is the remembered ⌘⇧1 shot, the last is the
+    /// fresh capture. Swapped in for the plain tutor task only — the system prompt (depth
+    /// contract, FINAL line) is unchanged, so a context answer renders exactly like a tutor one.
+    static let contextTask = "tutor me on the problem shown in the LAST image. The earlier image is reference material the user captured moments before (for example the reading passage, source text, or problem setup this question belongs to); read it first and treat it as the context the last image's problem builds on."
+
+    /// The user-turn text every transport sends alongside the image block(s). Kept here so the
+    /// three channels can never drift on how the images are introduced. The single-image form is
+    /// byte-identical to the pre-context wording.
+    static func analyzeTaskText(_ task: String, imageCount: Int) -> String {
+        imageCount > 1
+            ? "Analyze the \(imageCount) attached screenshot images in order, then \(task)"
+            : "Analyze the attached screenshot image, then \(task)"
+    }
+
     // MARK: - Frozen capture payload
 
     /// Build the complete request payload exactly once. All three transport channels receive this
