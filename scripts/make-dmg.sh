@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.."  # -> native/
 
 APP_NAME="NotchSPI"
 BUNDLE_ID="com.rottesya.notchspi"
-VERSION="2.7"
+VERSION="2.8"
 ICON_FILE="NotchSPI.icns"
 OUT="dist"
 STAGING="$OUT/staging"
@@ -46,7 +46,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIconFile</key><string>$ICON_FILE</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
-  <key>CFBundleVersion</key><string>15</string>
+  <key>CFBundleVersion</key><string>16</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHumanReadableCopyright</key><string>NotchSPI</string>
