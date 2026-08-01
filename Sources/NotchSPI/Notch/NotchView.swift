@@ -542,17 +542,37 @@ private final class NotchCapsuleButton: NSControl {
     var onClick: (() -> Void)?
     var title: String = "" {
         didSet {
+            guard title != oldValue else { return }
+            let previous = attr
             attr = NSAttributedString(string: title, attributes: [
                 .font: NSFont.systemFont(ofSize: 11),
                 .foregroundColor: NotchPalette.secondary,
             ])
             setAccessibilityLabel(title)
             invalidateIntrinsicContentSize()
-            needsDisplay = true
+            // Cycling the depth rolls the label like a station indicator — old value yields
+            // upward, the new one rises into place. First fill and Reduce Motion just repaint.
+            if !oldValue.isEmpty, window != nil,
+               !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+                prevAttr = previous
+                if rollTween == nil {
+                    rollTween = DisplayTween(host: self, value: 1)
+                    rollTween?.onChange = { [weak self] t in
+                        self?.needsDisplay = true
+                        if t >= 1 { self?.prevAttr = nil }
+                    }
+                }
+                rollTween?.set(0)
+                rollTween?.animate(to: 1, duration: 0.28)
+            } else {
+                needsDisplay = true
+            }
         }
     }
 
     private var attr = NSAttributedString()
+    private var prevAttr: NSAttributedString?
+    private var rollTween: DisplayTween?
     private let hPad: CGFloat = 8, vPad: CGFloat = 3
     private var hovering = false { didSet { if hovering != oldValue { needsDisplay = true } } }
     private var trackingAreaRef: NSTrackingArea?
@@ -574,14 +594,40 @@ private final class NotchCapsuleButton: NSControl {
     }
 
     override func draw(_ dirtyRect: NSRect) {
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         let r = bounds
         let radius = r.height / 2
         let cap = NSBezierPath(roundedRect: r, xRadius: radius, yRadius: radius)
         NSColor(white: 1, alpha: hovering ? 0.16 : 0.10).setFill()
         cap.fill()
+
+        // Text clipped to the capsule so the roll reads as a wheel inside the pill.
+        ctx.saveGState()
+        cap.addClip()
+        let t = prevAttr != nil ? max(0, min(1, rollTween?.value ?? 1)) : 1
+        let rise: CGFloat = 7
         let s = attr.size()
-        attr.draw(in: CGRect(x: (r.width - s.width) / 2, y: (r.height - s.height) / 2,
-                             width: s.width, height: s.height))
+        let newOrigin = CGPoint(x: (r.width - s.width) / 2,
+                                y: (r.height - s.height) / 2 + (1 - t) * rise)
+        if let prev = prevAttr, t < 1 {
+            let ps = prev.size()
+            drawFaded(prev, at: CGPoint(x: (r.width - ps.width) / 2,
+                                        y: (r.height - ps.height) / 2 - t * rise), alpha: 1 - t)
+            drawFaded(attr, at: newOrigin, alpha: t)
+        } else {
+            attr.draw(at: newOrigin)
+        }
+        ctx.restoreGState()
+    }
+
+    private func drawFaded(_ string: NSAttributedString, at point: CGPoint, alpha: CGFloat) {
+        let m = NSMutableAttributedString(attributedString: string)
+        m.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: m.length)) { v, range, _ in
+            let c = (v as? NSColor) ?? NotchPalette.secondary
+            m.addAttribute(.foregroundColor, value: c.withAlphaComponent(c.alphaComponent * alpha),
+                           range: range)
+        }
+        m.draw(at: point)
     }
 
     override func updateTrackingAreas() {
