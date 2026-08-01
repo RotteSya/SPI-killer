@@ -266,8 +266,11 @@ private final class GeneralPageController: NSViewController, SettingsPage {
     private let languagePopup = NSPopUpButton()
     private let depthPopup = NSPopUpButton()
     private let targetPopup = NSPopUpButton()
+    private let autoCapPopup = NSPopUpButton()
     private let loginCheckbox = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let loginCaption = captionLabel("")
+
+    private static let autoCapChoices = [5, 10, 20, 30, 50]
 
     private let contentWidth: CGFloat = 560
 
@@ -315,6 +318,25 @@ private final class GeneralPageController: NSViewController, SettingsPage {
         targetPopup.target = self
         targetPopup.action = #selector(targetPicked)
         y += 44
+
+        // 自动连答上限
+        addRow(root, y: y, label: L10n.t("自动连答上限", "自動連続回答の上限", "Auto session cap"),
+               control: autoCapPopup, controlWidth: 200)
+        for cap in Self.autoCapChoices {
+            autoCapPopup.addItem(withTitle: L10n.questions(cap))
+            autoCapPopup.lastItem?.representedObject = cap
+        }
+        autoCapPopup.selectItem(
+            at: Self.autoCapChoices.firstIndex(of: Settings.shared.autoModeMaxQuestions) ?? 2)
+        autoCapPopup.target = self
+        autoCapPopup.action = #selector(autoCapPicked)
+        let autoCapHint = captionLabel(L10n.t(
+            "自动模式单次会话最多连答的题数，达到后自动停止。下次开启会话时生效。",
+            "自動モード1セッションで回答する最大数。上限に達すると自動停止します。次回セッションから有効。",
+            "Max questions one auto session will answer before stopping. Applies from the next session."))
+        autoCapHint.frame = NSRect(x: 36 + 160, y: y + 30, width: contentWidth - 160, height: 30)
+        root.addSubview(autoCapHint)
+        y += 72
 
         // 开机自启
         loginCheckbox.title = L10n.t("登录时自动启动", "ログイン時に自動起動", "Launch at login")
@@ -401,6 +423,11 @@ private final class GeneralPageController: NSViewController, SettingsPage {
         }
     }
 
+    @objc private func autoCapPicked() {
+        guard let cap = autoCapPopup.selectedItem?.representedObject as? Int else { return }
+        Settings.shared.autoModeMaxQuestions = cap
+    }
+
     @objc private func loginToggled() {
         do {
             if loginCheckbox.state == .on {
@@ -429,7 +456,7 @@ private final class HotkeysPageController: NSViewController, SettingsPage {
 
         embedded.onChange = { [weak self] in self?.onChange?() }
         addChild(embedded)
-        embedded.view.frame = NSRect(x: 36, y: 92, width: 420, height: 190)
+        embedded.view.frame = NSRect(x: 36, y: 92, width: 420, height: 228)
         root.addSubview(embedded.view)
 
         view = root

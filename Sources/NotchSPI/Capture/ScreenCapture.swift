@@ -190,6 +190,48 @@ enum ScreenCapture {
         return await shoot(filter: filter, config: config, maxLongEdge: maxLongEdge, blankThreshold: 9000)
     }
 
+    // MARK: - Auto-mode hash sampling
+
+    /// AUTO-MODE TICK PATH: tiny in-memory full-screen luma grid for change detection.
+    /// Reuses the shareable-content cache; the window server delivers a ≤128px frame
+    /// (setDimensions) which is pooled down to ScreenHasher's 32×20 grid. Never encodes,
+    /// never touches disk. Runs at poll rate, so unlike `capture` it neither treats a
+    /// missing panel window as an error (Release panels are sharingType .none — already
+    /// invisible to capture — and a hide-blink fallback would flicker the notch at 2 Hz)
+    /// nor re-warms the cache per tick (the cache isn't consumed; staleness surfaces as
+    /// a failed attempt and the fresh-enumeration fallback re-caches).
+    static func captureHashGrid(excludingWindowID: CGWindowID?) async -> [UInt8]? {
+        if let cached = await MainActor.run(body: { cachedContent }),
+           let grid = await attemptHashGrid(content: cached, excludingWindowID: excludingWindowID) {
+            return grid
+        }
+        guard let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        else { return nil }
+        await MainActor.run { cachedContent = content }
+        return await attemptHashGrid(content: content, excludingWindowID: excludingWindowID)
+    }
+
+    private static func attemptHashGrid(
+        content: SCShareableContent, excludingWindowID: CGWindowID?
+    ) async -> [UInt8]? {
+        let mainID = CGMainDisplayID()
+        guard let display = content.displays.first(where: { $0.displayID == mainID }) ?? content.displays.first
+        else { return nil }
+
+        let filter: SCContentFilter
+        if let id = excludingWindowID, let panel = content.windows.first(where: { $0.windowID == id }) {
+            filter = SCContentFilter(display: display, excludingWindows: [panel])
+        } else {
+            filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
+        }
+        let config = SCStreamConfiguration()
+        config.showsCursor = false
+        setDimensions(config, width: CGFloat(display.width), height: CGFloat(display.height), maxLongEdge: 128)
+        guard let cg = try? await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+        else { return nil }
+        return ScreenHasher.lumaGrid(from: cg)
+    }
+
     /// Ask the window server for the shot at its FINAL size (≤ maxLongEdge on the long side):
     /// capturing a 5K display at native pixels only to immediately downscale wastes both the
     /// capture IPC and a CPU resample on the hot path.

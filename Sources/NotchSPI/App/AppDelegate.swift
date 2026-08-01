@@ -57,6 +57,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+        if args.contains("--qa-auto-mode") {
+            // Starts an auto session through the production toggle path (hotkey-equivalent).
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                controller.qaStartAutoMode()
+            }
+        }
         #endif
 
         // Quietly ask the service for a newer release (≤ once/day; only surfaces if one exists).

@@ -39,18 +39,20 @@ final class HotkeySettingsViewController: NSViewController {
     private var capture = Settings.shared.captureCombo
     private var personality = Settings.shared.personalityCombo
     private var toggle = Settings.shared.toggleCombo
-    private var recording: String?          // "capture" | "personality" | "toggle" | nil
+    private var autoMode = Settings.shared.autoModeCombo
+    private var recording: String?          // "capture" | "personality" | "toggle" | "autoMode" | nil
     private var monitor: Any?
 
     private let captureButton = HotkeySettingsViewController.makeRecordButton()
     private let personalityButton = HotkeySettingsViewController.makeRecordButton()
     private let toggleButton = HotkeySettingsViewController.makeRecordButton()
+    private let autoButton = HotkeySettingsViewController.makeRecordButton()
     private let hint = HotkeySettingsViewController.makeLabel(
         "", size: 11, weight: .regular, color: .secondaryLabelColor)
     private var conflictObserver: Any?
 
     override func loadView() {
-        let root = FlippedView(frame: NSRect(x: 0, y: 0, width: 420, height: 190))
+        let root = FlippedView(frame: NSRect(x: 0, y: 0, width: 420, height: 228))
 
         addRow(into: root, y: 8,
                title: L10n.t("截屏讲题（学习辅导）", "解説キャプチャ（学習）", "Capture & tutor"),
@@ -61,8 +63,11 @@ final class HotkeySettingsViewController: NSViewController {
         addRow(into: root, y: 84,
                title: L10n.t("显示 / 隐藏", "表示 / 非表示", "Show / hide"),
                button: toggleButton, action: #selector(recordToggle))
+        addRow(into: root, y: 122,
+               title: L10n.t("自动连答（开始 / 停止）", "自動連続回答（開始 / 停止）", "Auto session (start / stop)"),
+               button: autoButton, action: #selector(recordAutoMode))
 
-        hint.frame = NSRect(x: 20, y: 128, width: 380, height: 40)
+        hint.frame = NSRect(x: 20, y: 166, width: 380, height: 40)
         hint.maximumNumberOfLines = 2
         hint.lineBreakMode = .byWordWrapping
         root.addSubview(hint)
@@ -91,6 +96,7 @@ final class HotkeySettingsViewController: NSViewController {
     @objc private func recordCapture() { record("capture") }
     @objc private func recordPersonality() { record("personality") }
     @objc private func recordToggle() { record("toggle") }
+    @objc private func recordAutoMode() { record("autoMode") }
 
     private func record(_ which: String) {
         stop()
@@ -108,6 +114,9 @@ final class HotkeySettingsViewController: NSViewController {
             case "personality":
                 self.personality = combo
                 Settings.shared.personalityCombo = combo
+            case "autoMode":
+                self.autoMode = combo
+                Settings.shared.autoModeCombo = combo
             default:
                 self.toggle = combo
                 Settings.shared.toggleCombo = combo
@@ -142,6 +151,7 @@ final class HotkeySettingsViewController: NSViewController {
         paint(captureButton, .capture, capture)
         paint(personalityButton, .personality, personality)
         paint(toggleButton, .toggle, toggle)
+        paint(autoButton, .autoMode, autoMode)
         hint.stringValue = taken.isEmpty
             ? L10n.t("点击右侧按钮，然后按下新的组合键（需包含 ⌘/⇧/⌥/⌃ 至少一个）。",
                      "右のボタンをクリックし、新しいキーの組み合わせを押してください（⌘/⇧/⌥/⌃ のいずれかが必要）。",

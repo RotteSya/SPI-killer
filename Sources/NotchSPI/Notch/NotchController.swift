@@ -17,6 +17,14 @@ final class NotchController: NSObject {
     private var runGeneration: UInt64 = 0
     private var visible = true
     private var collapseWork: DispatchWorkItem?
+    /// Auto-session brain (pure state machine); the controller owns the timer + capture I/O.
+    private let autoEngine = AutoSessionEngine()
+    private var autoPollTimer: Timer?
+    private var autoHashInFlight = false
+    /// 截图目标锁定: the session only triggers while this app is frontmost. Derived at
+    /// session start (explicit capture-target app, else the then-frontmost app); nil = no lock.
+    private var autoLockedBundleID: String?
+    private var autoPaused = false // edge-transition tracking for the DEBUG log only
     private var settingsController: MainSettingsWindowController?
     private var onboardingWindow: NSWindow?
     private var observers: [NSObjectProtocol] = []
@@ -84,7 +92,8 @@ final class NotchController: NSObject {
                 guard let self else { return }
                 self.model.reasoningRevealed.toggle()
                 self.resizeToFit() // the height spring glides the fold/unfold
-            }
+            },
+            onStopAuto: { [weak self] in self?.stopAutoSession(.stopButton) }
         )
         view.autoresizingMask = [.width, .height]
         notchView = view
@@ -196,6 +205,9 @@ final class NotchController: NSObject {
     /// so the whole pipeline — screenshot → official channel → stream → quota status line —
     /// can be exercised and screenshotted without pressing keys.
     func qaTriggerCapture() { runTapped(mode: "tutor") }
+
+    /// Visual-QA hook: toggle an auto session through the production start/stop path.
+    func qaStartAutoMode() { autoModeTapped() }
 
     /// Visual-QA hook: drive the notch into a specific presentation state with FIXTURE content
     /// (no capture, no server), so the light field / streaming text / morph can be screenshotted
@@ -365,14 +377,24 @@ final class NotchController: NSObject {
         let cap = Settings.shared.captureCombo
         let persona = Settings.shared.personalityCombo
         let tog = Settings.shared.toggleCombo
+        let auto = Settings.shared.autoModeCombo
+        // During an auto session the capture hotkey becomes "stop": the user's reflex key
+        // must never fire an extra quota-costing capture on top of the automation.
         HotKeyCenter.shared.register(role: .capture, keyCode: cap.keyCode, modifiers: cap.modifiers) { [weak self] in
-            self?.runTapped(mode: "tutor")
+            guard let self else { return }
+            if self.autoEngine.isActive { self.stopAutoSession(.captureHotkey) }
+            else { self.runTapped(mode: "tutor") }
         }
         HotKeyCenter.shared.register(role: .personality, keyCode: persona.keyCode, modifiers: persona.modifiers) { [weak self] in
-            self?.runTapped(mode: "personality")
+            guard let self else { return }
+            if self.autoEngine.isActive { self.stopAutoSession(.captureHotkey) }
+            self.runTapped(mode: "personality")
         }
         HotKeyCenter.shared.register(role: .toggle, keyCode: tog.keyCode, modifiers: tog.modifiers) { [weak self] in
             self?.toggleVisibility()
+        }
+        HotKeyCenter.shared.register(role: .autoMode, keyCode: auto.keyCode, modifiers: auto.modifiers) { [weak self] in
+            self?.autoModeTapped()
         }
     }
 
@@ -709,6 +731,165 @@ final class NotchController: NSObject {
         if cleared { model.statusText = L10n.statusContextCleared }
     }
 
+    // MARK: - Auto mode (连续自动截图作答)
+
+    private static let autoPollInterval: TimeInterval = 0.5
+
+    private func autoModeTapped() {
+        if autoEngine.isActive {
+            stopAutoSession(.userToggled)
+            return
+        }
+        guard !running else { return } // a manual run owns the moment; same spirit as runTapped's gate
+        startAutoSession()
+    }
+
+    private func startAutoSession() {
+        // Fail fast on the one precondition the pipeline only discovers mid-capture: an
+        // unattended session must not start blind. Quota preflight is NOT duplicated here —
+        // runTapped runs the real QuotaGate moments later and a denial stops the session
+        // through the completion hook with the right reason.
+        guard CGPreflightScreenCaptureAccess() else {
+            if !visible { visible = true; panel.orderFrontRegardless() }
+            setExpanded(true)
+            finishError(Self.message(for: .noPermission))
+            return
+        }
+        // 截图目标锁定: an explicit app target wins; a full-screen target locks to whatever
+        // the user is looking at right now — the app they started the session FOR. Switching
+        // away (chat, docs) pauses triggering instead of burning a question on the switch.
+        switch Settings.shared.captureTarget {
+        case .app(let bundleID):
+            autoLockedBundleID = bundleID
+        case .fullScreen:
+            autoLockedBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        }
+        autoPaused = false
+        autoEngine.start(config: .init(maxQuestions: Settings.shared.autoModeMaxQuestions))
+        model.autoActive = true
+        model.autoProgress = "0/\(autoEngine.config.maxQuestions)"
+        #if DEBUG
+        print("[NotchSPI] auto: locked to \(autoLockedBundleID ?? "none")")
+        #endif
+        runTapped(mode: "tutor")
+    }
+
+    /// Called from BOTH terminal points of a run (onDone, finishError) — the only places
+    /// "one question is finished" exists. No-ops unless an auto session is live.
+    private func autoRunCompleted(ok: Bool) {
+        guard autoEngine.isActive else { return }
+        guard ok else {
+            // A failed run never re-arms the watch. Distinguish "out of quota" so the
+            // status says why — including the 401 path that wipes the cached balance.
+            let quotaDead = OfficialAPI.credentialRejected
+                || OfficialAPI.balanceQuestions.map({ $0 <= 0 }) == true
+            stopAutoSession(quotaDead ? .quotaExhausted : .runFailed)
+            return
+        }
+        switch autoEngine.noteRunSucceeded(
+            balanceQuestions: OfficialAPI.balanceQuestions,
+            credentialRejected: OfficialAPI.credentialRejected
+        ) {
+        case .stop(let reason):
+            stopAutoSession(reason)
+        default:
+            model.autoProgress = "\(autoEngine.questionsAsked)/\(autoEngine.config.maxQuestions)"
+            model.statusText += " · " + L10n.statusAutoWatching
+            #if DEBUG
+            print("[NotchSPI] auto: watching (\(model.autoProgress))")
+            #endif
+            startAutoPolling()
+        }
+    }
+
+    private func startAutoPolling() {
+        stopAutoPolling()
+        autoPollTimer = Timer.scheduledTimer(withTimeInterval: Self.autoPollInterval, repeats: true) {
+            [weak self] _ in
+            MainActor.assumeIsolated { self?.autoPollTick() }
+        }
+    }
+
+    private func stopAutoPolling() {
+        autoPollTimer?.invalidate()
+        autoPollTimer = nil
+        autoHashInFlight = false
+    }
+
+    private func autoPollTick() {
+        guard autoEngine.isActive, !running, !autoHashInFlight else { return }
+        // Locked-target gate: while another app is frontmost, don't even sample the screen —
+        // the idle timeout still advances so a session parked elsewhere dies after 15 min.
+        if let locked = autoLockedBundleID,
+           NSWorkspace.shared.frontmostApplication?.bundleIdentifier != locked {
+            #if DEBUG
+            if !autoPaused { print("[NotchSPI] auto: paused (target not frontmost)") }
+            #endif
+            autoPaused = true
+            if case .stop(let reason) = autoEngine.tickPaused() { stopAutoSession(reason) }
+            return
+        }
+        #if DEBUG
+        if autoPaused { print("[NotchSPI] auto: resumed (target frontmost)") }
+        #endif
+        autoPaused = false
+        autoHashInFlight = true // the hash IPC can straddle a 0.5 s tick; never overlap captures
+        Task { @MainActor in
+            let id = panel.windowNumber > 0 ? CGWindowID(panel.windowNumber) : nil
+            let hash = await ScreenCapture.captureHashGrid(excludingWindowID: id)
+            autoHashInFlight = false
+            switch autoEngine.tick(hash: hash) {
+            case .none:
+                break
+            case .stop(let reason):
+                stopAutoSession(reason)
+            case .trigger:
+                stopAutoPolling()
+                #if DEBUG
+                print("[NotchSPI] auto: change settled → capture \(autoEngine.questionsAsked + 1)")
+                #endif
+                if running { stopAutoSession(.runFailed) } // defensive; hotkeys stop the session first
+                else { runTapped(mode: "tutor") }
+            }
+        }
+    }
+
+    /// Idempotent. During an in-flight run only the auto chrome is cleared — the pipeline
+    /// owns the status line and the answer finishes normally (its completion hook then
+    /// no-ops because the engine is already inactive).
+    ///
+    /// The cleanup latch is `model.autoActive`, NOT the engine's state: engine-initiated
+    /// stops (question cap, tick outcomes) arrive here with the engine ALREADY inactive,
+    /// and gating on it would skip the timer/chrome/status teardown (2026-08-01 真机 bug).
+    private func stopAutoSession(_ reason: AutoStopReason) {
+        autoEngine.stop(reason: reason) // no-op if the engine already stopped itself
+        guard model.autoActive else { return }
+        stopAutoPolling()
+        autoLockedBundleID = nil
+        autoPaused = false
+        #if DEBUG
+        print("[NotchSPI] auto: stopped (\(reason))")
+        #endif
+        model.autoActive = false
+        model.autoProgress = ""
+        if !running {
+            switch reason {
+            case .userToggled, .captureHotkey, .stopButton:
+                model.statusText = L10n.statusAutoStopped
+            case .questionCap(let cap):
+                model.statusText = L10n.statusAutoCapReached(cap)
+            case .quotaExhausted:
+                model.statusText = L10n.statusAutoStoppedQuota
+            case .runFailed:
+                model.statusText = L10n.statusAutoStoppedError
+            case .idleTimeout:
+                model.statusText = L10n.statusAutoStoppedIdle
+            case .hashFailures:
+                model.statusText = L10n.statusAutoStoppedScreen
+            }
+        }
+    }
+
     // MARK: - Pipeline: capture → channel → stream
 
     private func runTapped(mode: String) {
@@ -962,6 +1143,7 @@ final class NotchController: NSObject {
                 self.pinned = false
                 try? FileManager.default.removeItem(atPath: shot.path)
                 self.scheduleCollapseAfterAnswer()
+                self.autoRunCompleted(ok: ok)
             }
 
             switch snapshot.channel {
@@ -1094,6 +1276,7 @@ final class NotchController: NSObject {
             let delay = Appearance.collapseDelay
             scheduleCollapse(after: delay > 0 ? max(delay, 14) : 14) // errors always linger long enough to read
         }
+        autoRunCompleted(ok: false)
     }
 }
 

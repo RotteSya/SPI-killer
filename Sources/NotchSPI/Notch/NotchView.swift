@@ -25,6 +25,7 @@ final class NotchView: NSView {
     private let onEditPersona: () -> Void
     private let onSettings: () -> Void
     private let onToggleReasoning: () -> Void
+    private let onStopAuto: () -> Void
     /// Supplies the CURRENT collapsed/expanded panel frames (screen coords). Geometry stays owned
     /// by the controller; this view owns the clock that travels between the two.
     private let frameProvider: (Bool) -> NSRect
@@ -86,7 +87,8 @@ final class NotchView: NSView {
          onCycleDepth: @escaping () -> Void,
          onEditPersona: @escaping () -> Void,
          onSettings: @escaping () -> Void,
-         onToggleReasoning: @escaping () -> Void) {
+         onToggleReasoning: @escaping () -> Void,
+         onStopAuto: @escaping () -> Void) {
         self.model = model
         self.frameProvider = frameProvider
         self.onHover = onHover
@@ -94,6 +96,7 @@ final class NotchView: NSView {
         self.onEditPersona = onEditPersona
         self.onSettings = onSettings
         self.onToggleReasoning = onToggleReasoning
+        self.onStopAuto = onStopAuto
         super.init(frame: .zero)
         build()
         observe()
@@ -119,10 +122,14 @@ final class NotchView: NSView {
 
         addSubview(rose)   // above the plate; decorative, never intercepts clicks
 
-        // The capsule dispatches by the active mode: cycle depth (tutor) / edit persona (personality).
+        // The capsule dispatches by the active mode: stop (auto session) / cycle depth (tutor)
+        // / edit persona (personality). Auto wins — while a session is live the capsule IS
+        // the panel's stop button.
         capsule.onClick = { [weak self] in
             guard let self else { return }
-            if self.model.mode == "personality" { self.onEditPersona() } else { self.onCycleDepth() }
+            if self.model.autoActive { self.onStopAuto() }
+            else if self.model.mode == "personality" { self.onEditPersona() }
+            else { self.onCycleDepth() }
         }
 
         morph.onChange = { [weak self] _ in self?.applyLayout() }
@@ -170,9 +177,11 @@ final class NotchView: NSView {
         statusText.stringValue = model.statusText
 
         let isPersona = model.mode == "personality"
-        capsule.title = isPersona
-            ? (model.personaLabel.isEmpty ? L10n.t("设置人物像", "人物像を設定", "Set persona") : model.personaLabel)
-                                   : model.depthLabel
+        capsule.title = model.autoActive
+            ? L10n.autoStopCapsule(model.autoProgress)
+            : isPersona
+                ? (model.personaLabel.isEmpty ? L10n.t("设置人物像", "人物像を設定", "Set persona") : model.personaLabel)
+                : model.depthLabel
 
         let attr = NotchType.answerString(model.answer, presentation: NotchType.presentation(for: model))
         answerStream.setAnswer(attr, isPlaceholder: model.answer.isEmpty)

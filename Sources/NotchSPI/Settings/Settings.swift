@@ -195,11 +195,23 @@ final class Settings {
         return .fullScreen
     }
 
+    // MARK: - Auto mode
+
+    /// Per-session question cap for 自动连答. Snapshotted when a session starts,
+    /// so edits apply from the next session.
+    var autoModeMaxQuestions: Int {
+        get { AutoSessionEngine.clampMaxQuestions(d.integer(forKey: "autoMaxQuestions")) }
+        set { d.set(AutoSessionEngine.clampMaxQuestions(newValue), forKey: "autoMaxQuestions") }
+    }
+
     // MARK: - Hotkeys
 
     private static let defaultCapture = HotkeyCombo(keyCode: UInt32(kVK_ANSI_1), modifiers: UInt32(cmdKey | shiftKey), label: "1")
     private static let defaultPersonality = HotkeyCombo(keyCode: UInt32(kVK_ANSI_2), modifiers: UInt32(cmdKey | shiftKey), label: "2")
     private static let defaultToggle = HotkeyCombo(keyCode: UInt32(kVK_Space), modifiers: UInt32(cmdKey | shiftKey), label: "Space")
+    // ⌘⇧0: the 3–6 row is owned by the system screenshot shortcuts, which swallow the
+    // event after RegisterEventHotKey "succeeds" — an invisible-by-design dead combo.
+    private static let defaultAutoMode = HotkeyCombo(keyCode: UInt32(kVK_ANSI_0), modifiers: UInt32(cmdKey | shiftKey), label: "0")
 
     /// Capture-and-tutor (学习辅导). Bound to its own hotkey so the mode is chosen by which key
     /// you press — no manual mode switching.
@@ -215,6 +227,11 @@ final class Settings {
     var toggleCombo: HotkeyCombo {
         get { combo("toggle", Settings.defaultToggle) }
         set { setCombo("toggle", newValue) }
+    }
+    /// Start/stop an auto session (连续自动截图作答) — one hotkey, toggle semantics.
+    var autoModeCombo: HotkeyCombo {
+        get { combo("autoMode", Settings.defaultAutoMode) }
+        set { setCombo("autoMode", newValue) }
     }
 
     private func combo(_ prefix: String, _ def: HotkeyCombo) -> HotkeyCombo {

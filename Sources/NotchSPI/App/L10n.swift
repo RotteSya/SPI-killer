@@ -195,6 +195,38 @@ enum L10n {
           "Start new questionnaire / clear context")
     }
 
+    // MARK: - Auto mode (连续自动截图作答)
+
+    /// Suffix on the answer's status line while the session watches for the next question.
+    static var statusAutoWatching: String {
+        t("自动模式：等待画面变化", "自動モード：画面の変化を待機中", "Auto: watching for changes")
+    }
+    /// Capsule title during an auto session — the capsule IS the stop button.
+    static func autoStopCapsule(_ progress: String) -> String {
+        t("停止自动 · \(progress)", "自動を停止 · \(progress)", "Stop auto · \(progress)")
+    }
+    static var statusAutoStopped: String {
+        t("自动模式已停止", "自動モードを停止しました", "Auto mode stopped")
+    }
+    static func statusAutoCapReached(_ cap: Int) -> String {
+        t("已连答 \(cap) 题，自动模式结束", "\(cap)問に達したため自動モードを終了",
+          "Reached \(cap) questions — auto mode ended")
+    }
+    static var statusAutoStoppedError: String {
+        t("出错，自动模式已停止", "エラーのため自動モードを停止", "Auto mode stopped after an error")
+    }
+    static var statusAutoStoppedQuota: String {
+        t("额度用完，自动模式已停止", "残高がないため自動モードを停止", "Out of questions — auto mode stopped")
+    }
+    static var statusAutoStoppedIdle: String {
+        t("画面长时间无变化，自动模式已停止", "画面に変化がないため自動モードを停止",
+          "No changes for a while — auto mode stopped")
+    }
+    static var statusAutoStoppedScreen: String {
+        t("无法读取屏幕，自动模式已停止", "画面を取得できないため自動モードを停止",
+          "Can't read the screen — auto mode stopped")
+    }
+
     /// Caption on the answer card (see NotchType.card).
     static var answerCardLabel: String { t("答案", "答え", "ANSWER") }
     static var noOutput: String { t("（没有输出）", "（出力なし）", "(no output)") }
