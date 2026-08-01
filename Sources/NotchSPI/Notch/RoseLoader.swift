@@ -95,6 +95,14 @@ final class RoseLoaderView: NSView {
         let rotation = -((timeMs.truncatingRemainder(dividingBy: rotationDurationMs)) / rotationDurationMs) * 360
         let progress = (timeMs.truncatingRemainder(dividingBy: durationMs)) / durationMs
 
+        // Size-aware legibility: the geometry lives in a 100-unit space, so at the notch's 16-22pt
+        // sizes one unit is a fraction of a pixel — the trail's 0.9…3.6-unit particles collapse
+        // into sub-pixel mush and the 12%-alpha curve reads as a smudge. `smallness` (0 at hero
+        // sizes → 1 at ≤~20pt) compensates: thicker stroke, a touch more curve ink, and a particle
+        // radius floor of about one device pixel — the signature stays quiet, but becomes *drawn*.
+        let unitsPerPoint = 100 / max(1, min(sz.width, sz.height))
+        let smallness = max(0, min(1, (unitsPerPoint - 1.2) / 3.8))
+
         ctx.saveGState()
         ctx.translateBy(x: sz.width / 2, y: sz.height / 2)
         ctx.rotate(by: rotation * .pi / 180)
@@ -110,9 +118,10 @@ final class RoseLoaderView: NSView {
             if i == 0 { path.move(to: p) } else { path.addLine(to: p) }
         }
         ctx.addPath(path)
-        let curveColor = hero ? NotchPalette.accent.withAlphaComponent(0.22) : color.withAlphaComponent(0.12)
+        let curveColor = hero ? NotchPalette.accent.withAlphaComponent(0.22)
+                              : color.withAlphaComponent(0.12 + 0.09 * smallness)
         ctx.setStrokeColor(curveColor.cgColor)
-        ctx.setLineWidth(strokeWidth)
+        ctx.setLineWidth(strokeWidth * (1 + smallness * 0.85))
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
         ctx.strokePath()
@@ -122,7 +131,7 @@ final class RoseLoaderView: NSView {
             let tail = Double(i) / Double(particleCount - 1)
             let p = point(normalize(progress - tail * trailSpan), detail)
             let fade = pow(1 - tail, 0.56)
-            let radius = 0.9 + fade * 2.7
+            let radius = max((0.9 + fade * 2.7) * (1 + smallness * 0.7), smallness * 2.4)
             let opacity = 0.04 + fade * 0.96
             // Hero: accent at the tail warming to near-white at the head, with a soft bloom under
             // the leading particles — the signature drawn in light.

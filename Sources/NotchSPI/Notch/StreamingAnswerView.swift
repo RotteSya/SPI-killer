@@ -155,6 +155,27 @@ final class StreamingAnswerView: NSView {
                 let runColor = (attrs[NSAttributedString.Key.foregroundColor.rawValue as NSString] as? NSColor)
                     ?? NotchPalette.primary
 
+                // A hotkey cap in the placeholder: seat a mini glass keycap under this run —
+                // the world's "press this" material, at text scale. Chip before glyphs, so the
+                // symbol prints on the cap face.
+                if attrs[NSAttributedString.Key.nspiKeycap.rawValue as NSString] != nil {
+                    var ascent: CGFloat = 0, descent: CGFloat = 0
+                    let w = CGFloat(CTRunGetTypographicBounds(run, CFRange(location: 0, length: 0),
+                                                              &ascent, &descent, nil))
+                    let rect = CGRect(x: originX + positions[0].x - 4.5,
+                                      y: originY - descent - 2,
+                                      width: w + 9, height: ascent + descent + 4)
+                    let capPath = CGPath(roundedRect: rect, cornerWidth: 4.5, cornerHeight: 4.5,
+                                         transform: nil)
+                    ctx.addPath(capPath)
+                    ctx.setFillColor(NSColor(white: 1, alpha: 0.085).cgColor)
+                    ctx.fillPath()
+                    ctx.addPath(capPath)
+                    ctx.setStrokeColor(NSColor(white: 1, alpha: 0.20).cgColor)
+                    ctx.setLineWidth(1)
+                    ctx.strokePath()
+                }
+
                 for g in 0..<count {
                     let a: CGFloat
                     if isPlaceholder {

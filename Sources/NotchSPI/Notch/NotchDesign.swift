@@ -130,6 +130,7 @@ struct AnswerPresentation: Equatable {
     var depth: String       // depth this answer was CAPTURED with (frozen per run, not live)
     var finished: Bool      // the stream has ended (idle / error)
     var revealed: Bool      // the user unfolded the scratch work (brief depth, finished)
+    var failed: Bool = false // the run ended in error — error prose, never answer ink
 }
 
 extension NSAttributedString.Key {
@@ -138,6 +139,9 @@ extension NSAttributedString.Key {
     static let nspiAnswerCard = NSAttributedString.Key("nspiAnswerCard")
     /// Marks the clickable "▸ 推理过程" line that folds/unfolds the scratch work.
     static let nspiReasoningToggle = NSAttributedString.Key("nspiReasoningToggle")
+    /// Marks one hotkey cap ("⇧", "⌘", "1") in the idle placeholder. The streaming view draws a
+    /// mini glass keycap behind the range — the product's "press this" language, inline in text.
+    static let nspiKeycap = NSAttributedString.Key("nspiKeycap")
 }
 
 /// Single source of truth for the answer's typography, used by BOTH the view (rendering) and the
@@ -155,17 +159,53 @@ enum NotchType {
     static let cardPadH: CGFloat = 12      // text indent inside the full-width chip
     static let cardGapAbove: CGFloat = 10  // clear air between the chip and what precedes it
 
-    static func placeholder(mode: String) -> String {
-        if mode == "personality" {
-            let key = Settings.displayString(Settings.shared.personalityCombo)
-            return L10n.t("按 \(key) 截屏作答 · 悬停展开",
-                          "\(key) で回答 · ホバーで展開",
-                          "Press \(key) to answer · hover to expand")
+    /// The idle hint, with the hotkey set as inline mini keycaps (the same "press this" language
+    /// the onboarding and settings teach) instead of raw glyphs lost in a gray sentence. Each cap
+    /// character carries `.nspiKeycap`; the streaming view draws the glass cap behind it, and the
+    /// kerned separators reserve the air the caps need. One string drives measure AND render.
+    static func placeholderLine(mode: String) -> NSAttributedString {
+        let combo = mode == "personality" ? Settings.shared.personalityCombo
+                                          : Settings.shared.captureCombo
+        let caps = KeycapChipView.caps(from: combo)
+        let (prefix, suffix) = mode == "personality"
+            ? (L10n.t("按", "", "Press"),
+               L10n.t("截屏作答 · 悬停展开", "で回答 · ホバーで展開", "to answer · hover to expand"))
+            : (L10n.t("按", "", "Press"),
+               L10n.t("截屏讲题 · 悬停展开", "で解説 · ホバーで展開", "for tutoring · hover to expand"))
+
+        let para = NSMutableParagraphStyle()
+        para.lineSpacing = 2
+        para.paragraphSpacingBefore = 3          // headroom for the caps' vertical bleed
+        para.firstLineHeadIndent = 5             // keeps a leading cap's chip clear of the clip edge
+        let hint: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: answerFontSize),
+            .foregroundColor: NotchPalette.secondary,
+            .paragraphStyle: para,
+        ]
+        // Kerned spaces between caps: advance for the chips' horizontal bleed (±4.5pt each).
+        let gap: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: answerFontSize),
+            .kern: 8,
+            .paragraphStyle: para,
+        ]
+        let cap: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: max(10.5, answerFontSize - 1.5), weight: .medium),
+            .foregroundColor: NSColor(white: 1, alpha: 0.85),
+            .paragraphStyle: para,
+            .nspiKeycap: true,
+        ]
+
+        let out = NSMutableAttributedString()
+        if !prefix.isEmpty { out.append(NSAttributedString(string: prefix, attributes: hint)) }
+        for capText in caps {
+            if out.length > 0 { out.append(NSAttributedString(string: " ", attributes: gap)) }
+            out.append(NSAttributedString(string: capText, attributes: cap))
         }
-        let key = Settings.displayString(Settings.shared.captureCombo)
-        return L10n.t("按 \(key) 截屏讲题 · 悬停展开",
-                      "\(key) で解説 · ホバーで展開",
-                      "Press \(key) for tutoring · hover to expand")
+        if !suffix.isEmpty {
+            out.append(NSAttributedString(string: " ", attributes: gap))
+            out.append(NSAttributedString(string: suffix, attributes: hint))
+        }
+        return out
     }
 
     /// Presentation snapshot for the model's CURRENT answer.
@@ -175,14 +215,23 @@ enum NotchType {
             mode: model.mode,
             depth: model.answerDepth,
             finished: !(model.status == .running || model.status == .streaming),
-            revealed: model.reasoningRevealed)
+            revealed: model.reasoningRevealed,
+            failed: model.status == .error)
     }
 
     static func answerString(_ answer: String, presentation p: AnswerPresentation) -> NSAttributedString {
         if answer.isEmpty {
+            // Mid-run there is nothing to say yet: the light field and the status line carry
+            // "thinking" — a hotkey hint here would contradict the capture the user just fired.
+            guard p.finished else { return NSAttributedString() }
+            return placeholderLine(mode: p.mode)
+        }
+        if p.failed {
+            // Error prose is not an answer: quiet secondary ink; the red rose and the amber
+            // light field already carry the state. Never the answer's bright primary white.
             let para = NSMutableParagraphStyle()
-            para.lineSpacing = 2
-            return NSAttributedString(string: placeholder(mode: p.mode), attributes: [
+            para.lineSpacing = 3
+            return NSAttributedString(string: answer, attributes: [
                 .font: NSFont.systemFont(ofSize: answerFontSize),
                 .foregroundColor: NotchPalette.secondary,
                 .paragraphStyle: para,

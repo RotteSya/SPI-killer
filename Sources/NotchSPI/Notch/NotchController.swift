@@ -244,6 +244,9 @@ final class NotchController: NSObject {
         NSPI_CONTEXT_V1: {"last":{"ordinal":"2","summary":"二つの行動傾向から近い方を選ぶ項目","choice":"Bに近い"},"referenceable":[{"ordinal":"1","summary":"新しい役割を自分から引き受ける傾向","choice":"やや当てはまる"}]}
         """
         switch state {
+        case "ready":  // hover-expanded idle: the keycap placeholder line, no answer yet
+            model.answer = ""; model.status = .ready; model.statusText = L10n.statusReady
+            setExpanded(true); resizeToFit()
         case "running":
             model.answer = ""; model.status = .running; model.statusText = L10n.statusPreparing
             setExpanded(true)
