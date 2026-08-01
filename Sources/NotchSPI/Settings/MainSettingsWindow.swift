@@ -55,6 +55,22 @@ final class MainSettingsWindowController: NSWindowController, NSWindowDelegate {
     private var pageControllers: [Page: NSViewController] = [:]
     private var current: Page = .general
     private var observers: [NSObjectProtocol] = []
+    /// The sliding selection lozenge behind the sidebar rows — one shared element that glides
+    /// from row to row instead of each row repainting its own chosen state.
+    private let selectionPill = CALayer()
+    /// The page view currently on screen (kept during a transition so an interrupted hand-off
+    /// can be cleaned up deterministically).
+    private weak var displayedPageView: NSView?
+
+    private var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+
+    /// Navigation timing. DEBUG-only NSPI_QA_SLOW_NAV=1 stretches it for frame-by-frame QA.
+    private static var navTimeScale: CFTimeInterval {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["NSPI_QA_SLOW_NAV"] == "1" { return 6 }
+        #endif
+        return 1
+    }
 
     init() {
         let window = NSWindow(
@@ -73,6 +89,10 @@ final class MainSettingsWindowController: NSWindowController, NSWindowDelegate {
         observers.append(NotificationCenter.default.addObserver(
             forName: L10n.languageDidChange, object: nil, queue: .main
         ) { [weak self] _ in self?.rebuildAfterLanguageChange() })
+        // Accent theme switches restyle the live chrome (pill tint, row icons) immediately.
+        observers.append(NotificationCenter.default.addObserver(
+            forName: Appearance.themeDidChange, object: nil, queue: .main
+        ) { [weak self] _ in self?.restyleChrome() })
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -106,6 +126,13 @@ final class MainSettingsWindowController: NSWindowController, NSWindowDelegate {
     private func buildSidebarRows() {
         rowButtons.forEach { $0.removeFromSuperview() }
         rowButtons = []
+        // The pill lives on the sidebar's own layer, added before any row subview so it stays
+        // beneath every row's hover chip and content.
+        sidebar.wantsLayer = true
+        if selectionPill.superlayer == nil {
+            selectionPill.cornerRadius = 8
+            sidebar.layer?.addSublayer(selectionPill)
+        }
         var y: CGFloat = 52 // clear the (hidden-title) titlebar / traffic lights
         for page in Page.allCases {
             let row = SidebarRowButton(page: page) { [weak self] in self?.show(page: $0) }
@@ -114,6 +141,8 @@ final class MainSettingsWindowController: NSWindowController, NSWindowDelegate {
             rowButtons.append(row)
             y += 38
         }
+        restyleChrome()
+        movePill(to: current, animated: false)
         highlightRows()
     }
 
@@ -121,17 +150,134 @@ final class MainSettingsWindowController: NSWindowController, NSWindowDelegate {
         for row in rowButtons { row.isChosen = row.page == current }
     }
 
+    /// Re-tint the accent-following chrome after a theme switch (rows redraw; the pill re-fills).
+    private func restyleChrome() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        selectionPill.backgroundColor = NotchPalette.accent.withAlphaComponent(0.22).cgColor
+        CATransaction.commit()
+        rowButtons.forEach { $0.needsDisplay = true }
+    }
+
+    /// Glide the selection lozenge to the given row — the one shared element of the sidebar.
+    private func movePill(to page: Page, animated: Bool) {
+        guard let row = rowButtons.first(where: { $0.page == page }) else { return }
+        let target = row.frame
+        guard animated, !reduceMotion, selectionPill.frame.height > 0 else {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            selectionPill.frame = target
+            CATransaction.commit()
+            return
+        }
+        let from = selectionPill.presentation()?.position ?? selectionPill.position
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        selectionPill.frame = target
+        CATransaction.commit()
+        let spring = CASpringAnimation(keyPath: "position")
+        spring.fromValue = NSValue(point: NSPoint(x: from.x, y: from.y))
+        spring.toValue = NSValue(point: NSPoint(x: selectionPill.position.x, y: selectionPill.position.y))
+        spring.mass = 1
+        spring.stiffness = 380
+        spring.damping = 30
+        spring.duration = spring.settlingDuration * Self.navTimeScale
+        spring.speed = Float(1 / Self.navTimeScale)
+        selectionPill.add(spring, forKey: "glide")
+    }
+
+    /// Page hand-off with depth (the onboarding's two-plane language, turned vertical to match
+    /// the sidebar's axis): the incoming page springs in from the direction of travel while the
+    /// outgoing one yields with a shorter parallax drift. Never a hard cut.
     func show(page: Page) {
+        let delta = page.rawValue - current.rawValue
+        let vc = pageControllers[page] ?? makeController(for: page)
+        pageControllers[page] = vc
+
+        // Already the visible page (a re-click on the current row): just settle the chrome.
+        if vc.view === displayedPageView, vc.view.superview != nil {
+            current = page
+            movePill(to: page, animated: true)
+            highlightRows()
+            window?.title = page.localizedTitle
+            return
+        }
+
+        let isInitial = displayedPageView == nil
         current = page
+        movePill(to: page, animated: !isInitial)
         highlightRows()
         window?.title = page.localizedTitle
 
-        contentHost.subviews.forEach { $0.removeFromSuperview() }
-        let vc = pageControllers[page] ?? makeController(for: page)
-        pageControllers[page] = vc
-        vc.view.frame = contentHost.bounds
-        contentHost.addSubview(vc.view)
+        let incoming = vc.view
+        incoming.frame = contentHost.bounds
+        let outgoing = displayedPageView
+        // An interrupted hand-off may have left a mid-flight page behind — clear it instantly.
+        for v in contentHost.subviews where v !== outgoing && v !== incoming { v.removeFromSuperview() }
+        displayedPageView = incoming
+        contentHost.addSubview(incoming)
         (vc as? SettingsPage)?.pageDidShow()
+
+        guard let outgoing, !isInitial, !reduceMotion else {
+            outgoing?.removeFromSuperview()
+            return
+        }
+        incoming.wantsLayer = true
+        outgoing.wantsLayer = true
+        guard let inLayer = incoming.layer, let outLayer = outgoing.layer else {
+            outgoing.removeFromSuperview()
+            return
+        }
+
+        let dir: CGFloat = delta == 0 ? 0 : (delta > 0 ? 1 : -1)
+        let scale = Self.navTimeScale
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self, weak outgoing] in
+            guard let outgoing, outgoing !== self?.displayedPageView else { return }
+            outgoing.removeFromSuperview()
+            outgoing.layer?.removeAllAnimations()
+            outgoing.alphaValue = 1
+        }
+
+        if dir != 0 {
+            // Travel axis follows the sidebar: going down the list, content rises from below.
+            let slideIn = CASpringAnimation(keyPath: "transform.translation.y")
+            slideIn.fromValue = dir * 26
+            slideIn.toValue = 0
+            slideIn.mass = 1
+            slideIn.stiffness = 260
+            slideIn.damping = 30
+            slideIn.duration = min(slideIn.settlingDuration, 0.7) * scale
+            slideIn.speed = Float(1 / scale)
+            inLayer.add(slideIn, forKey: "slideIn")
+
+            let slideOut = CABasicAnimation(keyPath: "transform.translation.y")
+            slideOut.fromValue = 0
+            slideOut.toValue = -dir * 18
+            slideOut.duration = 0.26 * scale
+            slideOut.timingFunction = CAMediaTimingFunction(controlPoints: 0.3, 0, 0.4, 1)
+            slideOut.fillMode = .forwards
+            slideOut.isRemovedOnCompletion = false
+            outLayer.add(slideOut, forKey: "slideOut")
+        }
+
+        let fadeIn = CABasicAnimation(keyPath: "opacity")
+        fadeIn.fromValue = 0
+        fadeIn.toValue = 1
+        fadeIn.duration = 0.24 * scale
+        fadeIn.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        inLayer.add(fadeIn, forKey: "fadeIn")
+
+        let fadeOut = CABasicAnimation(keyPath: "opacity")
+        fadeOut.fromValue = 1
+        fadeOut.toValue = 0
+        fadeOut.duration = 0.20 * scale
+        fadeOut.timingFunction = CAMediaTimingFunction(name: .easeIn)
+        fadeOut.fillMode = .forwards
+        fadeOut.isRemovedOnCompletion = false
+        outLayer.add(fadeOut, forKey: "fadeOut")
+
+        CATransaction.commit()
     }
 
     private func makeController(for page: Page) -> NSViewController {
@@ -192,10 +338,11 @@ private final class SidebarRowButton: NSControl {
     override var isFlipped: Bool { true }
 
     override func draw(_ dirtyRect: NSRect) {
-        if isChosen || hovering {
+        // The chosen backdrop is the window's shared selection pill (it glides between rows);
+        // a row only paints its own transient hover chip.
+        if hovering && !isChosen {
             let path = NSBezierPath(roundedRect: bounds, xRadius: 8, yRadius: 8)
-            (isChosen ? NotchPalette.accent.withAlphaComponent(0.22)
-                      : NSColor.labelColor.withAlphaComponent(0.06)).setFill()
+            NSColor.labelColor.withAlphaComponent(0.06).setFill()
             path.fill()
         }
         let tint: NSColor = isChosen ? NotchPalette.accent : .secondaryLabelColor
@@ -816,12 +963,38 @@ private final class AccountPageController: NSViewController, SettingsPage {
         if let observer { NotificationCenter.default.removeObserver(observer) }
     }
 
+    /// Visual-QA: NSPI_QA_BALANCE=N renders the page as a registered device holding N questions
+    /// — no Keychain, no network (pair with NSPI_QA_EPHEMERAL). Always nil in release.
+    private static var qaBalance: Int? {
+        #if DEBUG
+        return ProcessInfo.processInfo.environment["NSPI_QA_BALANCE"].flatMap(Int.init)
+        #else
+        return nil
+        #endif
+    }
+
     func pageDidShow() {
         reload()
-        if OfficialAPI.deviceToken != nil { refreshTapped() }
+        if OfficialAPI.deviceToken != nil, Self.qaBalance == nil { refreshTapped() }
     }
 
     private func reload() {
+        #if DEBUG
+        if let n = Self.qaBalance {
+            ring.setBalance(n, animated: true)
+            usageLabel.stringValue = L10n.t("累计已答 \(OfficialAPI.totalQuestions) 题",
+                                            "これまでに\(OfficialAPI.totalQuestions)問回答",
+                                            "\(OfficialAPI.totalQuestions) questions answered so far")
+            tokensLabel.stringValue = "· 128650 tokens"
+            deviceLabel.stringValue = L10n.t("设备 ID：", "デバイスID：", "Device ID: ") + "nspi-••••••••Q4"
+            claimButton.isHidden = true
+            resetButton.isHidden = true
+            copyCodeButton.isHidden = false
+            topUpButton.isEnabled = true
+            refreshButton.isEnabled = true
+            return
+        }
+        #endif
         let registered = OfficialAPI.deviceToken != nil
         // Credential kept but rejected by the server (401): a distinct state from "not registered".
         let rejected = registered && OfficialAPI.credentialRejected
@@ -918,75 +1091,123 @@ private final class AccountPageController: NSViewController, SettingsPage {
     }
 }
 
-/// The quota at a glance: an animated gradient arc (proportion of the 180-question grant, capped
-/// at full) around the live number. Amber when running low, so "time to top up" is felt before
-/// it's read.
+/// The quota at a glance: a true conic-gradient arc (proportion of the 180-question grant,
+/// capped at full) around a live rolling number. The arc lands on a soft spring and the number
+/// counts to its new value — one glance says both "how much" and "which way it just moved".
+/// Amber when running low, so "time to top up" is felt before it's read.
 final class QuotaRingView: NSView {
-    private var displayed: CGFloat = 0 // 0…1 arc fraction currently drawn
+    private var displayedFraction: CGFloat = 0   // 0…1 arc sweep currently drawn
+    private var displayedNumber: CGFloat = 0     // rolling count-up value
     private var balance: Int?
-    private var tween: DisplayTween?
+    private var arcTween: DisplayTween?
+    private var numberTween: DisplayTween?
+
+    /// The progress ring: a conic gradient sheet masked to a round-capped arc whose strokeEnd is
+    /// the live sweep. CG has no conic API, so the gradient rides a CAGradientLayer above the
+    /// view's own drawing (track + number), which is exactly the right stacking anyway.
+    private let conic = CAGradientLayer()
+    private let arcMask = CAShapeLayer()
+
+    private var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        conic.type = .conic
+        conic.startPoint = CGPoint(x: 0.5, y: 0.5)
+        conic.endPoint = CGPoint(x: 0.5, y: 1)     // gradient's 0-angle points at the arc's top start
+        arcMask.fillColor = nil
+        arcMask.strokeColor = NSColor.black.cgColor
+        arcMask.lineWidth = 12
+        arcMask.lineCap = .round
+        arcMask.strokeEnd = 0
+        conic.mask = arcMask
+        layer?.addSublayer(conic)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func setBalance(_ newBalance: Int?, animated: Bool) {
         balance = newBalance
         let target = CGFloat(min(1, max(0, Double(newBalance ?? 0) / 180.0)))
-        if tween == nil { tween = DisplayTween(host: self, value: 0) }
-        tween?.onChange = { [weak self] v in
-            self?.displayed = v
-            self?.needsDisplay = true
+        if arcTween == nil {
+            arcTween = DisplayTween(host: self, value: 0)
+            arcTween?.ease = NotchMotion.springSettle   // the arc lands with a soft breath past target
+            arcTween?.onChange = { [weak self] v in
+                self?.displayedFraction = v
+                self?.applyRing()
+            }
+            numberTween = DisplayTween(host: self, value: 0)
+            numberTween?.onChange = { [weak self] v in
+                self?.displayedNumber = v
+                self?.needsDisplay = true
+            }
         }
-        if animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            tween?.animate(to: target, duration: 0.8)
+        let number = CGFloat(newBalance ?? 0)
+        if animated && !reduceMotion {
+            arcTween?.animate(to: target, duration: 0.9)
+            numberTween?.animate(to: number, duration: 0.9)
         } else {
-            tween?.set(target)
+            arcTween?.set(target)
+            numberTween?.set(number)
         }
+        applyRing()
+    }
+
+    override func layout() {
+        super.layout()
+        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        let radius = min(bounds.width, bounds.height) / 2 - 10
+        // One full clockwise-from-top turn; strokeEnd exposes the live sweep.
+        let arc = CGMutablePath()
+        arc.addArc(center: center, radius: radius,
+                   startAngle: .pi / 2, endAngle: .pi / 2 - 2 * .pi, clockwise: true)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        conic.frame = bounds
+        arcMask.frame = bounds
+        arcMask.path = arc
+        CATransaction.commit()
+        applyRing()
+    }
+
+    /// Push the tweened sweep into the layers: strokeEnd plus gradient stops pinned so the
+    /// accent sits at the arc's start and the highlight rides its head. The conic sweep runs
+    /// counterclockwise in this y-up geometry while the arc runs clockwise, so arc position s
+    /// samples the gradient at location 1 − s.
+    private func applyRing() {
+        let low = (balance ?? Int.max) <= OfficialAPI.lowQuotaThreshold
+        let accent = low ? AccentTheme.amber.accent : NotchPalette.accent
+        let accentHi = low ? AccentTheme.amber.accentHi : NotchPalette.accentHi
+        let f = min(1, max(0, displayedFraction))
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        arcMask.strokeEnd = f
+        conic.colors = [accentHi.cgColor, accentHi.cgColor, accent.cgColor]
+        conic.locations = [0, NSNumber(value: Double(1 - f)), 1]
+        conic.isHidden = f <= 0.004
+        CATransaction.commit()
+        needsDisplay = true
     }
 
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         let low = (balance ?? Int.max) <= OfficialAPI.lowQuotaThreshold
-        let accent = low ? AccentTheme.amber.accent : NotchPalette.accent
-        let accentHi = low ? AccentTheme.amber.accentHi : NotchPalette.accentHi
 
         let center = CGPoint(x: bounds.midX, y: bounds.midY)
         let radius = min(bounds.width, bounds.height) / 2 - 10
         let lineWidth: CGFloat = 12
 
-        // Track.
+        // Track (the conic progress rides above as a sublayer).
         ctx.setStrokeColor(NSColor.labelColor.withAlphaComponent(0.10).cgColor)
         ctx.setLineWidth(lineWidth)
         ctx.setLineCap(.round)
         ctx.addArc(center: center, radius: radius, startAngle: 0, endAngle: 2 * .pi, clockwise: false)
         ctx.strokePath()
 
-        // Progress arc, top-anchored, clockwise; gradient along the sweep approximated by
-        // stroking in short segments.
-        if displayed > 0.004 {
-            let start = CGFloat.pi / 2
-            let sweep = displayed * 2 * .pi
-            let steps = max(2, Int(60 * displayed))
-            for i in 0..<steps {
-                let f0 = CGFloat(i) / CGFloat(steps)
-                let f1 = CGFloat(i + 1) / CGFloat(steps) + 0.004
-                let t = f0
-                let c0 = accent.usingColorSpace(.sRGB) ?? accent
-                let c1 = accentHi.usingColorSpace(.sRGB) ?? accentHi
-                let mix = NSColor(
-                    srgbRed: c0.redComponent + (c1.redComponent - c0.redComponent) * t,
-                    green: c0.greenComponent + (c1.greenComponent - c0.greenComponent) * t,
-                    blue: c0.blueComponent + (c1.blueComponent - c0.blueComponent) * t,
-                    alpha: 1)
-                ctx.setStrokeColor(mix.cgColor)
-                ctx.setLineWidth(lineWidth)
-                ctx.setLineCap(.round)
-                ctx.addArc(center: center, radius: radius,
-                           startAngle: start - sweep * f0, endAngle: start - sweep * f1, clockwise: true)
-                ctx.strokePath()
-            }
-        }
-
         // Number + unit in the middle. The number itself goes amber when the quota is low —
         // at zero there is no arc left to carry the warning color.
-        let numberText = balance.map(String.init) ?? "—"
+        let numberText = balance == nil ? "—" : String(Int(displayedNumber.rounded()))
         let numberAttrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 34, weight: .bold),
             .foregroundColor: (low && balance != nil) ? AccentTheme.amber.accent : NSColor.labelColor,

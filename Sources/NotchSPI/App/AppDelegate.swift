@@ -35,6 +35,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 controller.openSettings(page: page)
             }
         }
+        // Visual-QA: force an appearance so light/dark can both be screenshotted regardless of
+        // the system setting (`--qa-appearance light|dark`).
+        if let i = args.firstIndex(of: "--qa-appearance"), i + 1 < args.count {
+            NSApp.appearance = NSAppearance(named: args[i + 1] == "dark" ? .darkAqua : .aqua)
+        }
+        // Visual-QA: seed a small persona library (dev-domain defaults only) so the 人物像 page
+        // can be screenshotted with real rows + the active badge.
+        if ProcessInfo.processInfo.environment["NSPI_QA_PERSONAS"] == "1", PersonaStore.shared.all.isEmpty {
+            let a = PersonaStore.shared.add(
+                name: "A社 求める人物像",
+                text: "●創意と挑戦心を持ち、主体的に行動できる方 ●変化へ柔軟に適応できる方")
+            _ = PersonaStore.shared.add(
+                name: "B社 リーダー候補",
+                text: "●チームワークを重要視し、協調性を発揮できる方")
+            PersonaStore.shared.setActive(a)
+        }
+        if args.contains("--qa-settings-autoplay") {
+            // Walks through every settings page on a fixed beat so the sidebar pill glide and
+            // the page hand-off can be captured as a screenshot burst.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                controller.openSettings(page: .general)
+            }
+            for (step, page) in MainSettingsWindowController.Page.allCases.enumerated() where page != .general {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5 + Double(step) * 1.4) {
+                    controller.openSettings(page: page)
+                }
+            }
+        }
         let qaNotchState: String? = {
             if let i = args.firstIndex(of: "--qa-notch"), i + 1 < args.count {
                 return args[i + 1]
