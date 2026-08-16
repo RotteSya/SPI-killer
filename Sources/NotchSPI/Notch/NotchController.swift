@@ -188,13 +188,12 @@ final class NotchController: NSObject {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    /// Push the active mode + persona name into the model so the notch header reflects them.
+    /// Push the active mode + persona name into the model.
     /// Reads the active persona from `PersonaStore` (which also keeps `Settings` mirrored for the
     /// capture pipeline). Touching the store here on launch performs the one-time legacy migration.
     private func refreshModeLabels() {
         let m = Settings.shared.mode
         model.mode = m
-        model.modeLabel = L10n.modeLabel(m)
         model.personaLabel = PersonaStore.shared.active?.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
@@ -301,7 +300,6 @@ final class NotchController: NSObject {
             Settings.shared.personaName = "QA Persona"
             Settings.shared.personaText = "慎重だが一貫し、必要な場面では明確に判断する。"
             model.mode = "personality"
-            model.modeLabel = L10n.modePersonality
             model.personaLabel = "QA Persona"
             model.answer = personalityFixture
             model.status = .idle

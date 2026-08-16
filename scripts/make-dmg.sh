@@ -94,5 +94,5 @@ ls -lh "$OUT/$APP_NAME.dmg"
 if [ -n "$SIGN_ID" ] && [ "${PUBLISH_QUARK:-1}" != "0" ]; then
   echo "==> Publishing DMG to Quark cloud drive…"
   VERSION="$VERSION" "$(dirname "$0")/publish-quark.sh" \
-    || echo "    ⚠️  网盘上传失败（DMG 已在本地/GitHub 不受影响）；修好后重跑: scripts/publish-quark.sh"
+    || echo "    ⚠️  网盘上传失败（DMG 已在本地，不受影响）；修好后重跑: scripts/publish-quark.sh"
 fi

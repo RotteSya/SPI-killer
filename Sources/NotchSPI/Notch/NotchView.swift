@@ -113,6 +113,15 @@ final class NotchView: NSView {
         addSubview(surface)
         addSubview(luma)
 
+        // The header carries the wordmark, not a category name — fixed "NotchSPI" in every mode
+        // and language (the capsule + status line already say what the instrument is doing).
+        // A breath of tracking matches the onboarding's brand moment.
+        modeLabel.attributedStringValue = NSAttributedString(string: "NotchSPI", attributes: [
+            .font: NSFont.systemFont(ofSize: 12.5, weight: .semibold),
+            .foregroundColor: NotchPalette.primary,
+            .kern: 0.5,
+        ])
+
         configureAnswerArea()
         [modeLabel, statusText, capsule, gearButton, answerScroll].forEach { expandedContent.addSubview($0) }
         expandedContent.wantsLayer = true
@@ -173,7 +182,6 @@ final class NotchView: NSView {
         if model.status == .streaming, model.answer.count > lastAnswerLen { luma.pulse() }
         lastAnswerLen = model.answer.count
 
-        modeLabel.stringValue = model.modeLabel
         statusText.stringValue = model.statusText
 
         let isPersona = model.mode == "personality"
