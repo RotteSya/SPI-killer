@@ -1,12 +1,13 @@
 # NotchSPI 官方服务 — 服务端 API 契约（v2 · 题数额度制）
 
 客户端（`Sources/NotchSPI/Cloud/`）已按本契约实现完毕。服务端参考实现见
-[`../server/`](../server/)（Node.js + TypeScript + Fastify + SQLite，`npm start` 开箱即跑）。
+[`../server/`](../server/)（Node.js + TypeScript + Fastify；生产 Postgres，本地 SQLite / memory，`npm start` 开箱即跑）。
 上线后无需改动客户端代码（默认地址 `https://notchspi-api.vercel.app`，可用
 `defaults write com.rottesya.notchspi official.baseURL <url>` 指向测试环境）。
 
 **计费模型：题数额度制。** 账户余额是整数「题数」；一次成功的截屏问答扣 1 题，
-失败（网络/模型错误）不扣。新设备注册即赠 `TRIAL_QUESTIONS`（默认 180）题。
+失败（网络/模型错误）不扣。新设备注册赠随机试用题，区间
+`[TRIAL_MIN_QUESTIONS, TRIAL_MAX_QUESTIONS]`（默认 100–180）；`TRIAL_QUESTIONS` 只是对外宣传上限。
 金钱只出现在充值环节 —— 充值页出售「题包」（题数 + 价格），客户端永远只看到题数。
 
 服务端职责：代持真正的模型厂商 API Key、代理模型调用、按题计量、扣减题数、
@@ -23,9 +24,21 @@
   提供二次确认的「重置服务凭证」。`402 insufficient_quota` 额度用完（客户端把本地题数
   镜像清零并引导充值）；`429 rate_limited` 请求过于频繁（注册频率或并发截图超限）。
 
+## 客户端遥测请求头（经营数据，缺了会瞎）
+
+由 `server/src/auth.ts` 在每次 Bearer 鉴权时读取，写失败不得打断已付费请求：
+
+| 头 | 值 | 作用 |
+| --- | --- | --- |
+| `x-app-version` | 客户端版本，如 `2.9` | 更新 `devices.app_version`（仅在变化时写） |
+| `x-onboarded` | `1` | 标记引导完成 |
+| `x-client-event` | `hotkey` | 热键按下计数（走预热 ping，截图/额度失败也算） |
+
+`store.recordHotkeyPress` **只**由 `x-client-event: hotkey` 触发，不在 `routes.ts` 里出现。
+
 ## POST /v1/devices — 匿名设备注册（开箱即用入口）
 
-无需认证。首次注册赠送试用题数。重复调用允许（客户端只在本地无令牌时调用）。
+无需认证。首次注册赠送随机试用题数（默认 100–180）。重复调用允许（客户端只在本地无令牌时调用）。
 为防止免费额度被脚本批量领取，本端点按客户端 IP 限流（`DEVICE_REG_PER_HOUR`，默认 30 次/小时），
 超限返回 `429 rate_limited`。此为进程内尽力而为的限流，硬性保障应交由平台 WAF。
 
@@ -38,7 +51,7 @@
 响应 200：
 
 ```json
-{ "device_token": "dev_xxxxxxxx", "balance_questions": 180 }
+{ "device_token": "dev_xxxxxxxx", "balance_questions": 142 }
 ```
 
 ## GET /v1/account — 题数与用量查询
@@ -130,3 +143,21 @@ data: [DONE]
   题数未知时放行，以服务端 `402` 为准。自定义 API Key / 本机 CLI 模式完全不经过
   官方服务，也不受拦截影响。
 - 新安装引导流程内静默注册；老安装保持原有模式，不会被改路由。
+
+## 非客户端契约端点（索引，细节以代码为准）
+
+这些路径不是客户端 SDK 契约，只在此列目录，避免第二份会漂移的说明书：
+
+| 方法 | 路径 | 一句话 | 锚点 |
+| --- | --- | --- | --- |
+| GET | `/` | 产品落地页 | `server/src/routes.ts` `app.get('/')` |
+| GET | `/dl` | 流式代理 DMG | `app.get('/dl')` |
+| GET | `/update` | 版本中继（客户端检查更新） | `app.get('/update')` |
+| GET | `/stats` | 下载按钮点击计数 | `app.get('/stats')` |
+| GET | `/healthz` | 健康检查 | `app.get('/healthz')` |
+| POST | `/topup/checkout` | 创建 Stripe Checkout Session | `app.post('/topup/checkout')` |
+| POST | `/webhooks/stripe` | Stripe 入账 webhook | `app.post('/webhooks/stripe')` |
+| GET | `/admin` | 管理台（需 `ADMIN_TOKEN`） | `app.get('/admin')` |
+| POST | `/admin/grant` | 手动加题 | `app.post('/admin/grant')` |
+| GET | `/admin/activity` | 最近注册 / 充值 | `app.get('/admin/activity')` |
+| POST | `/admin/cli` | 按设备开关 CLI 通道 | `app.post('/admin/cli')` |

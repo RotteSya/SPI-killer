@@ -20,7 +20,6 @@ final class TutorModel: ObservableObject {
     @Published var answerDepth = "guided" // depth the CURRENT answer was captured with (frozen per run)
     @Published var reasoningRevealed = false // brief mode: the folded scratch work is open
     @Published var mode = "tutor"        // active mode id: "tutor" | "personality"
-    @Published var modeLabel = ""        // header title for the active mode
     @Published var personaLabel = ""      // current persona name (empty = not set)
     @Published var autoActive = false    // an auto session is live (any phase)
     @Published var autoProgress = ""     // "3/20" while autoActive; capsule + status suffix
