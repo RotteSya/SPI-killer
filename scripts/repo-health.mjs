@@ -272,6 +272,22 @@ for (const file of trackedFiles) {
   }
 }
 
+// --- Eval output stays under .eval-results/ --------------------------------------
+
+if (exists('Tests/NotchSPITests/PersonalityEvaluationTests.swift')) {
+  const evalSrc = read('Tests/NotchSPITests/PersonalityEvaluationTests.swift');
+  if (evalSrc.includes('docs/evals')) {
+    fail('PersonalityEvaluationTests.swift still writes under docs/evals');
+  }
+}
+
+if (exists('.github/workflows/ci.yml')) {
+  const ci = read('.github/workflows/ci.yml');
+  if (/notarytool|publish-quark|NSPI_RUN_PERSONALITY_EVAL/.test(ci)) {
+    fail('CI must not run notarization, netdisk publish, or the paid personality gate');
+  }
+}
+
 // --- Secrets and private tool paths in tracked files -----------------------------
 
 const secretRe = [

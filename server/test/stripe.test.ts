@@ -50,10 +50,14 @@ async function register(): Promise<string> {
   return body.device_token;
 }
 
-function checkoutCompletedEvent(token: string, overrides: Record<string, unknown> = {}): string {
+function checkoutEvent(
+  token: string,
+  type: string,
+  overrides: Record<string, unknown> = {},
+): string {
   return JSON.stringify({
-    id: 'evt_1',
-    type: 'checkout.session.completed',
+    id: (overrides.event_id as string) ?? 'evt_1',
+    type,
     data: {
       object: {
         id: (overrides.session_id as string) ?? 'cs_test_ok_1',
@@ -65,6 +69,10 @@ function checkoutCompletedEvent(token: string, overrides: Record<string, unknown
       },
     },
   });
+}
+
+function checkoutCompletedEvent(token: string, overrides: Record<string, unknown> = {}): string {
+  return checkoutEvent(token, 'checkout.session.completed', overrides);
 }
 
 // ---- pure signature verification --------------------------------------------------------
@@ -118,6 +126,57 @@ test('buildCheckoutParams builds a dynamic-payment-method session (no payment_me
 });
 
 // ---- webhook integration ------------------------------------------------------------------
+
+test('signed checkout.session.async_payment_succeeded credits a delayed session; redelivery is a no-op', async () => {
+  const token = await register();
+  const sessionId = 'cs_test_async_1';
+  const unpaid = checkoutCompletedEvent(token, { session_id: sessionId, payment_status: 'unpaid' });
+  assert.equal((await fetch(`${base}/webhooks/stripe`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'stripe-signature': sign(unpaid) },
+    body: unpaid,
+  })).status, 200);
+  const before = (await (await fetch(`${base}/v1/account`, { headers: { authorization: `Bearer ${token}` } })).json()) as { balance_questions: number };
+  assert.equal(before.balance_questions, 0, 'unpaid completed must not credit');
+
+  const payload = checkoutEvent(token, 'checkout.session.async_payment_succeeded', {
+    event_id: 'evt_async_1',
+    session_id: sessionId,
+  });
+  const deliver = () => fetch(`${base}/webhooks/stripe`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'stripe-signature': sign(payload) },
+    body: payload,
+  });
+  assert.equal((await deliver()).status, 200);
+  const acct1 = (await (await fetch(`${base}/v1/account`, { headers: { authorization: `Bearer ${token}` } })).json()) as { balance_questions: number };
+  assert.equal(acct1.balance_questions, 300);
+  assert.equal((await deliver()).status, 200);
+  const acct2 = (await (await fetch(`${base}/v1/account`, { headers: { authorization: `Bearer ${token}` } })).json()) as { balance_questions: number };
+  assert.equal(acct2.balance_questions, 300);
+});
+
+test('async_payment_succeeded after a paid completed event does not double-credit', async () => {
+  const token = await register();
+  const sessionId = 'cs_test_both_1';
+  const completed = checkoutCompletedEvent(token, { session_id: sessionId });
+  assert.equal((await fetch(`${base}/webhooks/stripe`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'stripe-signature': sign(completed) },
+    body: completed,
+  })).status, 200);
+  const asyncPaid = checkoutEvent(token, 'checkout.session.async_payment_succeeded', {
+    event_id: 'evt_both_async',
+    session_id: sessionId,
+  });
+  assert.equal((await fetch(`${base}/webhooks/stripe`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'stripe-signature': sign(asyncPaid) },
+    body: asyncPaid,
+  })).status, 200);
+  const acct = (await (await fetch(`${base}/v1/account`, { headers: { authorization: `Bearer ${token}` } })).json()) as { balance_questions: number };
+  assert.equal(acct.balance_questions, 300);
+});
 
 test('signed checkout.session.completed credits the pack; redelivery is a no-op', async () => {
   const token = await register();

@@ -351,10 +351,7 @@ final class PersonalityEvaluationTests: XCTestCase {
             ?? Self.releaseVersion()
             ?? "dev"
         let date = Self.dateFormatter.string(from: Date())
-        let resultDirectory = root == repositoryFixtureRoot
-            ? repositoryFixtureRoot.deletingLastPathComponent().deletingLastPathComponent()
-                .appendingPathComponent("../.eval-results/personality").standardizedFileURL
-            : root.appendingPathComponent(".eval-results", isDirectory: true)
+        let resultDirectory = Self.evaluationOutputDirectory(fixtureRoot: root)
         try FileManager.default.createDirectory(at: resultDirectory, withIntermediateDirectories: true)
         let resultURL = resultDirectory.appendingPathComponent(
             "\(date)-\(commit)\(channel.fileSuffix).jsonl"
@@ -481,9 +478,7 @@ final class PersonalityEvaluationTests: XCTestCase {
 
         let summary = PersonalityEvaluationSummary.calculate(results)
         if filter == nil, root == repositoryFixtureRoot {
-            let summaryDirectory = repositoryFixtureRoot.deletingLastPathComponent()
-                .deletingLastPathComponent().deletingLastPathComponent()
-                .appendingPathComponent("docs/evals/personality", isDirectory: true)
+            let summaryDirectory = Self.evaluationOutputDirectory(fixtureRoot: root)
             try FileManager.default.createDirectory(at: summaryDirectory, withIntermediateDirectories: true)
             let summaryURL = summaryDirectory.appendingPathComponent(
                 "\(date)-\(commit)\(channel.fileSuffix).md"
@@ -547,8 +542,7 @@ final class PersonalityEvaluationTests: XCTestCase {
         try Self.writeJSONL(signed, to: resultURL)
 
         let first = try XCTUnwrap(signed.first)
-        let summaryDirectory = Self.repositoryRoot
-            .appendingPathComponent("docs/evals/personality", isDirectory: true)
+        let summaryDirectory = Self.evaluationOutputDirectory(fixtureRoot: root)
         try FileManager.default.createDirectory(at: summaryDirectory, withIntermediateDirectories: true)
         let summaryURL = summaryDirectory.appendingPathComponent(
             resultURL.deletingPathExtension().lastPathComponent + ".md"
@@ -760,6 +754,14 @@ final class PersonalityEvaluationTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
+    }
+
+    private static func evaluationOutputDirectory(fixtureRoot: URL) -> URL {
+        let bundled = repositoryRoot.appendingPathComponent("Tests/Fixtures/Personality", isDirectory: true)
+        if fixtureRoot.standardizedFileURL.path == bundled.standardizedFileURL.path {
+            return repositoryRoot.appendingPathComponent(".eval-results/personality", isDirectory: true)
+        }
+        return fixtureRoot.appendingPathComponent(".eval-results", isDirectory: true)
     }
 
     private static let dateFormatter: DateFormatter = {

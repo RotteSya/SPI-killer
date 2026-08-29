@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: Node
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+        env:
+          OFFICIAL_PROVIDER: mock
+
+  postgres:
+    name: Postgres store
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: notchspi
+          POSTGRES_PASSWORD: notchspi
+          POSTGRES_DB: notchspi_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - run: npm test
+        env:
+          OFFICIAL_PROVIDER: mock
+          TEST_POSTGRES_URL: postgres://notchspi:notchspi@localhost:5432/notchspi_test?sslmode=disable
+
+  macos:
+    name: macOS
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/repo-health.mjs
+      - name: Swift tests (serial, warnings-as-errors)
+        run: swift test -Xswiftc -warnings-as-errors
+      - name: Release arm64 build
+        run: swift build -c release --arch arm64
+        env:
+          OFFICIAL_PROVIDER: mock
