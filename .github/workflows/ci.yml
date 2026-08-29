@@ -63,13 +63,15 @@ jobs:
 
   macos:
     name: macOS
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - run: node scripts/repo-health.mjs
+      - name: Swift toolchain
+        run: swift --version
       - name: Swift tests (serial, warnings-as-errors)
         run: swift test -Xswiftc -warnings-as-errors
       - name: Release arm64 build
