@@ -17,7 +17,6 @@ enum NotchPalette {
 
     static let primary   = NSColor(white: 1, alpha: 0.96)
     static let secondary = NSColor(white: 1, alpha: 0.60)
-    static let tertiary  = NSColor(white: 1, alpha: 0.34)
 
     /// The user's chosen accent theme (外观 → 强调色), flowing through the whole instrument.
     /// Reads a cached theme — safe to call from every draw.
@@ -41,8 +40,6 @@ enum NotchPalette {
         #endif
         return 0.32
     }()
-    static let contentDuration: CFTimeInterval = 0.18
-    static let controlDuration: CFTimeInterval = 0.13
 }
 
 /// Shared easing curves for the expand/collapse morph.

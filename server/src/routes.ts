@@ -564,7 +564,7 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
       .header('X-Robots-Tag', 'noindex, nofollow')
       .header('Cache-Control', 'no-store')
       .type('text/html; charset=utf-8')
-      .send(renderAdminPage({ currency: config.currency }));
+      .send(renderAdminPage());
   });
 
   // POST /admin/grant — grant N free questions to a device, authorized by the admin secret in the

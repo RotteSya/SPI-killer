@@ -789,11 +789,21 @@ final class NotchController: NSObject {
     private func autoRunCompleted(ok: Bool) {
         guard autoEngine.isActive else { return }
         guard ok else {
-            // A failed run never re-arms the watch. Distinguish "out of quota" so the
-            // status says why — including the 401 path that wipes the cached balance.
+            // A failed run never re-arms the watch. Quota exhaustion (including the 401
+            // path that wipes the cached balance) stops with that reason; every other
+            // failure goes through the engine so the runFailed state machine stays live.
             let quotaDead = OfficialAPI.credentialRejected
                 || OfficialAPI.balanceQuestions.map({ $0 <= 0 }) == true
-            stopAutoSession(quotaDead ? .quotaExhausted : .runFailed)
+            if quotaDead {
+                stopAutoSession(.quotaExhausted)
+                return
+            }
+            switch autoEngine.noteRunFailed() {
+            case .stop(let reason):
+                stopAutoSession(reason)
+            default:
+                stopAutoSession(.runFailed)
+            }
             return
         }
         switch autoEngine.noteRunSucceeded(

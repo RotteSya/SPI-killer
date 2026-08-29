@@ -41,9 +41,6 @@ struct PersonalityAnswerComposition: Equatable {
     let violations: [PersonalityProtocolViolation]
 
     var hasFinalizedChoices: Bool { !finalizedChoices.isEmpty }
-    var hasInvalidContext: Bool {
-        violations.contains(.invalidContext) || violations.contains(.missingContext)
-    }
 }
 
 enum PersonalityAnswer {
@@ -190,10 +187,6 @@ enum PersonalityAnswer {
 
     static func isTerminalError(_ code: String?) -> Bool {
         code.map(terminalErrorCodes.contains) ?? false
-    }
-
-    static func isPartialError(_ code: String?) -> Bool {
-        code.map(partialErrorCodes.contains) ?? false
     }
 
     private static func parseChoiceLine(_ source: String) -> PersonalityChoiceLine? {

@@ -115,6 +115,7 @@ final class PersonalitySession {
         lastBeginClearedContext = cleared
     }
 
+    /// `@testable` observation surface for session tests.
     var recordCount: Int { records.count }
     var hasContinuity: Bool { !records.isEmpty || barrier != nil }
 

@@ -54,21 +54,6 @@ export async function buildApp(overrides: { provider?: Provider } = {}) {
   return app;
 }
 
-// Default export: a Node request handler, so this module works as a serverless entry too.
-// Vercel's Fastify preset treats src/index.ts as a function and requires a default export that
-// is a server or (req,res) handler — without this it fails with "Invalid export found in
-// module". The app is built once per instance and reused across invocations, same as api/index.ts.
-let appOnce: ReturnType<typeof buildApp> | null = null;
-export default async function handler(
-  req: import('node:http').IncomingMessage,
-  res: import('node:http').ServerResponse,
-): Promise<void> {
-  appOnce ??= buildApp();
-  const app = await appOnce;
-  await app.ready();
-  app.server.emit('request', req, res);
-}
-
 // Only start listening when run directly (not when imported by a test). Compare via
 // pathToFileURL so a relative entry path (e.g. `node src/index.ts`) still matches.
 const entry = process.argv[1];

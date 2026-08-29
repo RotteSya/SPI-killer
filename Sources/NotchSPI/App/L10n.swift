@@ -100,9 +100,6 @@ enum L10n {
 
     // MARK: - Modes & depths
 
-    static var modeTutor: String { t("学习辅导", "学習チューター", "Study Tutor") }
-    static var modePersonality: String { t("性格测试", "性格検査", "Personality Test") }
-
     static var depthBrief: String { t("简略", "簡潔", "Brief") }
     static var depthHint: String { t("提示", "ヒント", "Hints") }
     static var depthGuided: String { t("引导", "ガイド", "Guided") }

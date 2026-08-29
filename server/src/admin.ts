@@ -5,11 +5,7 @@
 // POST /admin/grant and POST /admin/cli, which verify it server-side. The whole /admin path is
 // 404 unless ADMIN_TOKEN is configured (see routes.ts).
 
-export interface AdminPageInput {
-  currency: string;
-}
-
-export function renderAdminPage(_input: AdminPageInput): string {
+export function renderAdminPage(): string {
   return `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
