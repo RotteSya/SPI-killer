@@ -783,10 +783,9 @@ private final class PermissionPage: OnboardingPage {
 // MARK: - Page 4 · The gift  (claim-to-reveal)
 
 /// The welcome gift is *earned by a tap*: a sealed brand medallion the player opens to reveal a
-/// randomly-granted free balance (100–180, decided server-side at registration — see OfficialAPI /
-/// the register route). Opening plays a charge→break→count-up→burst sequence; the odometer lands on
-/// the real granted number. "Continue" stays hidden until the claim gesture, so the step can't be
-/// skipped past — but Back and Esc always work, and the gate flips on the tap, never on the network.
+/// randomly-granted free balance (server-side at registration; the odometer uses the register
+/// response). Opening plays a charge→break→count-up→burst sequence. "Continue" stays hidden until
+/// the claim gesture — Back and Esc always work, and the gate flips on the tap, never on the network.
 /// The medallion itself is the hero and the button; the capsule below is a quiet secondary path.
 private final class GiftPage: OnboardingPage {
     private enum Phase { case sealed, revealing, revealed }
@@ -852,9 +851,9 @@ private final class GiftPage: OnboardingPage {
             ? L10n.t("你的见面礼", "はじめましての贈りもの", "A little welcome gift")
             : L10n.t("见面礼已到账", "贈りもの、届きました", "Your gift has arrived")
         odometer.suffix = L10n.t("题", "問", "questions")
-        caption.stringValue = L10n.t("轻点领取 · 随机 100–180 题",
-                                     "タップして受け取る · 100–180問からランダム",
-                                     "Tap to claim · a random 100–180 questions")
+        caption.stringValue = L10n.t("轻点领取 · 随机欢迎额度",
+                                     "タップして受け取る · ランダムなウェルカム枠",
+                                     "Tap to claim · a random welcome quota")
         claimButton.title = L10n.t("领取见面礼", "受け取る", "Claim gift")
         layoutClaimButton()
         if phase == .revealed { note.stringValue = noteText() }

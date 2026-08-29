@@ -121,7 +121,12 @@ if (exists('Sources/NotchSPI/Update/UpdateChecker.swift')) {
 
 // --- Markdown relative links -----------------------------------------------------
 
-const mdFiles = tracked().filter((f) => f.endsWith('.md'));
+const mdFiles = [
+  ...new Set([
+    ...tracked().filter((f) => f.endsWith('.md') && exists(f)),
+    ...walk('.', (_rel, name) => name.endsWith('.md')),
+  ]),
+];
 const linkRe = /\[[^\]]*]\(([^)]+)\)/g;
 for (const file of mdFiles) {
   const text = read(file);

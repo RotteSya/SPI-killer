@@ -46,8 +46,8 @@ actor RegistrationGate {
 /// Client for the NotchSPI 官方服务（题数额度制 — the account balance is a number of questions;
 /// one successful capture costs one question). The server side holds the vendor API keys,
 /// proxies the model call, meters per question, and deducts quota; this client only registers
-/// an anonymous device (granting the 180-question trial), streams answers, and mirrors the
-/// account state for the UI. The wire contract lives in docs/official-api.md.
+/// an anonymous device (random trial quota from the register response), streams answers, and
+/// mirrors the account state for the UI. The wire contract lives in docs/official-api.md.
 ///
 /// This file is used ONLY by the `.official` service channel — the custom-key and CLI paths
 /// (`APIKeyRunner`, `CLIRunner`) never touch it.

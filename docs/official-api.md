@@ -1,46 +1,41 @@
-# NotchSPI 官方服务 — 服务端 API 契约（v2 · 题数额度制）
+# NotchSPI 官方服务 — 客户端 HTTP 契约
 
-客户端（`Sources/NotchSPI/Cloud/`）已按本契约实现完毕。服务端参考实现见
-[`../server/`](../server/)（Node.js + TypeScript + Fastify；生产 Postgres，本地 SQLite / memory，`npm start` 开箱即跑）。
-上线后无需改动客户端代码（默认地址 `https://notchspi-api.vercel.app`，可用
-`defaults write com.rottesya.notchspi official.baseURL <url>` 指向测试环境）。
+客户端实现：`Sources/NotchSPI/Cloud/`。服务端路由：`server/src/routes.ts`。
+默认基址为 `OfficialAPI.defaultBaseURL`，可用 `official.baseURL`（`defaults write` 或启动参数）覆盖。
 
-**计费模型：题数额度制。** 账户余额是整数「题数」；一次成功的截屏问答扣 1 题，
-失败（网络/模型错误）不扣。新设备注册赠随机试用题，区间
-`[TRIAL_MIN_QUESTIONS, TRIAL_MAX_QUESTIONS]`（默认 100–180）；`TRIAL_QUESTIONS` 只是对外宣传上限。
-金钱只出现在充值环节 —— 充值页出售「题包」（题数 + 价格），客户端永远只看到题数。
+**计费：** 账户余额是整数「题数」。一次成功截屏问答扣 1 题，失败不扣。
+新设备注册赠随机试用题，区间 `[TRIAL_MIN_QUESTIONS, TRIAL_MAX_QUESTIONS]`；
+`TRIAL_QUESTIONS` 只是对外宣传上限。金钱只出现在充值：题包价格字段 `amount_cents`
+是**币种最小单位**（JPY 为日元整数，CNY/USD 为分）。
 
-服务端职责：代持真正的模型厂商 API Key、代理模型调用、按题计量、扣减题数、
-处理题包购买（网页端）。客户端永远拿不到厂商 Key，只持有一个匿名设备令牌。
+服务端代持厂商 API Key。客户端只持有匿名设备令牌。
 
 通用约定：
 
 - 认证：`Authorization: Bearer <device_token>`（除注册端点外）。
-- 错误响应体：`{"error": {"message": "<兜底信息>", "code": "<错误码>"}}`。
-  客户端按 `code` 本地化已知错误（`insufficient_quota` / `invalid_token` /
-  `bad_request` / `rate_limited` / `upstream_error` / `internal`），未知码显示 `message`。
-- `401 invalid_token` 令牌无效：客户端**保留**设备令牌（它是已购题数的唯一凭证，
-  瞬时 401 不得销毁），仅清空本地题数镜像并标记「凭证待确认」，在设置 →「账户与额度」
-  提供二次确认的「重置服务凭证」。`402 insufficient_quota` 额度用完（客户端把本地题数
-  镜像清零并引导充值）；`429 rate_limited` 请求过于频繁（注册频率或并发截图超限）。
+- 错误体：`{"error": {"message": "<兜底信息>", "code": "<错误码>"}}`。
+  已知码：`insufficient_quota` / `invalid_token` / `bad_request` /
+  `rate_limited` / `upstream_error` / `internal`。
+- `401 invalid_token`：客户端**保留**设备令牌（已购题数的唯一凭证），只清空本地题数镜像。
+- `402 insufficient_quota`：额度用完。
+- `429 rate_limited`：注册频率或并发截图超限。
 
-## 客户端遥测请求头（经营数据，缺了会瞎）
+## 客户端遥测请求头
 
-由 `server/src/auth.ts` 在每次 Bearer 鉴权时读取，写失败不得打断已付费请求：
+由 `server/src/auth.ts` 在 Bearer 鉴权时读取；写失败不得打断已付费请求：
 
 | 头 | 值 | 作用 |
 | --- | --- | --- |
-| `x-app-version` | 客户端版本，如 `2.9` | 更新 `devices.app_version`（仅在变化时写） |
+| `x-app-version` | 客户端版本 | 更新 `devices.app_version`（仅变化时写） |
 | `x-onboarded` | `1` | 标记引导完成 |
-| `x-client-event` | `hotkey` | 热键按下计数（走预热 ping，截图/额度失败也算） |
+| `x-client-event` | `hotkey` | 热键按下计数（预热 ping；截图失败也算） |
 
-`store.recordHotkeyPress` **只**由 `x-client-event: hotkey` 触发，不在 `routes.ts` 里出现。
+`store.recordHotkeyPress` **只**由 `x-client-event: hotkey` 触发。
 
-## POST /v1/devices — 匿名设备注册（开箱即用入口）
+## POST /v1/devices — 匿名设备注册
 
-无需认证。首次注册赠送随机试用题数（默认 100–180）。重复调用允许（客户端只在本地无令牌时调用）。
-为防止免费额度被脚本批量领取，本端点按客户端 IP 限流（`DEVICE_REG_PER_HOUR`，默认 30 次/小时），
-超限返回 `429 rate_limited`。此为进程内尽力而为的限流，硬性保障应交由平台 WAF。
+无需认证。首次注册赠随机试用题。重复调用允许（客户端只在本地无令牌时调用）。
+按客户端 IP 限流（`DEVICE_REG_PER_HOUR`），超限 `429 rate_limited`。
 
 请求：
 
@@ -54,7 +49,9 @@
 { "device_token": "dev_xxxxxxxx", "balance_questions": 142 }
 ```
 
-## GET /v1/account — 题数与用量查询
+`balance_questions` 以注册响应为准；客户端不猜测赠送区间。
+
+## GET /v1/account — 题数与用量
 
 响应 200：
 
@@ -68,18 +65,15 @@
 }
 ```
 
-（客户端读取全部字段；`total_*` 会覆盖本地累计镜像，以服务端为准。Token 数只做
-内部统计展示，不参与计费。`cli_enabled` 是按设备的 CLI 通道开关：默认 false，
-运营在管理后台（POST /admin/cli，与手动加题同一套 ADMIN_TOKEN 鉴权）按设备码
-开启后，客户端在下一次账户同步时镜像该值，设置 → 高级 才会出现「本机 CLI」选项。）
+`total_*` 覆盖本地累计镜像。`cli_enabled` 由运营按设备打开后，客户端在下次账户同步时镜像。
 
-## POST /v1/captures — 截图问答（SSE 流式，1 题/次）
+## POST /v1/captures — 截图问答（SSE，1 题/次）
 
 请求：
 
 ```json
 {
-  "system": "<系统提示词，客户端已按模式/深度/人物像构建好>",
+  "system": "<系统提示词>",
   "task": "<用户消息文本>",
   "image_base64": "<JPEG base64>",
   "image_media_type": "image/jpeg",
@@ -87,10 +81,9 @@
 }
 ```
 
-上下文追问（⌘⇧2，双图）追加可选字段 `images_base64`（有序数组：老上下文图在前、
-新截图在后，单张上限与 `image_base64` 相同，数量上限 4，仍只扣 1 题）。该字段存在
-时优先于 `image_base64`；客户端同时把**最后一张**（当前题目）放进 `image_base64`，
-这样尚未升级的服务端也能退化为单图作答而不是拿错图：
+上下文追问（⌘⇧2）可追加 `images_base64`（有序：老上下文在前、新截图在后，单张上限与
+`image_base64` 相同，数量上限 4，仍只扣 1 题）。该字段存在时优先；客户端同时把**最后一张**
+放进 `image_base64`，旧服务端退化为单图：
 
 ```json
 {
@@ -103,8 +96,7 @@
 }
 ```
 
-服务端选择模型、调用厂商 API、成功后扣 1 题。响应为 `text/event-stream`，事件均为
-`data: <json>` 行：
+响应 `text/event-stream`：
 
 ```
 data: {"type":"delta","text":"答案增量文本"}
@@ -113,51 +105,34 @@ data: {"type":"usage","input_tokens":1200,"output_tokens":480,"questions_charged
 data: [DONE]
 ```
 
-- `usage` 事件必须在流结束前发出**一次**，客户端据此更新本地题数镜像与累计用量。
-- 流中出错，或模型返回空回答（没有任何 `delta` 文本）：发送
-  `data: {"type":"error","error":{"message":"…","code":"…"}}` 后结束，**不扣题**
-  —— 只有真正产出了答案文本才会扣 1 题。
-- 请求前额度已用完：直接返回 HTTP `402`（响应体用通用错误格式，`code:
-  "insufficient_quota"`）。
-- 同一令牌并发截图超过 `CAPTURE_CONCURRENCY_PER_TOKEN`（默认 3）：返回 HTTP `429`
-  `rate_limited`（在流开始前，仍是通用 JSON 错误格式）。
-- 服务端未配置好模型厂商 Key（`OFFICIAL_PROVIDER` 指定了真实厂商但对应 Key 为空）：返回
-  HTTP `503` `upstream_error`，**不扣题**。此时 `GET /healthz` 同样返回 503 并带
-  `provider_error` 字段说明缺哪个变量。客户端无需特殊处理——`upstream_error` 是已知错误码。
+- `usage` 在流结束前发出**一次**。
+- 流出错或没有任何 `delta`：发送 `error` 事件后结束，**不扣题**。
+- 请求前额度已用完：HTTP `402` `insufficient_quota`。
+- 并发超过 `CAPTURE_CONCURRENCY_PER_TOKEN`：HTTP `429` `rate_limited`。
+- 指定了真实厂商但 Key 为空：HTTP `503` `upstream_error`，不扣题。
 
-**扣题时序（服务端实现约定）：** 采用「预扣 — 结算」。请求进入时用一条原子 SQL
-（`WHERE balance_questions >= n`）先扣住 1 题，流结束后确认为答案则结算，失败则退回。
-对客户端而言语义与「失败不扣题」完全一致，但并发请求无法把余额扣成负数。唯一的行为差异：
-客户端在收到足量答案文本后主动断开连接，这一题仍然计费（答案已送达）。
+扣题采用「预扣 — 结算」。客户端在收到足量答案后主动断开，这一题仍然计费。
 
-## GET /topup?device=\<token\>&lang=\<zh|ja|en\> — 题包购买网页（非 API）
+## GET /topup?device=\<token\>&lang=\<zh|ja|en\> — 题包购买页
 
-「充值」按钮用系统浏览器打开此地址；`lang` 由客户端传入其界面语言，页面据此本地化。
-页面展示题包目录（`PACKS_JSON` 配置）并自行完成支付（生产接 Stripe / 支付宝 / 微信；
-开发环境 `ALLOW_STUB_TOPUP=1` 时点击即入账）。到账后客户端点「刷新」即可通过
-`/v1/account` 同步。
+客户端用系统浏览器打开。页面完成支付后，客户端点「刷新」走 `/v1/account`。
 
-## 客户端行为摘要（便于服务端联调）
+运营：Stripe webhook `POST /webhooks/stripe` 必须同时订阅
+`checkout.session.completed` 与 `checkout.session.async_payment_succeeded`（延迟通知类支付在
+`completed` 时可能仍为 unpaid）。入账以 Checkout Session id 为幂等键。
 
-- 额度拦截只作用于官方模式：本地已知题数 ≤ 0 时在发起截图前拦下并引导充值；
-  题数未知时放行，以服务端 `402` 为准。自定义 API Key / 本机 CLI 模式完全不经过
-  官方服务，也不受拦截影响。
-- 新安装引导流程内静默注册；老安装保持原有模式，不会被改路由。
+开发桩 `POST /topup/stub-complete` 只在本地显式 `ALLOW_STUB_TOPUP=1` 时存在；生产默认 404。
 
-## 非客户端契约端点（索引，细节以代码为准）
+## GET /update — 最新版本
 
-这些路径不是客户端 SDK 契约，只在此列目录，避免第二份会漂移的说明书：
+客户端检查更新。响应 `{ version, tag, notes }`，不暴露上游托管主机。
 
-| 方法 | 路径 | 一句话 | 锚点 |
-| --- | --- | --- | --- |
-| GET | `/` | 产品落地页 | `server/src/routes.ts` `app.get('/')` |
-| GET | `/dl` | 流式代理 DMG | `app.get('/dl')` |
-| GET | `/update` | 版本中继（客户端检查更新） | `app.get('/update')` |
-| GET | `/stats` | 下载按钮点击计数 | `app.get('/stats')` |
-| GET | `/healthz` | 健康检查 | `app.get('/healthz')` |
-| POST | `/topup/checkout` | 创建 Stripe Checkout Session | `app.post('/topup/checkout')` |
-| POST | `/webhooks/stripe` | Stripe 入账 webhook | `app.post('/webhooks/stripe')` |
-| GET | `/admin` | 管理台（需 `ADMIN_TOKEN`） | `app.get('/admin')` |
-| POST | `/admin/grant` | 手动加题 | `app.post('/admin/grant')` |
-| GET | `/admin/activity` | 最近注册 / 充值 | `app.get('/admin/activity')` |
-| POST | `/admin/cli` | 按设备开关 CLI 通道 | `app.post('/admin/cli')` |
+## GET /dl — 下载 DMG
+
+客户端「前往下载」打开此地址；服务端流式代理内部产物源。
+
+## 客户端行为摘要
+
+- 额度拦截只作用于官方模式：本地已知题数 ≤ 0 时在截图前拦下；题数未知时放行，以服务端 `402` 为准。
+- 自定义 API Key / 本机 CLI 不经过官方服务。
+- 新安装引导内静默注册；老安装保持原通道。
