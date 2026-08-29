@@ -99,6 +99,46 @@ const loadVersionEnv = () => {
 
 const version = loadVersionEnv();
 
+// --- Node runtime floor ------------------------------------------------------------
+
+let nodeMinimum = null;
+if (exists('server/package.json')) {
+  try {
+    const pkg = JSON.parse(read('server/package.json'));
+    const engine = pkg.engines?.node;
+    const match = typeof engine === 'string' ? engine.match(/^>=(\d+\.\d+\.\d+)$/) : null;
+    if (!match) {
+      fail('server/package.json engines.node must be an exact minimum such as >=22.18.0');
+    } else {
+      nodeMinimum = match[1];
+    }
+  } catch (err) {
+    fail(`server/package.json is not valid JSON: ${err.message}`);
+  }
+}
+
+if (nodeMinimum !== null) {
+  for (const file of ['README.md', 'HANDOVER.md', 'scripts/bootstrap.sh']) {
+    if (!exists(file) || !read(file).includes(nodeMinimum)) {
+      fail(`${file} must name the Node minimum from server/package.json (${nodeMinimum})`);
+    }
+  }
+  if (exists('.github/workflows/ci.yml')
+      && !read('.github/workflows/ci.yml').includes(`node-version: '${nodeMinimum}'`)) {
+    fail(`CI must exercise the declared minimum Node version ${nodeMinimum}`);
+  }
+  if (exists('server/package-lock.json')) {
+    try {
+      const lock = JSON.parse(read('server/package-lock.json'));
+      if (lock.packages?.['']?.engines?.node !== `>=${nodeMinimum}`) {
+        fail('server/package-lock.json root engine must match server/package.json');
+      }
+    } catch (err) {
+      fail(`server/package-lock.json is not valid JSON: ${err.message}`);
+    }
+  }
+}
+
 for (const retired of ['scripts/make-dmg.sh', 'scripts/make-qa-app.sh', 'scripts/publish-quark.sh']) {
   if (exists(retired)) fail(`${retired} must not remain; use scripts/package.sh`);
 }
@@ -113,6 +153,35 @@ if (exists('scripts/package.sh')) {
   }
   if (pkg.includes('x86_64') || /universal/i.test(pkg)) {
     fail('scripts/package.sh must build arm64 only');
+  }
+  if (/SHORT_VERSION=.*-test/.test(pkg)) {
+    fail('scripts/package.sh must keep CFBundleShortVersionString numeric in QA builds');
+  }
+  if (/codesign --verify[^\n]*\|\| true/.test(pkg) || /stapler validate[^\n]*\|\| true/.test(pkg)) {
+    fail('scripts/package.sh must fail closed when code-signing or stapler validation fails');
+  }
+}
+
+if (exists('scripts/dev.sh')) {
+  const dev = read('scripts/dev.sh');
+  if (!dev.includes('exec env -i')) {
+    fail('scripts/dev.sh must start the local server from an empty environment');
+  }
+  if (!dev.includes('--smoke') || !exists('scripts/verify.sh') || !read('scripts/verify.sh').includes('--smoke')) {
+    fail('the isolated local-server smoke must remain part of scripts/dev.sh and scripts/verify.sh');
+  }
+  for (const fixed of [
+    'HOST="127.0.0.1"',
+    'DB_PATH=":memory:"',
+    'OFFICIAL_PROVIDER="mock"',
+    'PAYMENT_PROVIDER="stub"',
+    'ALLOW_STUB_TOPUP="1"',
+    'export NSPI_QA_EPHEMERAL=1',
+  ]) {
+    if (!dev.includes(fixed)) fail(`scripts/dev.sh is missing safe local setting: ${fixed}`);
+  }
+  if (/HOST="\$\{HOST|OFFICIAL_PROVIDER="\$\{|DB_PATH="\$\{|PAYMENT_PROVIDER="\$\{/.test(dev)) {
+    fail('scripts/dev.sh must not accept inherited host, storage, model, or payment mode');
   }
 }
 
@@ -227,18 +296,17 @@ for (const name of exampleVars) {
   if (!usedEnv.has(name)) fail(`server/.env.example lists ${name} which is not read by server source`);
 }
 
-// --- official-api.md client paths exist in routes.ts -----------------------------
+// --- official-api.md paths match routes and cover every client endpoint ---------
 
 if (exists('docs/official-api.md') && exists('server/src/routes.ts')) {
   const api = read('docs/official-api.md');
   const routes = read('server/src/routes.ts');
   const heading = /^(?:#{1,6})\s+(GET|POST|PUT|PATCH|DELETE)\s+(\/[^\s]+)/gm;
   let m;
-  const documented = [];
+  const documentedPaths = new Set();
   while ((m = heading.exec(api))) {
     const method = m[1];
-    const routePath = m[2].replace(/[.?].*$/, '').replace(/<[^>]+>/g, ':param');
-    documented.push({ method, path: m[2].split('?')[0] });
+    documentedPaths.add(m[2].split('?')[0].replace(/\\/g, ''));
     const literal = m[2].split('?')[0].replace(/<[^>]+>/g, '');
     const lookup = literal.replace(/\/$/, '');
     const routeNeedle = lookup.replace(/\\/g, '');
@@ -247,6 +315,22 @@ if (exists('docs/official-api.md') && exists('server/src/routes.ts')) {
       const base = routeNeedle.split('/:')[0];
       if (!routes.includes(`'${base}`) && !routes.includes(`"${base}`)) {
         fail(`docs/official-api.md documents ${method} ${m[2]} which is not in server/src/routes.ts`);
+      }
+    }
+  }
+
+  const clientSources = [
+    'Sources/NotchSPI/Cloud/OfficialAPI.swift',
+    'Sources/NotchSPI/Update/UpdateChecker.swift',
+  ];
+  const endpoint = /endpointURL\([^)]*path:\s*"([^"]+)"\)/g;
+  for (const file of clientSources) {
+    if (!exists(file)) continue;
+    const source = read(file);
+    while ((m = endpoint.exec(source))) {
+      const clientPath = `/${m[1].replace(/^\/+/, '')}`;
+      if (!documentedPaths.has(clientPath)) {
+        fail(`${file} calls ${clientPath}, but docs/official-api.md has no endpoint heading for it`);
       }
     }
   }

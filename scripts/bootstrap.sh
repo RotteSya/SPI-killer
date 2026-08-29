@@ -72,13 +72,13 @@ if ! version_ge "$swift_ver" "5.9"; then
   fail "Swift 5.9+ is required (found $swift_ver)"
 fi
 
-need_cmd node "Install Node.js 22.5+ from https://nodejs.org (LTS). This script will not install it."
-need_cmd npm "Install npm (ships with Node.js 22.5+) from https://nodejs.org"
+need_cmd node "Install Node.js 22.18.0+ from https://nodejs.org (LTS). This script will not install it."
+need_cmd npm "Install npm (ships with Node.js 22.18.0+) from https://nodejs.org"
 
 node_ver="$(node -v 2>/dev/null | sed 's/^v//')"
 [[ -n "$node_ver" ]] || fail "could not parse \`node -v\`"
-if ! version_ge "$node_ver" "22.5"; then
-  fail "Node.js ≥ 22.5 is required (found v$node_ver). Install from https://nodejs.org"
+if ! version_ge "$node_ver" "22.18.0"; then
+  fail "Node.js ≥ 22.18.0 is required (found v$node_ver). Install from https://nodejs.org"
 fi
 
 echo "    macOS $os_ver ($arch), Swift $swift_ver, Node v$node_ver"

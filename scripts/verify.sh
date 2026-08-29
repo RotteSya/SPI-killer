@@ -16,6 +16,19 @@ step "typecheck"
 step "node tests"
 ( cd "$REPO_ROOT/server" && npm test )
 
+step "isolated local-server smoke"
+HOST=0.0.0.0 \
+OFFICIAL_PROVIDER=anthropic \
+ANTHROPIC_API_KEY=poison-model-key \
+POSTGRES_URL=postgres://poison:poison@127.0.0.1:1/production \
+PAYMENT_PROVIDER=stripe \
+STRIPE_SECRET_KEY=poison-stripe-key \
+STRIPE_WEBHOOK_SECRET=poison-webhook-key \
+VERCEL=1 \
+NSPI_QA_EPHEMERAL=0 \
+PORT=18787 \
+"$REPO_ROOT/scripts/dev.sh" --smoke
+
 step "swift tests (serial, warnings-as-errors)"
 # Shared UserDefaults/Keychain make two first-run migration tests race under --parallel.
 swift test -Xswiftc -warnings-as-errors

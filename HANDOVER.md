@@ -16,7 +16,7 @@
 
 | 字段 | 要求 |
 |---|---|
-| Prerequisites | macOS 14+、Apple Silicon、Xcode/Swift 5.9+、Node ≥22.5、npm |
+| Prerequisites | macOS 14+、Apple Silicon、Xcode/Swift 5.9+、Node ≥22.18.0、npm |
 | Bootstrap | [`./scripts/bootstrap.sh`](scripts/bootstrap.sh) |
 | Run | [`./scripts/dev.sh`](scripts/dev.sh) |
 | Expected server state | `GET /healthz` 为 mock provider、sqlite 或 memory、payments 为 stub 或 disabled |

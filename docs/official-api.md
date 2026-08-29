@@ -32,6 +32,18 @@
 
 `store.recordHotkeyPress` **只**由 `x-client-event: hotkey` 触发。
 
+## GET /healthz — 无状态预热与健康检查
+
+无需认证。客户端尚无设备令牌时，`warmUp()` 用此端点建立连接；本地启动脚本也用它
+判定服务就绪。正常响应 200：
+
+```json
+{ "ok": true, "provider": "mock", "db": "sqlite", "payments": "stub", "webhook": "n/a" }
+```
+
+真实厂商被选中但密钥缺失时响应 503，`ok=false` 并附带 `provider_error`；不得将此状态
+误报为健康。
+
 ## POST /v1/devices — 匿名设备注册
 
 无需认证。首次注册赠随机试用题。重复调用允许（客户端只在本地无令牌时调用）。

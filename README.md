@@ -12,7 +12,7 @@ the physical display.
 ## Requirements
 
 - macOS 14+ (Apple Silicon)
-- Swift 5.9+ / Xcode Command Line Tools, Node ≥ 22.5, and npm to build from source
+- Swift 5.9+ / Xcode Command Line Tools, Node ≥ 22.18.0, and npm to build from source
 
 ## Get started
 

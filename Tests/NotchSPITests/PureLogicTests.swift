@@ -18,6 +18,7 @@ final class UpdateCheckerVersionTests: XCTestCase {
         XCTAssertEqual(UpdateChecker.normalize("v1.6"), "1.6")
         XCTAssertEqual(UpdateChecker.normalize(" V2.0 "), "2.0")
         XCTAssertEqual(UpdateChecker.normalize("1.5"), "1.5")
+        XCTAssertEqual(UpdateChecker.normalize("v2.9-test"), "2.9")
     }
 
     func testIsNewerIsNumericNotLexicographic() {
@@ -33,6 +34,7 @@ final class UpdateCheckerVersionTests: XCTestCase {
     func testIsNewerFalseForEqualOrOlder() {
         XCTAssertFalse(UpdateChecker.isNewer("1.6", than: "1.6"))
         XCTAssertFalse(UpdateChecker.isNewer("1.9", than: "1.10"))
+        XCTAssertFalse(UpdateChecker.isNewer("2.9", than: UpdateChecker.normalize("2.9-test")))
     }
 
     func testUnbundledCurrentVersionMatchesVERSIONEnv() throws {

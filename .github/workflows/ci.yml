@@ -19,14 +19,28 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.18.0'
           cache: npm
           cache-dependency-path: server/package-lock.json
       - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run typecheck
       - run: npm test
         env:
           OFFICIAL_PROVIDER: mock
+      - name: Isolated local-server smoke
+        run: ../scripts/dev.sh --smoke
+        env:
+          HOST: 0.0.0.0
+          OFFICIAL_PROVIDER: anthropic
+          ANTHROPIC_API_KEY: poison-model-key
+          POSTGRES_URL: postgres://poison:poison@127.0.0.1:1/production
+          PAYMENT_PROVIDER: stripe
+          STRIPE_SECRET_KEY: poison-stripe-key
+          STRIPE_WEBHOOK_SECRET: poison-webhook-key
+          VERCEL: '1'
+          NSPI_QA_EPHEMERAL: '0'
+          PORT: '18787'
 
   postgres:
     name: Postgres store
@@ -52,7 +66,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.18.0'
           cache: npm
           cache-dependency-path: server/package-lock.json
       - run: npm ci
@@ -68,7 +82,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.18.0'
       - run: node scripts/repo-health.mjs
       - name: Swift toolchain
         run: swift --version

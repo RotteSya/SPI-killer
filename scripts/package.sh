@@ -74,7 +74,6 @@ ICON_FILE="NotchSPI.icns"
 SHORT_VERSION="$APP_VERSION"
 DISPLAY_NAME="$APP_NAME"
 if [[ "$MODE" == "qa" ]]; then
-  SHORT_VERSION="${APP_VERSION}-test"
   DISPLAY_NAME="$APP_NAME (test)"
 fi
 
@@ -151,11 +150,12 @@ sign_app() {
     echo "==> Ad-hoc code signing"
     codesign --force --deep --sign - "$APP"
   fi
-  codesign --verify --verbose "$APP" 2>&1 | sed 's/^/    /' || true
 }
 
 sign_app
 xattr -dr com.apple.quarantine "$APP" 2>/dev/null || true
+echo "==> Verifying app signature"
+codesign --verify --deep --strict --verbose=2 "$APP" 2>&1 | sed 's/^/    /'
 
 if [[ "$MODE" == "qa" ]]; then
   echo "==> Done:"
@@ -179,11 +179,12 @@ fi
 
 echo "==> Signing DMG"
 codesign --force --timestamp --sign "$SIGN_ID" "$OUT/$APP_NAME.dmg"
+codesign --verify --strict --verbose=2 "$OUT/$APP_NAME.dmg" 2>&1 | sed 's/^/    /'
 echo "==> Notarizing with Apple (profile: $NOTARY_PROFILE)"
 xcrun notarytool submit "$OUT/$APP_NAME.dmg" --keychain-profile "$NOTARY_PROFILE" --wait
 echo "==> Stapling notarization ticket"
 xcrun stapler staple "$OUT/$APP_NAME.dmg"
-xcrun stapler validate "$OUT/$APP_NAME.dmg" 2>&1 | sed 's/^/    /' || true
+xcrun stapler validate "$OUT/$APP_NAME.dmg" 2>&1 | sed 's/^/    /'
 
 echo "==> Done:"
 ls -lh "$OUT/$APP_NAME.dmg"

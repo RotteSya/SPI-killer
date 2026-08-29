@@ -144,11 +144,13 @@ enum UpdateChecker {
 
     // MARK: - Version comparison
 
-    /// Strip a leading "v"/"V" and surrounding whitespace, leaving the dotted numeric core.
+    /// Strip a leading "v"/"V", surrounding whitespace, and a prerelease suffix, leaving the
+    /// dotted numeric core. Packaged CFBundle versions stay numeric; suffix support is defensive
+    /// for older QA builds and hand-edited server responses.
     static func normalize(_ raw: String) -> String {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if s.hasPrefix("v") || s.hasPrefix("V") { s.removeFirst() }
-        return s
+        return String(s.split(separator: "-", maxSplits: 1).first ?? "")
     }
 
     /// Numeric, component-wise comparison so "1.10" > "1.9" and "1.5" == "1.5.0".
