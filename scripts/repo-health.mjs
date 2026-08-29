@@ -99,6 +99,10 @@ const loadVersionEnv = () => {
 
 const version = loadVersionEnv();
 
+for (const retired of ['scripts/make-dmg.sh', 'scripts/make-qa-app.sh', 'scripts/publish-quark.sh']) {
+  if (exists(retired)) fail(`${retired} must not remain; use scripts/package.sh`);
+}
+
 if (exists('scripts/package.sh')) {
   const pkg = read('scripts/package.sh');
   if (!pkg.includes('VERSION.env')) {
@@ -106,6 +110,9 @@ if (exists('scripts/package.sh')) {
   }
   if (/VERSION="[0-9]+\.[0-9]+/.test(pkg) || /CFBundleVersion<\/key><string>[0-9]+/.test(pkg)) {
     fail('scripts/package.sh must not hardcode CFBundle version values');
+  }
+  if (pkg.includes('x86_64') || /universal/i.test(pkg)) {
+    fail('scripts/package.sh must build arm64 only');
   }
 }
 
@@ -287,7 +294,6 @@ for (const file of trackedFiles) {
   for (const re of secretRe) {
     if (re.test(text)) fail(`${file} matches a live-looking secret pattern`);
   }
-  if (file === 'scripts/publish-quark.sh') continue;
   if (privateTool.test(text)) fail(`${file} references a private absolute tool path`);
 }
 
