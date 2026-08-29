@@ -11,10 +11,10 @@ step "repo-health"
 node "$REPO_ROOT/scripts/repo-health.mjs"
 
 step "typecheck"
-npm --prefix "$REPO_ROOT/server" run typecheck
+( cd "$REPO_ROOT/server" && npm run typecheck )
 
 step "node tests"
-npm --prefix "$REPO_ROOT/server" test
+( cd "$REPO_ROOT/server" && npm test )
 
 step "swift tests (serial, warnings-as-errors)"
 # Shared UserDefaults/Keychain make two first-run migration tests race under --parallel.
@@ -28,7 +28,7 @@ git diff HEAD --check
 
 if [[ -n "${TEST_POSTGRES_URL:-}" ]]; then
   step "Postgres store suite"
-  npm --prefix "$REPO_ROOT/server" test
+  ( cd "$REPO_ROOT/server" && npm test )
 fi
 
 echo

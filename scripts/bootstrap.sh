@@ -84,7 +84,7 @@ fi
 echo "    macOS $os_ver ($arch), Swift $swift_ver, Node v$node_ver"
 
 echo "==> Installing server dependencies (npm ci)"
-npm --prefix "$REPO_ROOT/server" ci
+( cd "$REPO_ROOT/server" && npm ci )
 
 echo "==> Building client (debug)"
 swift build
