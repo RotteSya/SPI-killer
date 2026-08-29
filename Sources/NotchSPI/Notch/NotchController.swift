@@ -106,10 +106,16 @@ final class NotchController: NSObject {
         // Language / theme switches re-render the always-visible notch immediately.
         observers.append(NotificationCenter.default.addObserver(
             forName: L10n.languageDidChange, object: nil, queue: .main
-        ) { [weak self] _ in Task { @MainActor in self?.refreshAfterLanguageChange() } })
+        ) { [weak self] _ in
+            let controller = self
+            Task { @MainActor in controller?.refreshAfterLanguageChange() }
+        })
         observers.append(NotificationCenter.default.addObserver(
             forName: Appearance.themeDidChange, object: nil, queue: .main
-        ) { [weak self] _ in Task { @MainActor in self?.refreshAppearance() } })
+        ) { [weak self] _ in
+            let controller = self
+            Task { @MainActor in controller?.refreshAppearance() }
+        })
 
         // Pre-enumerate shareable content so the first hotkey press skips the ~100–300ms
         // window-server enumeration; kept fresh after each shot and across display changes.
