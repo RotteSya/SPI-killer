@@ -27,15 +27,39 @@ enum UpdateChecker {
     /// Guards against stacking alerts if the menu item is clicked twice while a check is in flight.
     private static var inFlight = false
 
-    /// Running app version from the bundle's Info.plist (`CFBundleShortVersionString`), e.g. "1.5".
-    /// Unbundled `swift run` has no Info.plist, so fall back to `devFallbackVersion`.
+    /// Running app version from the bundled Info.plist (`CFBundleShortVersionString`).
+    /// Unbundled `swift run` / tests read `APP_VERSION` from the source tree's `VERSION.env`.
+    /// If neither is available the version is the explicit development marker `0.0.0-dev`.
     static var currentVersion: String {
-        (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? devFallbackVersion
+        if Bundle.main.bundlePath.hasSuffix(".app"),
+           let bundled = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+            let trimmed = bundled.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
+        }
+        if let fromSource = versionFromSourceTree() { return fromSource }
+        return "0.0.0-dev"
     }
 
-    /// Dev-only fallback for `swift run` (the real .app reads its Info.plist). Keep roughly in sync
-    /// with `VERSION` in `scripts/make-dmg.sh`, which is the source of truth for releases.
-    private static let devFallbackVersion = "2.9"
+    /// Parse `APP_VERSION` from the package's `VERSION.env` (two directories above `Sources/`).
+    private static func versionFromSourceTree() -> String? {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent() // Update
+            .deletingLastPathComponent() // NotchSPI
+            .deletingLastPathComponent() // Sources
+            .deletingLastPathComponent() // repo root
+            .appendingPathComponent("VERSION.env")
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        for raw in text.split(whereSeparator: \.isNewline) {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.isEmpty || line.hasPrefix("#") { continue }
+            let parts = line.split(separator: "=", maxSplits: 1)
+            guard parts.count == 2, parts[0] == "APP_VERSION" else { continue }
+            let value = parts[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+            return value.isEmpty ? nil : String(value)
+        }
+        return nil
+    }
 
     struct Release {
         let version: String   // normalized numeric core, e.g. "1.6"

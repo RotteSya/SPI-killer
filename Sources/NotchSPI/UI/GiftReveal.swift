@@ -361,7 +361,6 @@ final class GiftSealView: NSControl {
     private var link: CADisplayLink?
     private let birth = CACurrentMediaTime()
     private var breakStart: CFTimeInterval?      // set when the seal is breaking open
-    private var extraScale: CGFloat = 1          // charge squash / break scale
     var onBreakComplete: (() -> Void)?
 
     private var reduceMotion: Bool { onboardingReduceMotion() }

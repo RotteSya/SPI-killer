@@ -1,0 +1,4 @@
+# Locked dependency for scripts/generate-personality-fixtures.py.
+# Ordinary bootstrap does not install this.
+Pillow==11.3.0
+

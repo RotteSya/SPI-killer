@@ -34,6 +34,21 @@ final class UpdateCheckerVersionTests: XCTestCase {
         XCTAssertFalse(UpdateChecker.isNewer("1.6", than: "1.6"))
         XCTAssertFalse(UpdateChecker.isNewer("1.9", than: "1.10"))
     }
+
+    func testUnbundledCurrentVersionMatchesVERSIONEnv() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let text = try String(contentsOf: root.appendingPathComponent("VERSION.env"), encoding: .utf8)
+        var expected: String?
+        for raw in text.split(whereSeparator: \.isNewline) {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            guard line.hasPrefix("APP_VERSION=") else { continue }
+            expected = String(line.dropFirst("APP_VERSION=".count))
+        }
+        XCTAssertEqual(UpdateChecker.currentVersion, try XCTUnwrap(expected))
+    }
 }
 
 final class PromptsSelectionTests: XCTestCase {

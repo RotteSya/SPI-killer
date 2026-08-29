@@ -126,7 +126,7 @@ final class AutoSessionTests: XCTestCase {
         let engine = AutoSessionEngine()
         engine.start(config: .init(maxQuestions: 2))
         XCTAssertEqual(engine.noteRunSucceeded(balanceQuestions: 100, credentialRejected: false), .none)
-        engine.tick(hash: grid(1))  // park in .watching; the trigger path re-enters .running
+        _ = engine.tick(hash: grid(1))  // park in .watching; the trigger path re-enters .running
         engine.stop(reason: .userToggled)
         engine.start(config: .init(maxQuestions: 2))
         XCTAssertEqual(engine.noteRunSucceeded(balanceQuestions: 100, credentialRejected: false), .none)

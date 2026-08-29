@@ -745,11 +745,12 @@ final class PersonalityEvaluationTests: XCTestCase {
     }
 
     private static func releaseVersion() -> String? {
-        let script = repositoryRoot.appendingPathComponent("scripts/make-dmg.sh")
-        guard let source = try? String(contentsOf: script, encoding: .utf8) else { return nil }
+        let file = repositoryRoot.appendingPathComponent("VERSION.env")
+        guard let source = try? String(contentsOf: file, encoding: .utf8) else { return nil }
         return source.split(separator: "\n").lazy.compactMap { line -> String? in
-            guard line.hasPrefix("VERSION=") else { return nil }
-            return line.dropFirst("VERSION=".count)
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard trimmed.hasPrefix("APP_VERSION=") else { return nil }
+            return trimmed.dropFirst("APP_VERSION=".count)
                 .trimmingCharacters(in: CharacterSet(charactersIn: "\"' \t"))
         }.first
     }
