@@ -4,6 +4,7 @@ import { readFile, mkdir, writeFile, appendFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { composeObjectiveResult, normalizeObjectiveAnswer } from '../server/src/objective-result.ts';
 
 if (process.env.NSPI_RUN_OBJECTIVE_EVAL !== '1') {
@@ -18,6 +19,11 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixtureRoot = resolve(root, 'Tests/Fixtures/objective-v1');
 const manifest = JSON.parse(await readFile(resolve(fixtureRoot, 'manifest.json'), 'utf8'));
 if (manifest.fixtures.length !== 240) throw new Error('manifest must contain exactly 240 fixtures');
+for (const fixture of manifest.fixtures) {
+  const image = await readFile(resolve(fixtureRoot, fixture.image));
+  const digest = createHash('sha256').update(image).digest('hex');
+  if (digest !== fixture.sha256) throw new Error(`fixture ${fixture.id} sha256 mismatch`);
+}
 const outputDir = resolve(root, 'objective-eval-output');
 await mkdir(outputDir, { recursive: true });
 const stamp = new Date().toISOString().replaceAll(':', '-');
@@ -74,6 +80,8 @@ for (const [index, fixture] of manifest.fixtures.entries()) {
     id: fixture.id, language: fixture.language, kind: fixture.kind,
     expected_state: fixture.expected_state, schema_valid: parsed.parserPath === 'v1',
     actual_state: parsed.state, parser_path: parsed.parserPath, answer_hit: answerHit,
+    state_match: parsed.state === fixture.expected_state,
+    normalized_answer: parsed.finalAnswer ? normalizeObjectiveAnswer(parsed.finalAnswer) : null,
     input_tokens: usage?.input_tokens ?? null, output_tokens: usage?.output_tokens ?? null,
     total_ms: Math.round(performance.now() - started), model: process.env.NSPI_EVAL_MODEL,
     prompt_version: manifest.prompt_version, commit: process.env.NSPI_EVAL_COMMIT,
@@ -88,13 +96,18 @@ for (const [index, fixture] of manifest.fixtures.entries()) {
 const ratio = (n, d) => d ? n / d : 0;
 const answerable = records.filter((r) => r.expected_state !== 'retake');
 const predictedReady = records.filter((r) => r.actual_state === 'ready');
+const expectedReview = records.filter((r) => r.expected_state === 'review');
 const stateAccuracy = (rows) => ratio(rows.filter((r) => r.answer_hit).length, rows.length);
 const average = (values) => values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
 const summary = {
   generated_at: new Date().toISOString(), calls: records.length,
   v1_valid_rate: ratio(records.filter((r) => r.schema_valid).length, records.length),
   answerable_accuracy: stateAccuracy(answerable),
-  ready_precision: stateAccuracy(predictedReady),
+  ready_precision: ratio(predictedReady.filter((r) => r.expected_state === 'ready' && r.answer_hit).length,
+    predictedReady.length),
+  review_recall: ratio(expectedReview.filter((r) => r.actual_state === 'review').length,
+    expectedReview.length),
+  state_accuracy: ratio(records.filter((r) => r.state_match).length, records.length),
   retake_recall: ratio(records.filter((r) => r.expected_state === 'retake' && r.actual_state === 'retake').length,
     records.filter((r) => r.expected_state === 'retake').length),
   by_kind: Object.fromEntries([...new Set(records.map((r) => r.kind))].map((key) => [key, stateAccuracy(answerable.filter((r) => r.kind === key))])),

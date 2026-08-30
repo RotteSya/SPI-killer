@@ -8,10 +8,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "A",
+        "8",
+        "A. 8",
+        "A (8)",
+        "A（8）"
       ],
       "image": "images/zh-single_choice-01.png",
-      "sha256": "b2ba1acb52fe2e984b04eab97da4b47e49f448a3b1ce06343153ca32a0b765af",
+      "sha256": "12c4afdac8ec63120acaef820dab28d0f61f23c21f93fe4b189ae2bdf2651968",
       "requires_context": false
     },
     {
@@ -20,10 +24,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "D",
+        "10",
+        "D. 10",
+        "D (10)",
+        "D（10）"
       ],
       "image": "images/zh-single_choice-02.png",
-      "sha256": "d1b4a2b1c44608a377d4f93e787ca8ad3838b72edc9fac60e2419d5feb191ae2",
+      "sha256": "969bc0d84671f3e920c0153f37d95e9530c990ff1bdb2afa6bb2564986e968b6",
       "requires_context": false
     },
     {
@@ -32,10 +40,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "C",
+        "12",
+        "C. 12",
+        "C (12)",
+        "C（12）"
       ],
       "image": "images/zh-single_choice-03.png",
-      "sha256": "c04085ef8f7fd915a34ec44654920c569b66f9349dce5a4522afd57d0d60079b",
+      "sha256": "c210e1b097647810c274d648642314f28ac49b68afdd58b9dd9f1de6f4d7661f",
       "requires_context": false
     },
     {
@@ -44,10 +56,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "B",
+        "14",
+        "B. 14",
+        "B (14)",
+        "B（14）"
       ],
       "image": "images/zh-single_choice-04.png",
-      "sha256": "9efce54400b98033fe80b6215c2c52799f3a722d38db7d636ac6f8bbd2d11b64",
+      "sha256": "0c3bbae194368df87bc9f70fc0083365b09837de1b3ac01915e2ce1bc20e3b9d",
       "requires_context": false
     },
     {
@@ -56,10 +72,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "A",
+        "16",
+        "A. 16",
+        "A (16)",
+        "A（16）"
       ],
       "image": "images/zh-single_choice-05.png",
-      "sha256": "3830c65c62d73647d86b0e59d713e32988335f41294dd45507aa4ea7d6e38389",
+      "sha256": "4791a97cab37b698eee6f1a42972250b362906472ec96391f902f6c287d73422",
       "requires_context": false
     },
     {
@@ -68,10 +88,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "D",
+        "18",
+        "D. 18",
+        "D (18)",
+        "D（18）"
       ],
       "image": "images/zh-single_choice-06.png",
-      "sha256": "bdeaac40e3da86c4c9ceda73e909c6205ab87b147a5bc1865ba3d4a42aa2bfc1",
+      "sha256": "55181b110e62a0465b5672b48dc3837366d148eeec2ac2627ab71af7dee8dc68",
       "requires_context": false
     },
     {
@@ -80,10 +104,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "C",
+        "20",
+        "C. 20",
+        "C (20)",
+        "C（20）"
       ],
       "image": "images/zh-single_choice-07.png",
-      "sha256": "d1a5666eca097e4b0c35ef7cfd906c7d66835b52bae6dc595df361ade4e3348a",
+      "sha256": "22ee778b2eaee24d1cd7fc554c685d62b12546ca4980480bd03fa7f948482297",
       "requires_context": false
     },
     {
@@ -92,10 +120,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "B",
+        "22",
+        "B. 22",
+        "B (22)",
+        "B（22）"
       ],
       "image": "images/zh-single_choice-08.png",
-      "sha256": "a684ea319e609f76df4ad201a3f85ce8c48ac3811ec4a7368c9538798ee02d34",
+      "sha256": "0b46f31668264774e5ee00744a4c5a4b8e63bd385523136349861bb9e0fcc1bb",
       "requires_context": false
     },
     {
@@ -104,10 +136,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "A",
+        "24",
+        "A. 24",
+        "A (24)",
+        "A（24）"
       ],
       "image": "images/zh-single_choice-09.png",
-      "sha256": "d84ec32e820a937fdfb12ce0d727cae9ebbe2780d33db2b85c3015bb0f2798f5",
+      "sha256": "404cc40dd41fe63a58a72793c28b9d7a236ec8419cd570a7d2ff99c09e068d63",
       "requires_context": false
     },
     {
@@ -116,10 +152,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "D",
+        "26",
+        "D. 26",
+        "D (26)",
+        "D（26）"
       ],
       "image": "images/zh-single_choice-10.png",
-      "sha256": "5e997a53798b45ac130d464c466b3fcb4a6c58c45292be77aebd487726574a79",
+      "sha256": "2d2a2b6ebb624fb8a4aad6d328838a1d549a49461d90d2224041563f00f762f7",
       "requires_context": false
     },
     {
@@ -128,10 +168,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "C",
+        "28",
+        "C. 28",
+        "C (28)",
+        "C（28）"
       ],
       "image": "images/zh-single_choice-11.png",
-      "sha256": "2af1aeb72a418c8b427e71c57bb2b7b551207afbffcb34ff6d3e49dc0353df2c",
+      "sha256": "421c03fd0e23c25d4f98d6e1df64303eb0164588f7d330dd1170bf68b5942093",
       "requires_context": false
     },
     {
@@ -140,10 +184,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "B",
+        "30",
+        "B. 30",
+        "B (30)",
+        "B（30）"
       ],
       "image": "images/zh-single_choice-12.png",
-      "sha256": "2585a6d27a5e1891ef050aeafebac08d7e720716be720cc5b2c0c52cb17bad46",
+      "sha256": "825874246b50b693dc795ac960412febe087c816f2cd13abdf4be7f8381aa9c0",
       "requires_context": false
     },
     {
@@ -152,10 +200,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "A",
+        "32",
+        "A. 32",
+        "A (32)",
+        "A（32）"
       ],
       "image": "images/zh-single_choice-13.png",
-      "sha256": "917d9e03ccb5d4534a416ceab63cb9a1b6175931d191d7f7b1259e574e550e7c",
+      "sha256": "f19e57ba44147951135e4932fb65d49420ccc76c27b62e47b30591965cdb3019",
       "requires_context": false
     },
     {
@@ -164,10 +216,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "D",
+        "34",
+        "D. 34",
+        "D (34)",
+        "D（34）"
       ],
       "image": "images/zh-single_choice-14.png",
-      "sha256": "d13897ccd492344098e831e92c6a66fcd6b5f7a3a73a85fc409a3e131ec868e9",
+      "sha256": "764e01e69ec7bf5a7ad74962b3dcb40fceea02f64619276fc9e3d72f8ca8801a",
       "requires_context": false
     },
     {
@@ -176,10 +232,11 @@
       "kind": "single_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "B"
+        "36",
+        "?. 36"
       ],
       "image": "images/zh-single_choice-15.png",
-      "sha256": "e0ad10663c998b8c7f3925c04200a8fe550b93735f6973a25a8133ec1af41bc8",
+      "sha256": "035cc938ac5e8f2bdd5fc99e00befdf87cfca65fa979d1245c602dd39ae5fb14",
       "requires_context": false
     },
     {
@@ -188,10 +245,11 @@
       "kind": "single_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "B"
+        "38",
+        "?. 38"
       ],
       "image": "images/zh-single_choice-16.png",
-      "sha256": "7ae5cb7f24c69b1d29302ee4c28b163af5ee00982bd776638988e88ac8c6c00a",
+      "sha256": "84ada2e1da37d0932a91f572d92b318f558690d8f0f1a05dfbb07368dd079999",
       "requires_context": false
     },
     {
@@ -200,10 +258,11 @@
       "kind": "single_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "B"
+        "40",
+        "?. 40"
       ],
       "image": "images/zh-single_choice-17.png",
-      "sha256": "8d9bd67801c339a04c7206295b9ce3dd9c4cf2bbd528eba9f635b5abc61195d8",
+      "sha256": "dd3cd45cbbed6c650928adbd739279b4d6b537e1d1a66b104c84c988dc8b2a72",
       "requires_context": false
     },
     {
@@ -213,7 +272,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/zh-single_choice-18.png",
-      "sha256": "88f5fdae9b39f958ccd939ee211fb865c13a99668765a2ef470dae06893d4bd3",
+      "sha256": "1375522300b1b5adc7f80b5417e6e7301943b0bb5e60e35b8e09e3798d4d4caf",
       "requires_context": false
     },
     {
@@ -223,7 +282,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/zh-single_choice-19.png",
-      "sha256": "d7f313052cd03414b553f85b66550d6a9cb64d8a5a3e7cea15e22233052387a4",
+      "sha256": "f3bc595896170ee35ad4bbd9c8079314d21515339604b9d32744006dac4ccee2",
       "requires_context": false
     },
     {
@@ -233,7 +292,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/zh-single_choice-20.png",
-      "sha256": "ac39cccef852e77a9b80a892ca23d0e9e03b2589a0e3747c4c10600fc2aa33ca",
+      "sha256": "deea0dc4a0bdcec2f669750e94085bebf420cd750cbc3599952818f518d2db99",
       "requires_context": false
     },
     {
@@ -243,10 +302,20 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "2, 5",
+        "2,5",
+        "2 and 5",
+        "2 和 5",
+        "2と5",
+        "A, C (2, 5)",
+        "A, C（2, 5）"
       ],
       "image": "images/zh-multiple_choice-01.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "879ed3653a8c66303577c280fb5d6a64d3b53324161e9517f1e78547f739accd",
       "requires_context": false
     },
     {
@@ -255,11 +324,26 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "7, 3",
+        "7,3",
+        "7 and 3",
+        "7 和 3",
+        "7と3",
+        "B, D (7, 3)",
+        "B, D（7, 3）",
+        "3, 7",
+        "3,7",
+        "3 and 7",
+        "3 和 7",
+        "3と7"
       ],
       "image": "images/zh-multiple_choice-02.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "e75d98e591596dd845f3eda470c79ee367cefcb27f722f1b795d276adebf752a",
       "requires_context": false
     },
     {
@@ -269,10 +353,25 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "13, 11",
+        "13,11",
+        "13 and 11",
+        "13 和 11",
+        "13と11",
+        "A, C (13, 11)",
+        "A, C（13, 11）",
+        "11, 13",
+        "11,13",
+        "11 and 13",
+        "11 和 13",
+        "11と13"
       ],
       "image": "images/zh-multiple_choice-03.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "70466aee8a374104660af65dee05d3d0e99199d982d6c5b0353b65a60b631db5",
       "requires_context": false
     },
     {
@@ -281,11 +380,21 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "17, 19",
+        "17,19",
+        "17 and 19",
+        "17 和 19",
+        "17と19",
+        "B, D (17, 19)",
+        "B, D（17, 19）"
       ],
       "image": "images/zh-multiple_choice-04.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "9f77e43b9db92729a217efbd7a7661413b6ac97c3a17ff924bab22b2881f046f",
       "requires_context": false
     },
     {
@@ -295,10 +404,20 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "23, 29",
+        "23,29",
+        "23 and 29",
+        "23 和 29",
+        "23と29",
+        "A, C (23, 29)",
+        "A, C（23, 29）"
       ],
       "image": "images/zh-multiple_choice-05.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "8f42609e7aeeaef50f655254f94b2448045baf73ab99d62b68304497c48a5edc",
       "requires_context": false
     },
     {
@@ -307,11 +426,26 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "37, 31",
+        "37,31",
+        "37 and 31",
+        "37 和 31",
+        "37と31",
+        "B, D (37, 31)",
+        "B, D（37, 31）",
+        "31, 37",
+        "31,37",
+        "31 and 37",
+        "31 和 37",
+        "31と37"
       ],
       "image": "images/zh-multiple_choice-06.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "b125b68c3f5a749163cbecb4679dd60512d346a133db9a73b17e638b3dcf5834",
       "requires_context": false
     },
     {
@@ -321,10 +455,25 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "43, 41",
+        "43,41",
+        "43 and 41",
+        "43 和 41",
+        "43と41",
+        "A, C (43, 41)",
+        "A, C（43, 41）",
+        "41, 43",
+        "41,43",
+        "41 and 43",
+        "41 和 43",
+        "41と43"
       ],
       "image": "images/zh-multiple_choice-07.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "39bb8a4ac295f723648c37d3bea4e435a405933d8539cbd2eebd137f60839aa4",
       "requires_context": false
     },
     {
@@ -333,11 +482,21 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "47, 53",
+        "47,53",
+        "47 and 53",
+        "47 和 53",
+        "47と53",
+        "B, D (47, 53)",
+        "B, D（47, 53）"
       ],
       "image": "images/zh-multiple_choice-08.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "10b2619a7940fc5a0f3856ac772e26c150c6f29782791e03514bfb9b94376a07",
       "requires_context": false
     },
     {
@@ -347,10 +506,20 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "59, 61",
+        "59,61",
+        "59 and 61",
+        "59 和 61",
+        "59と61",
+        "A, C (59, 61)",
+        "A, C（59, 61）"
       ],
       "image": "images/zh-multiple_choice-09.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "6c8a23af915e5d75085e8fb1b8e64bd46b15d3d3741757a7d43ec7984946e105",
       "requires_context": false
     },
     {
@@ -359,11 +528,26 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "71, 67",
+        "71,67",
+        "71 and 67",
+        "71 和 67",
+        "71と67",
+        "B, D (71, 67)",
+        "B, D（71, 67）",
+        "67, 71",
+        "67,71",
+        "67 and 71",
+        "67 和 71",
+        "67と71"
       ],
       "image": "images/zh-multiple_choice-10.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "bbedc2ef785f8cb5930f4a5188b3a6fe510522d7a71de778c7590cfa543f0cc3",
       "requires_context": false
     },
     {
@@ -373,10 +557,25 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "79, 73",
+        "79,73",
+        "79 and 73",
+        "79 和 73",
+        "79と73",
+        "A, C (79, 73)",
+        "A, C（79, 73）",
+        "73, 79",
+        "73,79",
+        "73 and 79",
+        "73 和 79",
+        "73と79"
       ],
       "image": "images/zh-multiple_choice-11.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "a5b816fa8ad0061abecce728be018480271256250349b03e69f8d4c67c123ac0",
       "requires_context": false
     },
     {
@@ -385,11 +584,21 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "83, 89",
+        "83,89",
+        "83 and 89",
+        "83 和 89",
+        "83と89",
+        "B, D (83, 89)",
+        "B, D（83, 89）"
       ],
       "image": "images/zh-multiple_choice-12.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "f01ddb588ead88ebe20af403a81f8c5f468686b1f1929f87de51e2be7f69de2d",
       "requires_context": false
     },
     {
@@ -399,10 +608,20 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "97, 101",
+        "97,101",
+        "97 and 101",
+        "97 和 101",
+        "97と101",
+        "A, C (97, 101)",
+        "A, C（97, 101）"
       ],
       "image": "images/zh-multiple_choice-13.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "36104cea157e2ba4f3e8447a8c632f9af3e6fa9193485d279b1158208fdb1c37",
       "requires_context": false
     },
     {
@@ -411,11 +630,26 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "107, 103",
+        "107,103",
+        "107 and 103",
+        "107 和 103",
+        "107と103",
+        "B, D (107, 103)",
+        "B, D（107, 103）",
+        "103, 107",
+        "103,107",
+        "103 and 107",
+        "103 和 107",
+        "103と107"
       ],
       "image": "images/zh-multiple_choice-14.png",
-      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "sha256": "843c9209281b4d1a768a939987fbcd9cae57e0e21aa6c73d91c55496fa23c3b7",
       "requires_context": false
     },
     {
@@ -424,11 +658,26 @@
       "kind": "multiple_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "A, ?",
+        "A,?",
+        "A and ?",
+        "A 和 ?",
+        "Aと?",
+        "113, 109",
+        "113,109",
+        "113 and 109",
+        "113 和 109",
+        "113と109",
+        "A, ? (113, 109)",
+        "A, ?（113, 109）",
+        "109, 113",
+        "109,113",
+        "109 and 113",
+        "109 和 113",
+        "109と113"
       ],
       "image": "images/zh-multiple_choice-15.png",
-      "sha256": "45f3e4d68ee24dfc6a167e6c6014b43c568fedd418b4494263b8f30df88fb9a1",
+      "sha256": "b1e4e112984638b2e150e11d706c6c56a7d9778929528e43617d96c6eb5d3418",
       "requires_context": false
     },
     {
@@ -437,11 +686,21 @@
       "kind": "multiple_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, ?",
+        "B,?",
+        "B and ?",
+        "B 和 ?",
+        "Bと?",
+        "127, 131",
+        "127,131",
+        "127 and 131",
+        "127 和 131",
+        "127と131",
+        "B, ? (127, 131)",
+        "B, ?（127, 131）"
       ],
       "image": "images/zh-multiple_choice-16.png",
-      "sha256": "45f3e4d68ee24dfc6a167e6c6014b43c568fedd418b4494263b8f30df88fb9a1",
+      "sha256": "1f58ee3f4bb4e5a1a78374451a7351d55f7f81cdbb413260894167179d12d409",
       "requires_context": false
     },
     {
@@ -450,11 +709,21 @@
       "kind": "multiple_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "A, ?",
+        "A,?",
+        "A and ?",
+        "A 和 ?",
+        "Aと?",
+        "137, 139",
+        "137,139",
+        "137 and 139",
+        "137 和 139",
+        "137と139",
+        "A, ? (137, 139)",
+        "A, ?（137, 139）"
       ],
       "image": "images/zh-multiple_choice-17.png",
-      "sha256": "45f3e4d68ee24dfc6a167e6c6014b43c568fedd418b4494263b8f30df88fb9a1",
+      "sha256": "aa47245e5d54c7edb47b2932d617af9fa516fe1a7a61e09488eba154fd257f60",
       "requires_context": false
     },
     {
@@ -464,7 +733,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/zh-multiple_choice-18.png",
-      "sha256": "739872bd1b79c59eac1ef481dd7789f6de5b21fb9e6d5304772bc232b5192ea7",
+      "sha256": "57323a3e59339bcfad5bb1d790193d5d66ca65d8ed287837f82934bc9e33b003",
       "requires_context": false
     },
     {
@@ -474,7 +743,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/zh-multiple_choice-19.png",
-      "sha256": "a91b3ca3bd6bcc2b67d66e9cbc57b571dda270a1fbc9966f66544bf6c9ba3bf4",
+      "sha256": "6b26ec2524ae10a474c6109f8af070e5c4f7b414837d11b5680621fa9e7c481d",
       "requires_context": false
     },
     {
@@ -484,7 +753,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/zh-multiple_choice-20.png",
-      "sha256": "739872bd1b79c59eac1ef481dd7789f6de5b21fb9e6d5304772bc232b5192ea7",
+      "sha256": "1231aa05620ff701fcefd4ac137f84806deba50e8b60f79b6feb37f235719d5b",
       "requires_context": false
     },
     {
@@ -494,10 +763,15 @@
       "expected_state": "ready",
       "accepted_answers": [
         "B-D-A-C",
-        "B, D, A, C"
+        "B, D, A, C",
+        "B → D → A → C",
+        "2, 3, 5, 7",
+        "2 < 3 < 5 < 7",
+        "2 → 3 → 5 → 7",
+        "2-3-5-7"
       ],
       "image": "images/zh-ordering-01.png",
-      "sha256": "339508e76cf6667b716d40fe1e09b8b1bdba5c23768782942bbfdfa9ab9881b1",
+      "sha256": "58786a53bbbf96e534082973a4b23196a6a9360c438e9eacaa39b2eeb61acc50",
       "requires_context": false
     },
     {
@@ -506,11 +780,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "A-C-D-B",
+        "A, C, D, B",
+        "A → C → D → B",
+        "3, 4, 6, 8",
+        "3 < 4 < 6 < 8",
+        "3 → 4 → 6 → 8",
+        "3-4-6-8"
       ],
       "image": "images/zh-ordering-02.png",
-      "sha256": "51900a3d9f1df72039433a5290547a3472d28039e2c19e00fed3bff79dccda5a",
+      "sha256": "bec24c3f19f515ed161e292a05ba2351f9625c2e60a9aac56baca086e79072b3",
       "requires_context": false
     },
     {
@@ -519,11 +798,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "D-B-C-A",
+        "D, B, C, A",
+        "D → B → C → A",
+        "4, 5, 7, 9",
+        "4 < 5 < 7 < 9",
+        "4 → 5 → 7 → 9",
+        "4-5-7-9"
       ],
       "image": "images/zh-ordering-03.png",
-      "sha256": "68ddce787cb0ada5e1b0542f993307000c0e98c29a5ccc5e8baa5ad7439a6456",
+      "sha256": "8fcf7f2776155ecb810100e4b17f9921a9485466227d5ccd1ac9106e1dc32b8d",
       "requires_context": false
     },
     {
@@ -532,11 +816,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "C-A-B-D",
+        "C, A, B, D",
+        "C → A → B → D",
+        "5, 6, 8, 10",
+        "5 < 6 < 8 < 10",
+        "5 → 6 → 8 → 10",
+        "5-6-8-10"
       ],
       "image": "images/zh-ordering-04.png",
-      "sha256": "9e8f09ea73fc8b729069745ed25a31971dcd4daf1d78e20431624040e45f3c83",
+      "sha256": "654f6d579d9f5b45f6eb2e6a047c3dca93d8c9272aa87197c37a0d09f634b4cc",
       "requires_context": false
     },
     {
@@ -546,10 +835,15 @@
       "expected_state": "ready",
       "accepted_answers": [
         "B-D-A-C",
-        "B, D, A, C"
+        "B, D, A, C",
+        "B → D → A → C",
+        "6, 7, 9, 11",
+        "6 < 7 < 9 < 11",
+        "6 → 7 → 9 → 11",
+        "6-7-9-11"
       ],
       "image": "images/zh-ordering-05.png",
-      "sha256": "65a9fa248e0ab271e7eb23e2c8ddf417243c498315c2937ea8cedac5d6b45bde",
+      "sha256": "4c9514c0bb3fe6a2de5261ede23a17b11c8bdb6caef10328fe89e507baaae1e7",
       "requires_context": false
     },
     {
@@ -558,11 +852,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "A-C-D-B",
+        "A, C, D, B",
+        "A → C → D → B",
+        "7, 8, 10, 12",
+        "7 < 8 < 10 < 12",
+        "7 → 8 → 10 → 12",
+        "7-8-10-12"
       ],
       "image": "images/zh-ordering-06.png",
-      "sha256": "008cb485eca040dc9615b069bedc9a295bf3f0f9060a4babf13a4967a7c73d4c",
+      "sha256": "daf4983986b0c917e81c04850396a1e4463d45198627b8f2c28297eb045e0966",
       "requires_context": false
     },
     {
@@ -571,11 +870,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "D-B-C-A",
+        "D, B, C, A",
+        "D → B → C → A",
+        "8, 9, 11, 13",
+        "8 < 9 < 11 < 13",
+        "8 → 9 → 11 → 13",
+        "8-9-11-13"
       ],
       "image": "images/zh-ordering-07.png",
-      "sha256": "ff9fbb3b3d8a1b2b7954181946a5687c41d4fcef850ca24038c7f2f548da3a7e",
+      "sha256": "8dd9351ccf5263c428b881f17979b222a9123c17c0301d4db2ba90c701f68a4c",
       "requires_context": false
     },
     {
@@ -584,11 +888,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "C-A-B-D",
+        "C, A, B, D",
+        "C → A → B → D",
+        "9, 10, 12, 14",
+        "9 < 10 < 12 < 14",
+        "9 → 10 → 12 → 14",
+        "9-10-12-14"
       ],
       "image": "images/zh-ordering-08.png",
-      "sha256": "ff90654cf34fd820c872e8d78991afe90fed880e0962409691d346a39647f7e5",
+      "sha256": "ae915f7e1f552ee68adcf9ad099a3796796bcd525fcbce1f9fc32c1715bac8ec",
       "requires_context": false
     },
     {
@@ -598,10 +907,15 @@
       "expected_state": "ready",
       "accepted_answers": [
         "B-D-A-C",
-        "B, D, A, C"
+        "B, D, A, C",
+        "B → D → A → C",
+        "10, 11, 13, 15",
+        "10 < 11 < 13 < 15",
+        "10 → 11 → 13 → 15",
+        "10-11-13-15"
       ],
       "image": "images/zh-ordering-09.png",
-      "sha256": "388121101a5b69c6362e3ca982cdeb944b84af3ce8109a45febcb26671778932",
+      "sha256": "e5b5db096a237553e5da44b7b883803854b8c00e7101aa7cc11d44be51b19d40",
       "requires_context": false
     },
     {
@@ -610,11 +924,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "A-C-D-B",
+        "A, C, D, B",
+        "A → C → D → B",
+        "11, 12, 14, 16",
+        "11 < 12 < 14 < 16",
+        "11 → 12 → 14 → 16",
+        "11-12-14-16"
       ],
       "image": "images/zh-ordering-10.png",
-      "sha256": "2f5c67be05c8df397ab0b0919505bc8b6d37d235059e555340bbc5feefa9d355",
+      "sha256": "f40e99146064da9b6750118af198c3a3338d1923bb247e7c7c4202cd8a249af0",
       "requires_context": false
     },
     {
@@ -623,11 +942,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "D-B-C-A",
+        "D, B, C, A",
+        "D → B → C → A",
+        "12, 13, 15, 17",
+        "12 < 13 < 15 < 17",
+        "12 → 13 → 15 → 17",
+        "12-13-15-17"
       ],
       "image": "images/zh-ordering-11.png",
-      "sha256": "93d42c222fe7807a9b9b4372efb8b521ce05713ff321028c88ca8c4d7479f32c",
+      "sha256": "a899c22b9a8463560127537d4cae808a2d3c96471c4981fb11f23d52a52d34ea",
       "requires_context": false
     },
     {
@@ -636,11 +960,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "C-A-B-D",
+        "C, A, B, D",
+        "C → A → B → D",
+        "13, 14, 16, 18",
+        "13 < 14 < 16 < 18",
+        "13 → 14 → 16 → 18",
+        "13-14-16-18"
       ],
       "image": "images/zh-ordering-12.png",
-      "sha256": "8a97853d2c95e218521630b9a4d79b250cd0c3270ee78c23f0e3aa357cabd924",
+      "sha256": "6bc1cb3d080c362567078640b00cd69c197c5979b19f50c5a976b157e506ef4c",
       "requires_context": false
     },
     {
@@ -650,10 +979,15 @@
       "expected_state": "ready",
       "accepted_answers": [
         "B-D-A-C",
-        "B, D, A, C"
+        "B, D, A, C",
+        "B → D → A → C",
+        "14, 15, 17, 19",
+        "14 < 15 < 17 < 19",
+        "14 → 15 → 17 → 19",
+        "14-15-17-19"
       ],
       "image": "images/zh-ordering-13.png",
-      "sha256": "5aa3ef3e7837e759fb62323aaae72daff3be2c02632ef8adf8cb2cb86e951bcf",
+      "sha256": "66220557915395672c5d2576399efe87e22d198e1f33ef9523027a00c66ab325",
       "requires_context": false
     },
     {
@@ -662,11 +996,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "A-C-D-B",
+        "A, C, D, B",
+        "A → C → D → B",
+        "15, 16, 18, 20",
+        "15 < 16 < 18 < 20",
+        "15 → 16 → 18 → 20",
+        "15-16-18-20"
       ],
       "image": "images/zh-ordering-14.png",
-      "sha256": "a22da52029ee8f18ab816f6aea2d71dd0f28f66b7d9c6195121f65d86de97421",
+      "sha256": "b57124ededd36dc028aa7fb6e907070f8336f249083bab2369452d9eb0549fb5",
       "requires_context": false
     },
     {
@@ -675,11 +1014,13 @@
       "kind": "ordering",
       "expected_state": "review",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "16, 17, 19, 21",
+        "16 < 17 < 19 < 21",
+        "16 → 17 → 19 → 21",
+        "16-17-19-21"
       ],
       "image": "images/zh-ordering-15.png",
-      "sha256": "d59ecaba53d3e524b8bbf546a15cdc72094a4a4d08ab313912f8fe659766bf39",
+      "sha256": "33ab79fa00c06f1094b0708c03b7f7e9ebf2f0dfcd18c14fbbf9d704a36684fe",
       "requires_context": false
     },
     {
@@ -688,11 +1029,13 @@
       "kind": "ordering",
       "expected_state": "review",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "17, 18, 20, 22",
+        "17 < 18 < 20 < 22",
+        "17 → 18 → 20 → 22",
+        "17-18-20-22"
       ],
       "image": "images/zh-ordering-16.png",
-      "sha256": "86d311f0d115af900adacbe78bb37269cb1ab5ee245ddb383dd37957dec4ac01",
+      "sha256": "dee484271e0dd342a7989ae5adb62b87a9e9abfb073c3355236ab45409584e99",
       "requires_context": false
     },
     {
@@ -701,11 +1044,13 @@
       "kind": "ordering",
       "expected_state": "review",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "18, 19, 21, 23",
+        "18 < 19 < 21 < 23",
+        "18 → 19 → 21 → 23",
+        "18-19-21-23"
       ],
       "image": "images/zh-ordering-17.png",
-      "sha256": "8230752512ff2b6bd4ab74e2d10d3e368b9fef3ce117228107d22f70241f4cfe",
+      "sha256": "e30ba59e3adfb795992c6581e0da20c0d116e44d8d73cc5923e5837da460de7b",
       "requires_context": false
     },
     {
@@ -715,7 +1060,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/zh-ordering-18.png",
-      "sha256": "ddafcbb686df24d26c255cc4a6a7fd4b88f1d75dbb2d79ee73f861e5784f5a43",
+      "sha256": "dfb0655a57e9b0aa84dca6a4233dad810b82366051df2f580bb19e4b7cf071be",
       "requires_context": false
     },
     {
@@ -725,7 +1070,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/zh-ordering-19.png",
-      "sha256": "59aad36042159ee42a2385e6f08620feff2442560b652f012ec4df4b326f904c",
+      "sha256": "fac9ca82f6a2edbd5c874099128817d6173c16b4d7f6365872ac8889d23df550",
       "requires_context": false
     },
     {
@@ -735,7 +1080,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/zh-ordering-20.png",
-      "sha256": "5f370b1ee20afbf2724ceed4ac68bd3311bf23c1e751ec0a5f3a55429923a135",
+      "sha256": "1140acc6ae0fbd6f889c5765b6454f869de9fb10bbc4426ce0fe9e568fc8b21b",
       "requires_context": false
     },
     {
@@ -747,7 +1092,7 @@
         "10"
       ],
       "image": "images/zh-short_fill-01.png",
-      "sha256": "c757295859bf0adc2fd064d778be48cb90db94fcd2b3e13687a49f3c8e2dd211",
+      "sha256": "b8f40a1886b532e4252eccb67b46dea3273c13c87e696634cda4cf0cecdcad8b",
       "requires_context": false
     },
     {
@@ -759,7 +1104,7 @@
         "13"
       ],
       "image": "images/zh-short_fill-02.png",
-      "sha256": "b5eba49ba1e42250994471a38aba455f135da084c7c967f74a9c8c469cd36880",
+      "sha256": "51be87d1b7bd8b6c7f51fad02e6cc0987d1efce0169d37a6341dd82f5d310a2b",
       "requires_context": false
     },
     {
@@ -771,7 +1116,7 @@
         "16"
       ],
       "image": "images/zh-short_fill-03.png",
-      "sha256": "cddba70ab256d919a602714aee9bf9d5538fa40aeec5748c6c9af8ca9e1c8de1",
+      "sha256": "9f1dac3f247861b845f59f7afb6e6d8f90d586132cfb16bcb14c5cd7665e450e",
       "requires_context": false
     },
     {
@@ -783,7 +1128,7 @@
         "19"
       ],
       "image": "images/zh-short_fill-04.png",
-      "sha256": "fc398661e3549c7de046467deff872f4884f93db5a732567cb6d720e5e86cef4",
+      "sha256": "e6cdd2d97c0a01f7703d35dc5f6c34c1cd1b1313b167a39e5597ccc274a64ab5",
       "requires_context": false
     },
     {
@@ -795,7 +1140,7 @@
         "22"
       ],
       "image": "images/zh-short_fill-05.png",
-      "sha256": "87c5f73c2198308308f4ad4c0ae86ad64a7fb5de5c8c108ef049696575565ee2",
+      "sha256": "846619f801dbd3ba04eab166491baccf4b09074aa6fd46d1683d530c342ec3fd",
       "requires_context": false
     },
     {
@@ -807,7 +1152,7 @@
         "25"
       ],
       "image": "images/zh-short_fill-06.png",
-      "sha256": "d15599ce8bae2e86472d755191307b16e271f25926ca87134674d995ce6c144a",
+      "sha256": "d14fe120badd66b81a67b3e2c33ae9893528369792e96828dc29a0210ea75aa5",
       "requires_context": false
     },
     {
@@ -819,7 +1164,7 @@
         "28"
       ],
       "image": "images/zh-short_fill-07.png",
-      "sha256": "908c0434957163169d56d90f28f71c3efc806a1dcbd6ea0e1c02b1ded2a0f94c",
+      "sha256": "bf46f53100cce41a479cc825642795a5d505aae835c6643eded6e2346128791a",
       "requires_context": false
     },
     {
@@ -831,7 +1176,7 @@
         "31"
       ],
       "image": "images/zh-short_fill-08.png",
-      "sha256": "0ca67612c6640c64e6ac25d8ceda693b2c7d9507f9009099ca6df37ff99ec2eb",
+      "sha256": "8aad684ac8f4171a4293a71af246a9a7ea07187fe71254f9acd7f614cb0add49",
       "requires_context": false
     },
     {
@@ -843,7 +1188,7 @@
         "34"
       ],
       "image": "images/zh-short_fill-09.png",
-      "sha256": "2c5cd0180ebb38aaa950d30d38e272831308956c379e4b9cc7d9d2bbca4034d5",
+      "sha256": "321152eaf0e5fd15c6494b175df0818422536a2a937f8ca9e2664deb36311832",
       "requires_context": false
     },
     {
@@ -855,7 +1200,7 @@
         "37"
       ],
       "image": "images/zh-short_fill-10.png",
-      "sha256": "7d3581d116bfc088d79b222a75d6da314f8ce76a23cf1aed3cc63d5783dded85",
+      "sha256": "1c910a6678f2ffa6e19edeac38d350c45d3fe10c28c3f8271e5710ec02da46a6",
       "requires_context": false
     },
     {
@@ -867,7 +1212,7 @@
         "40"
       ],
       "image": "images/zh-short_fill-11.png",
-      "sha256": "5dd48d102a0bfd7a9998dbf4cfc2e4820cd7941d60311384d0af96ba78a5cf7b",
+      "sha256": "428b9e90294ae1e739048c3ea5d81957a3986e3c7141e705aafda3200ec8bb71",
       "requires_context": false
     },
     {
@@ -879,7 +1224,7 @@
         "43"
       ],
       "image": "images/zh-short_fill-12.png",
-      "sha256": "08228cd3068a8a951fdb0ea68e344ec4a3161a9cf6b6eb8beb867657d1e84654",
+      "sha256": "77292a7276579500ecca8b62861701866d2e930a41f55c8b96fc2a5c3b14f468",
       "requires_context": false
     },
     {
@@ -891,7 +1236,7 @@
         "46"
       ],
       "image": "images/zh-short_fill-13.png",
-      "sha256": "812692ee37e5087f1a34f831f25783e93f29e2df2c5286b79c581014152e938c",
+      "sha256": "15855ad196e2e357f01ddb44adf007ef29aa2967ad442b18b5d0e9479c411323",
       "requires_context": false
     },
     {
@@ -903,7 +1248,7 @@
         "49"
       ],
       "image": "images/zh-short_fill-14.png",
-      "sha256": "da06eebda0f111e9e3279ccc96cf6d2880a99355a6cd28324074f2e25273339c",
+      "sha256": "f44e96f0856799ee1eb3428d025e5ca4fa6280c4ecb878d5129e9105e918963e",
       "requires_context": false
     },
     {
@@ -912,10 +1257,14 @@
       "kind": "short_fill",
       "expected_state": "review",
       "accepted_answers": [
-        "52"
+        "50 or 52",
+        "50/52",
+        "50, 52",
+        "50 或 52",
+        "50または52"
       ],
       "image": "images/zh-short_fill-15.png",
-      "sha256": "f88098ff2a157a0699e68961e2dc4fe67a4f0ebad055c13022e8f8acabb3d905",
+      "sha256": "5f66c8aaf5bedc6f0e1863d0f518ebd20dfe3b743c66ce78ec764b6936ececdd",
       "requires_context": false
     },
     {
@@ -924,10 +1273,14 @@
       "kind": "short_fill",
       "expected_state": "review",
       "accepted_answers": [
-        "55"
+        "53 or 55",
+        "53/55",
+        "53, 55",
+        "53 或 55",
+        "53または55"
       ],
       "image": "images/zh-short_fill-16.png",
-      "sha256": "da8af61b77e8741e4572a4551b04e0797f05863af303ab50666549defe15c2ca",
+      "sha256": "86132c98a8a4277d88640847a5d4ff0e22a3c2c06503d918ee0aa153fba787ca",
       "requires_context": false
     },
     {
@@ -936,10 +1289,14 @@
       "kind": "short_fill",
       "expected_state": "review",
       "accepted_answers": [
-        "58"
+        "56 or 58",
+        "56/58",
+        "56, 58",
+        "56 或 58",
+        "56または58"
       ],
       "image": "images/zh-short_fill-17.png",
-      "sha256": "f318bcc3e81fb8454916f6b4eb6716d654a8b5de87f98e714e59766f7e90cb8d",
+      "sha256": "a856f293763f756a889ac8efea9d15d69e6c1c5373cbfa25939da665c84f1db1",
       "requires_context": false
     },
     {
@@ -949,7 +1306,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/zh-short_fill-18.png",
-      "sha256": "e4c25d9ff5b0b66ab24c14cd10d90edb51c8ef7df3057dab6c2a459b94dd99b7",
+      "sha256": "cc7386edb381637c4bbb93359ceff4873388745c39bab6ff472da2048bc42b05",
       "requires_context": false
     },
     {
@@ -959,7 +1316,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/zh-short_fill-19.png",
-      "sha256": "0f98eca97e962970e5b59436a30de7fc7bde5e450529cefb224a2826c753064c",
+      "sha256": "39aa287ee5fed28842f836015f55e6e31fd64c895bdc6adf7a73c8ae6d8857b5",
       "requires_context": false
     },
     {
@@ -969,7 +1326,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/zh-short_fill-20.png",
-      "sha256": "f9b5ca5910b90391f05e8aa5e68c2c4451acdf6c1d2c66ae5231025bcd97ceca",
+      "sha256": "e1cb2a3f75560b885118af9384ea928205286657edb5f22da76e324e5995a585",
       "requires_context": false
     },
     {
@@ -978,10 +1335,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "A",
+        "8",
+        "A. 8",
+        "A (8)",
+        "A（8）"
       ],
       "image": "images/ja-single_choice-01.png",
-      "sha256": "a70ec39608fea2666d8a7744c9dee7721d3d56463b47cea7bb36466449c397da",
+      "sha256": "71e9ef38281af85036d89866f0feb7636b592f798e32d86465eb5747624fd869",
       "requires_context": false
     },
     {
@@ -990,10 +1351,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "D",
+        "10",
+        "D. 10",
+        "D (10)",
+        "D（10）"
       ],
       "image": "images/ja-single_choice-02.png",
-      "sha256": "dc58be66229f1062bb842cc8c1acd4482ff11e9bc148ab0c2f8d8383f512874b",
+      "sha256": "451c8440ced4a903916d782f2eef76b58633d63828a82bf0503443f41a9e400a",
       "requires_context": false
     },
     {
@@ -1002,10 +1367,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "C",
+        "12",
+        "C. 12",
+        "C (12)",
+        "C（12）"
       ],
       "image": "images/ja-single_choice-03.png",
-      "sha256": "753238533480c448f9c2fbd3f61973629e325962b78ec6cbca4d333700b38297",
+      "sha256": "a37c798683529a3d0c950c86cf3b7645833d5ca5b13f9d56f83bc9a7a77b2b3b",
       "requires_context": false
     },
     {
@@ -1014,10 +1383,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "B",
+        "14",
+        "B. 14",
+        "B (14)",
+        "B（14）"
       ],
       "image": "images/ja-single_choice-04.png",
-      "sha256": "f6210d068221c244476499c28d0ab244abee902350713cb47b3c62e646660f49",
+      "sha256": "589d15d2bc64d8b8cb210f3058665d9760d03d5302f6cda073abed02505b1926",
       "requires_context": false
     },
     {
@@ -1026,10 +1399,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "A",
+        "16",
+        "A. 16",
+        "A (16)",
+        "A（16）"
       ],
       "image": "images/ja-single_choice-05.png",
-      "sha256": "e6a640b04144a7d0631f8c7cd54483ed3cd99e45598ba087700cf90b753c69e6",
+      "sha256": "40f2b14fea04303a06982d13fdf48edbb22e5f6848609b393b5120da00e2cc03",
       "requires_context": false
     },
     {
@@ -1038,10 +1415,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "D",
+        "18",
+        "D. 18",
+        "D (18)",
+        "D（18）"
       ],
       "image": "images/ja-single_choice-06.png",
-      "sha256": "6d8e195ee6df08fa3c3582f54f72199c2b284eaaa06c160f8b966b82aa0e2ee0",
+      "sha256": "4994cfaa4e1c154c38321cb856fd161b44102d75c64e98c832801aaeaed51ebe",
       "requires_context": false
     },
     {
@@ -1050,10 +1431,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "C",
+        "20",
+        "C. 20",
+        "C (20)",
+        "C（20）"
       ],
       "image": "images/ja-single_choice-07.png",
-      "sha256": "6a6c5fd34ed358a00ce946382dbda8d425d556c23a9ef5ad6f3c99ff056e615c",
+      "sha256": "148fcef45512a843599469c10a4bedc46a1b6008d428b289a7c2cf4f9befba74",
       "requires_context": false
     },
     {
@@ -1062,10 +1447,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "B",
+        "22",
+        "B. 22",
+        "B (22)",
+        "B（22）"
       ],
       "image": "images/ja-single_choice-08.png",
-      "sha256": "1624911fb187504718f61e275591a8cbc0cc8c03a67b0a6a8362a9221b847e7e",
+      "sha256": "d838bcea493e6653c1209648b3d995d96dbddd0705257ee8192a4fe509893e52",
       "requires_context": false
     },
     {
@@ -1074,10 +1463,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "A",
+        "24",
+        "A. 24",
+        "A (24)",
+        "A（24）"
       ],
       "image": "images/ja-single_choice-09.png",
-      "sha256": "c82000b0e88f418091cf207cdc0436310e35a6e2db1460f51c381ad2a3024acd",
+      "sha256": "d6a6cbea35aa90e2f79641180924bff3479b929d023866d6d1b033d73941c5c5",
       "requires_context": false
     },
     {
@@ -1086,10 +1479,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "D",
+        "26",
+        "D. 26",
+        "D (26)",
+        "D（26）"
       ],
       "image": "images/ja-single_choice-10.png",
-      "sha256": "fcbdfef690862373f5d880df14f0dc1eaa54045015faf4e4ef3b7def69d0a5bb",
+      "sha256": "00ed93e708800b80469991fcb079a3d18911638f5c909df5d1352ce62de3d8c8",
       "requires_context": false
     },
     {
@@ -1098,10 +1495,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "C",
+        "28",
+        "C. 28",
+        "C (28)",
+        "C（28）"
       ],
       "image": "images/ja-single_choice-11.png",
-      "sha256": "3acd3f90e1574750733cd5767d723ce3c93e504480923d8a44fdadcb8f98487c",
+      "sha256": "a45d13496727968ab937d3cb01bfd2ed0e9d3a730a4ea5b5ce5d2b410b64f5fa",
       "requires_context": false
     },
     {
@@ -1110,10 +1511,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "B",
+        "30",
+        "B. 30",
+        "B (30)",
+        "B（30）"
       ],
       "image": "images/ja-single_choice-12.png",
-      "sha256": "57c0e607593e7642f28ccc5b14d9d7452349d8d21ee2bae3783a5fa7841b7ccc",
+      "sha256": "83f4cfca87c1ca536a28c11fdf8ee5d865f93d2a18e63938e3f843f5c9bac2bc",
       "requires_context": false
     },
     {
@@ -1122,10 +1527,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "A",
+        "32",
+        "A. 32",
+        "A (32)",
+        "A（32）"
       ],
       "image": "images/ja-single_choice-13.png",
-      "sha256": "28ab4cb883003d1af8480b7f1c7d65802606704a654495a972deee04f70c9f2d",
+      "sha256": "9ac6d1e5019771c1ecb74c8b25957b71c939f2424926fba550c195e9147ceb8b",
       "requires_context": false
     },
     {
@@ -1134,10 +1543,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "D",
+        "34",
+        "D. 34",
+        "D (34)",
+        "D（34）"
       ],
       "image": "images/ja-single_choice-14.png",
-      "sha256": "142aefb38d45a4d6fe10afb9f42da9107088c713fd4ba9bafb6cc47e72860c89",
+      "sha256": "d150b85bbb0a56f7c02025d8c434ace03cf975d6e28063aae8faaefad68c6e77",
       "requires_context": false
     },
     {
@@ -1146,10 +1559,11 @@
       "kind": "single_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "B"
+        "36",
+        "?. 36"
       ],
       "image": "images/ja-single_choice-15.png",
-      "sha256": "33c17ee25a7c162f6d0e0f5c2d00da3dac3bb6f2acac3bdb0c54c4ce49643552",
+      "sha256": "9bd14e09ba81299a22ad75ba15dc8556a4e42fe0125ac4984f82aef37bb7a5fd",
       "requires_context": false
     },
     {
@@ -1158,10 +1572,11 @@
       "kind": "single_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "B"
+        "38",
+        "?. 38"
       ],
       "image": "images/ja-single_choice-16.png",
-      "sha256": "a97c5a6a863d87cfd927b350172318e3fd936e5553a9647719aefd385d71adfa",
+      "sha256": "78f9c3577c27831cd573bd881b11de810e46c7f89516ce3854cc2c05f9568c78",
       "requires_context": false
     },
     {
@@ -1170,10 +1585,11 @@
       "kind": "single_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "B"
+        "40",
+        "?. 40"
       ],
       "image": "images/ja-single_choice-17.png",
-      "sha256": "8fceb9a35d559e71655b2275b7b3de44cd71542da9937a74813f5e44cb6b8409",
+      "sha256": "1221846b01112ecab6dfe9fd715060d3481e22629f83c15e6e5debf6129f6dc3",
       "requires_context": false
     },
     {
@@ -1183,7 +1599,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/ja-single_choice-18.png",
-      "sha256": "fe729735e700eba00060d40dde1e1bf12076adfc6faa6ab6998941c58e41fdd6",
+      "sha256": "cccf7fda816bd33805d9930b392a635e93654080d9cb50a1ded09c12117b7c0d",
       "requires_context": false
     },
     {
@@ -1203,7 +1619,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/ja-single_choice-20.png",
-      "sha256": "7d2d39b0df1284ca4345c31c8ef3a8ec776bc7089caf53aee8666551309def9a",
+      "sha256": "6eff3dc7d31982127a0403eb493383b75c8b73b710177fdce53323bef93df5db",
       "requires_context": false
     },
     {
@@ -1213,10 +1629,20 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "2, 5",
+        "2,5",
+        "2 and 5",
+        "2 和 5",
+        "2と5",
+        "A, C (2, 5)",
+        "A, C（2, 5）"
       ],
       "image": "images/ja-multiple_choice-01.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "64680faf669368694dffa764587a6790a9b7558c72441b091014271942684680",
       "requires_context": false
     },
     {
@@ -1225,11 +1651,26 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "7, 3",
+        "7,3",
+        "7 and 3",
+        "7 和 3",
+        "7と3",
+        "B, D (7, 3)",
+        "B, D（7, 3）",
+        "3, 7",
+        "3,7",
+        "3 and 7",
+        "3 和 7",
+        "3と7"
       ],
       "image": "images/ja-multiple_choice-02.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "1cfc42ce5088bd4685aa99338b19fadd4512b0b63511ed108254055250c5ec44",
       "requires_context": false
     },
     {
@@ -1239,10 +1680,25 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "13, 11",
+        "13,11",
+        "13 and 11",
+        "13 和 11",
+        "13と11",
+        "A, C (13, 11)",
+        "A, C（13, 11）",
+        "11, 13",
+        "11,13",
+        "11 and 13",
+        "11 和 13",
+        "11と13"
       ],
       "image": "images/ja-multiple_choice-03.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "0cef41cb4b35ce20844f2cf87efe22fa59ce4445da074b470e5ce47c6e66f9ed",
       "requires_context": false
     },
     {
@@ -1251,11 +1707,21 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "17, 19",
+        "17,19",
+        "17 and 19",
+        "17 和 19",
+        "17と19",
+        "B, D (17, 19)",
+        "B, D（17, 19）"
       ],
       "image": "images/ja-multiple_choice-04.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "901e6a0c0eddec7c717662c7ec60277427a3ee309327fd57cfaa8bb237e1a894",
       "requires_context": false
     },
     {
@@ -1265,10 +1731,20 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "23, 29",
+        "23,29",
+        "23 and 29",
+        "23 和 29",
+        "23と29",
+        "A, C (23, 29)",
+        "A, C（23, 29）"
       ],
       "image": "images/ja-multiple_choice-05.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "f1be8eabf78400f7cd661301c3b415d5f5b336ad5ac93ffcbd85402f0f651c2e",
       "requires_context": false
     },
     {
@@ -1277,11 +1753,26 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "37, 31",
+        "37,31",
+        "37 and 31",
+        "37 和 31",
+        "37と31",
+        "B, D (37, 31)",
+        "B, D（37, 31）",
+        "31, 37",
+        "31,37",
+        "31 and 37",
+        "31 和 37",
+        "31と37"
       ],
       "image": "images/ja-multiple_choice-06.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "593ed5a0eb410598f64ef6c956db23f57a798612623b6cc73d702aa0e81f75f9",
       "requires_context": false
     },
     {
@@ -1291,10 +1782,25 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "43, 41",
+        "43,41",
+        "43 and 41",
+        "43 和 41",
+        "43と41",
+        "A, C (43, 41)",
+        "A, C（43, 41）",
+        "41, 43",
+        "41,43",
+        "41 and 43",
+        "41 和 43",
+        "41と43"
       ],
       "image": "images/ja-multiple_choice-07.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "b51f0ef87958fff41a38bd304993bcfb9d84e13dd6447ceae03e583490686368",
       "requires_context": false
     },
     {
@@ -1303,11 +1809,21 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "47, 53",
+        "47,53",
+        "47 and 53",
+        "47 和 53",
+        "47と53",
+        "B, D (47, 53)",
+        "B, D（47, 53）"
       ],
       "image": "images/ja-multiple_choice-08.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "45d2e54ab57b504a6932de947b24a071daf8b0bc3a0b1c66be7cf7569fb3da0d",
       "requires_context": false
     },
     {
@@ -1317,10 +1833,20 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "59, 61",
+        "59,61",
+        "59 and 61",
+        "59 和 61",
+        "59と61",
+        "A, C (59, 61)",
+        "A, C（59, 61）"
       ],
       "image": "images/ja-multiple_choice-09.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "3c1b4a92e9c4fef158a82c222053efb368be7362afdf3edcfc2ab097fc8a227b",
       "requires_context": false
     },
     {
@@ -1329,11 +1855,26 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "71, 67",
+        "71,67",
+        "71 and 67",
+        "71 和 67",
+        "71と67",
+        "B, D (71, 67)",
+        "B, D（71, 67）",
+        "67, 71",
+        "67,71",
+        "67 and 71",
+        "67 和 71",
+        "67と71"
       ],
       "image": "images/ja-multiple_choice-10.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "546cd61098ea7f1b007b67e4a3bd4dbe72b6a0a26f3dc444abad276eb8197c1c",
       "requires_context": false
     },
     {
@@ -1343,10 +1884,25 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "79, 73",
+        "79,73",
+        "79 and 73",
+        "79 和 73",
+        "79と73",
+        "A, C (79, 73)",
+        "A, C（79, 73）",
+        "73, 79",
+        "73,79",
+        "73 and 79",
+        "73 和 79",
+        "73と79"
       ],
       "image": "images/ja-multiple_choice-11.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "63b74bcc186f7d016f127a65274784e7f02a49173263546da3fac6fb266c4f29",
       "requires_context": false
     },
     {
@@ -1355,11 +1911,21 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "83, 89",
+        "83,89",
+        "83 and 89",
+        "83 和 89",
+        "83と89",
+        "B, D (83, 89)",
+        "B, D（83, 89）"
       ],
       "image": "images/ja-multiple_choice-12.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "084a99eb3773cda5f3916737e69502e62284e05bd6c6afc6539e4d8cdb1a91b3",
       "requires_context": false
     },
     {
@@ -1369,10 +1935,20 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "97, 101",
+        "97,101",
+        "97 and 101",
+        "97 和 101",
+        "97と101",
+        "A, C (97, 101)",
+        "A, C（97, 101）"
       ],
       "image": "images/ja-multiple_choice-13.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "e14b16320d96445a1f323dfea5f79f82bcfe0a80b7f5f6015c3cc1605ed33b3b",
       "requires_context": false
     },
     {
@@ -1381,11 +1957,26 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "107, 103",
+        "107,103",
+        "107 and 103",
+        "107 和 103",
+        "107と103",
+        "B, D (107, 103)",
+        "B, D（107, 103）",
+        "103, 107",
+        "103,107",
+        "103 and 107",
+        "103 和 107",
+        "103と107"
       ],
       "image": "images/ja-multiple_choice-14.png",
-      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "sha256": "2315bf48152fec6a36b7a4929efe288117cf649400c67d2e6145a1240db58428",
       "requires_context": false
     },
     {
@@ -1394,11 +1985,26 @@
       "kind": "multiple_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "A, ?",
+        "A,?",
+        "A and ?",
+        "A 和 ?",
+        "Aと?",
+        "113, 109",
+        "113,109",
+        "113 and 109",
+        "113 和 109",
+        "113と109",
+        "A, ? (113, 109)",
+        "A, ?（113, 109）",
+        "109, 113",
+        "109,113",
+        "109 and 113",
+        "109 和 113",
+        "109と113"
       ],
       "image": "images/ja-multiple_choice-15.png",
-      "sha256": "b743c22420c5dd2c1d8b78f61796c1bbf5454ed2b482fbe02056f2deef297e23",
+      "sha256": "bb1aeb84cef632d059ff98a85e2cf2cf210ad5b00228c7301cbe575f51270c33",
       "requires_context": false
     },
     {
@@ -1407,11 +2013,21 @@
       "kind": "multiple_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, ?",
+        "B,?",
+        "B and ?",
+        "B 和 ?",
+        "Bと?",
+        "127, 131",
+        "127,131",
+        "127 and 131",
+        "127 和 131",
+        "127と131",
+        "B, ? (127, 131)",
+        "B, ?（127, 131）"
       ],
       "image": "images/ja-multiple_choice-16.png",
-      "sha256": "b743c22420c5dd2c1d8b78f61796c1bbf5454ed2b482fbe02056f2deef297e23",
+      "sha256": "3a5f9ac639286ce77b511fb7e3f18378a47b4bd9c715b9572b96a933755a456c",
       "requires_context": false
     },
     {
@@ -1420,11 +2036,21 @@
       "kind": "multiple_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "A, ?",
+        "A,?",
+        "A and ?",
+        "A 和 ?",
+        "Aと?",
+        "137, 139",
+        "137,139",
+        "137 and 139",
+        "137 和 139",
+        "137と139",
+        "A, ? (137, 139)",
+        "A, ?（137, 139）"
       ],
       "image": "images/ja-multiple_choice-17.png",
-      "sha256": "b743c22420c5dd2c1d8b78f61796c1bbf5454ed2b482fbe02056f2deef297e23",
+      "sha256": "aaa5f470b1c45434ed11d9f07843901c55eccef26d842dbb739e0ca040369d76",
       "requires_context": false
     },
     {
@@ -1434,7 +2060,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/ja-multiple_choice-18.png",
-      "sha256": "7d57bec69e5d46ce6c1fc9fe754cc9e607e5e41555463b24fd4bb9c2a872bdf2",
+      "sha256": "6bf75356013b01a491b57ddbd21d72c48b2811251c1d3dda346fe93b0cb7ab3a",
       "requires_context": false
     },
     {
@@ -1444,7 +2070,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/ja-multiple_choice-19.png",
-      "sha256": "c3e9be6300ef9e1f90ed8ec4276c439c06b543ed467c82ab210b01e56f968a0d",
+      "sha256": "42a9ab7af7865cbdfe6b63e42064b416695262dc5f222823528c9eb80eae5924",
       "requires_context": false
     },
     {
@@ -1454,7 +2080,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/ja-multiple_choice-20.png",
-      "sha256": "7d57bec69e5d46ce6c1fc9fe754cc9e607e5e41555463b24fd4bb9c2a872bdf2",
+      "sha256": "206bbf185bffa762bcf1cbd0c01ae925971a51069fc242248a910e495c253b40",
       "requires_context": false
     },
     {
@@ -1464,7 +2090,12 @@
       "expected_state": "ready",
       "accepted_answers": [
         "B-D-A-C",
-        "B, D, A, C"
+        "B, D, A, C",
+        "B → D → A → C",
+        "2, 3, 5, 7",
+        "2 < 3 < 5 < 7",
+        "2 → 3 → 5 → 7",
+        "2-3-5-7"
       ],
       "image": "images/ja-ordering-01.png",
       "sha256": "db9839e4bb621b038ced1f4c515cd5055e4caf2ee3afd84e3e9e184cb7b8848f",
@@ -1476,11 +2107,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "A-C-D-B",
+        "A, C, D, B",
+        "A → C → D → B",
+        "3, 4, 6, 8",
+        "3 < 4 < 6 < 8",
+        "3 → 4 → 6 → 8",
+        "3-4-6-8"
       ],
       "image": "images/ja-ordering-02.png",
-      "sha256": "2e8e213c29f3edb216974f137cb7158f3fb6fe7a8f873940bdf13fc529b1e672",
+      "sha256": "882ec5aacd1d3fc7b0e18df01973e5c6e17f5074a044b890a09d20187606f7a7",
       "requires_context": false
     },
     {
@@ -1489,11 +2125,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "D-B-C-A",
+        "D, B, C, A",
+        "D → B → C → A",
+        "4, 5, 7, 9",
+        "4 < 5 < 7 < 9",
+        "4 → 5 → 7 → 9",
+        "4-5-7-9"
       ],
       "image": "images/ja-ordering-03.png",
-      "sha256": "633cc9773fb0f1ec8168b01e474686acc03eb4bab21b5146240a7e7b3ff9787a",
+      "sha256": "24480785f87e435b76b3f5d8eb56201549900a9b1defd7ab734d44c7e50ffc1c",
       "requires_context": false
     },
     {
@@ -1502,11 +2143,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "C-A-B-D",
+        "C, A, B, D",
+        "C → A → B → D",
+        "5, 6, 8, 10",
+        "5 < 6 < 8 < 10",
+        "5 → 6 → 8 → 10",
+        "5-6-8-10"
       ],
       "image": "images/ja-ordering-04.png",
-      "sha256": "57fca5d705730175075dc74ae91f15b536a9ed6a3435677213ac5d053b157667",
+      "sha256": "8158c92b9aa01d370b13af8860685277d72aabec286dc24a205f26c0b9fac899",
       "requires_context": false
     },
     {
@@ -1516,7 +2162,12 @@
       "expected_state": "ready",
       "accepted_answers": [
         "B-D-A-C",
-        "B, D, A, C"
+        "B, D, A, C",
+        "B → D → A → C",
+        "6, 7, 9, 11",
+        "6 < 7 < 9 < 11",
+        "6 → 7 → 9 → 11",
+        "6-7-9-11"
       ],
       "image": "images/ja-ordering-05.png",
       "sha256": "28d712d2bcce170b895b140e11f7ee8dab63837ed4ad6b6b297e2820b1c4ea06",
@@ -1528,11 +2179,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "A-C-D-B",
+        "A, C, D, B",
+        "A → C → D → B",
+        "7, 8, 10, 12",
+        "7 < 8 < 10 < 12",
+        "7 → 8 → 10 → 12",
+        "7-8-10-12"
       ],
       "image": "images/ja-ordering-06.png",
-      "sha256": "3c30aea7401d382703b925de40cbb711563d9daac92cb05428fd3ad3b1200bc6",
+      "sha256": "c11918a53b7b15600793d04bccf2a7d099f2786929e6152cc5102cbb917fb000",
       "requires_context": false
     },
     {
@@ -1541,11 +2197,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "D-B-C-A",
+        "D, B, C, A",
+        "D → B → C → A",
+        "8, 9, 11, 13",
+        "8 < 9 < 11 < 13",
+        "8 → 9 → 11 → 13",
+        "8-9-11-13"
       ],
       "image": "images/ja-ordering-07.png",
-      "sha256": "f288d0d7245dca01b33f6d5c934541bd9fc03a43d7f1022da61175179de19951",
+      "sha256": "3037808913c31739a25b2b72f58845aeaaef0c706ff934fc5166ce3f191488d1",
       "requires_context": false
     },
     {
@@ -1554,11 +2215,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "C-A-B-D",
+        "C, A, B, D",
+        "C → A → B → D",
+        "9, 10, 12, 14",
+        "9 < 10 < 12 < 14",
+        "9 → 10 → 12 → 14",
+        "9-10-12-14"
       ],
       "image": "images/ja-ordering-08.png",
-      "sha256": "f78a7fdfe7924b141f7385ca0fec4c1b6f78891e8195b37b0eb1a214d1685a03",
+      "sha256": "1f44c3c3756f5500fb0f62983ad7a6a2bbcbe14f3624680d0e4c49ba98e07496",
       "requires_context": false
     },
     {
@@ -1568,7 +2234,12 @@
       "expected_state": "ready",
       "accepted_answers": [
         "B-D-A-C",
-        "B, D, A, C"
+        "B, D, A, C",
+        "B → D → A → C",
+        "10, 11, 13, 15",
+        "10 < 11 < 13 < 15",
+        "10 → 11 → 13 → 15",
+        "10-11-13-15"
       ],
       "image": "images/ja-ordering-09.png",
       "sha256": "b3d194bd387f495a6ec14ef0a2b0e2b7d582bc61f947a9f8447a5eb2ffaa2016",
@@ -1580,11 +2251,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "A-C-D-B",
+        "A, C, D, B",
+        "A → C → D → B",
+        "11, 12, 14, 16",
+        "11 < 12 < 14 < 16",
+        "11 → 12 → 14 → 16",
+        "11-12-14-16"
       ],
       "image": "images/ja-ordering-10.png",
-      "sha256": "7225d89f4d62b454393e3f562a48261d5e1f7c970468599087ccc7e1e2a311be",
+      "sha256": "58f83fe93bfc882a55e2ddb3703b356fe929540aef96648ef88e05452fd38091",
       "requires_context": false
     },
     {
@@ -1593,11 +2269,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "D-B-C-A",
+        "D, B, C, A",
+        "D → B → C → A",
+        "12, 13, 15, 17",
+        "12 < 13 < 15 < 17",
+        "12 → 13 → 15 → 17",
+        "12-13-15-17"
       ],
       "image": "images/ja-ordering-11.png",
-      "sha256": "271db4e835ca449328c01f210758e00a142de250e621058ff9a51cdbc95cb3ca",
+      "sha256": "ada896187380c3d8e96de2136f991b96d304746bfea76ae50b564883570dc749",
       "requires_context": false
     },
     {
@@ -1606,11 +2287,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "C-A-B-D",
+        "C, A, B, D",
+        "C → A → B → D",
+        "13, 14, 16, 18",
+        "13 < 14 < 16 < 18",
+        "13 → 14 → 16 → 18",
+        "13-14-16-18"
       ],
       "image": "images/ja-ordering-12.png",
-      "sha256": "ecc72d2124988182db0edd0a088291a45a72255c4924a1f7237a7378a643ccdc",
+      "sha256": "953f2236af86b08890f5964f5aaca2ffc54da1dcbf329e9a9577753a99d847ff",
       "requires_context": false
     },
     {
@@ -1620,7 +2306,12 @@
       "expected_state": "ready",
       "accepted_answers": [
         "B-D-A-C",
-        "B, D, A, C"
+        "B, D, A, C",
+        "B → D → A → C",
+        "14, 15, 17, 19",
+        "14 < 15 < 17 < 19",
+        "14 → 15 → 17 → 19",
+        "14-15-17-19"
       ],
       "image": "images/ja-ordering-13.png",
       "sha256": "c1c66db8e39c1a2a050a64b5e7108e8ac58f4aa5fcf2f965718e39f337092fa5",
@@ -1632,11 +2323,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "A-C-D-B",
+        "A, C, D, B",
+        "A → C → D → B",
+        "15, 16, 18, 20",
+        "15 < 16 < 18 < 20",
+        "15 → 16 → 18 → 20",
+        "15-16-18-20"
       ],
       "image": "images/ja-ordering-14.png",
-      "sha256": "9190a9daa29fcc706a92d15bc48ea5db3032cd94df1f561df19798dfad419379",
+      "sha256": "910b86970766f2aa76ab02ad973ab3f08f55f95dc255e4f7f35c2a1deb87af11",
       "requires_context": false
     },
     {
@@ -1645,11 +2341,13 @@
       "kind": "ordering",
       "expected_state": "review",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "16, 17, 19, 21",
+        "16 < 17 < 19 < 21",
+        "16 → 17 → 19 → 21",
+        "16-17-19-21"
       ],
       "image": "images/ja-ordering-15.png",
-      "sha256": "0f3e8c91f1dea81d30f96b79f03dc6ab4957ce15b72ae1509466a4d4887f2f9b",
+      "sha256": "c307bcfb24337d235d4f2e35aeae1e7573f2d2802d25ec1b502d77a396fd9af6",
       "requires_context": false
     },
     {
@@ -1658,11 +2356,13 @@
       "kind": "ordering",
       "expected_state": "review",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "17, 18, 20, 22",
+        "17 < 18 < 20 < 22",
+        "17 → 18 → 20 → 22",
+        "17-18-20-22"
       ],
       "image": "images/ja-ordering-16.png",
-      "sha256": "766815fb82e07fb074485148860a785441e4993800dea9b266fe2bd9e9b4f7cf",
+      "sha256": "83ffb2422d90249ea5fc514f724932f3ffc1d9ccaa432045463b085cce0a07bb",
       "requires_context": false
     },
     {
@@ -1671,11 +2371,13 @@
       "kind": "ordering",
       "expected_state": "review",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "18, 19, 21, 23",
+        "18 < 19 < 21 < 23",
+        "18 → 19 → 21 → 23",
+        "18-19-21-23"
       ],
       "image": "images/ja-ordering-17.png",
-      "sha256": "bf0787f389f29fa1c6904a22ea9c7d2978ece4eb1a6dfe6422c34f425bcc6732",
+      "sha256": "c79c2ccb2bb1cd7c45f43f5f5cde5e89d236008308baf2c12f8655ff4f26cf88",
       "requires_context": false
     },
     {
@@ -1685,7 +2387,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/ja-ordering-18.png",
-      "sha256": "041672e10643c66373136304c159000778e0da04a786bfc2d17b170feaf3021a",
+      "sha256": "c81a19e27a468a4ef44e116309471b56a41722b2ba4d4821c039b477fd774f91",
       "requires_context": false
     },
     {
@@ -1705,7 +2407,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/ja-ordering-20.png",
-      "sha256": "d919aa1f9d4efa48b18c0f434ff7775f405a4063a5db78431b7a7f5e7313899a",
+      "sha256": "907b1167f5fd57533f40c338374f095f85280dea83aecaf25e5b6767ebe2a3c4",
       "requires_context": false
     },
     {
@@ -1882,10 +2584,14 @@
       "kind": "short_fill",
       "expected_state": "review",
       "accepted_answers": [
-        "52"
+        "50 or 52",
+        "50/52",
+        "50, 52",
+        "50 或 52",
+        "50または52"
       ],
       "image": "images/ja-short_fill-15.png",
-      "sha256": "7694e35fc6e7eb958146bf0213fad5d900a1f40785374f158881cb8563d1b825",
+      "sha256": "ea2ed8e5de6aca08a0108218d02019bb02ef84f660fc6bca92e00f130e9b1acf",
       "requires_context": false
     },
     {
@@ -1894,10 +2600,14 @@
       "kind": "short_fill",
       "expected_state": "review",
       "accepted_answers": [
-        "55"
+        "53 or 55",
+        "53/55",
+        "53, 55",
+        "53 或 55",
+        "53または55"
       ],
       "image": "images/ja-short_fill-16.png",
-      "sha256": "98bfa474ba19fe81c02f94876e8bf5d186b7dd4ead53a36e4965c20f38877f17",
+      "sha256": "f9af63add6ea1ddae6756c89d6ac64f2905bbe975d5e69d806bcfb8ad81bb42e",
       "requires_context": false
     },
     {
@@ -1906,10 +2616,14 @@
       "kind": "short_fill",
       "expected_state": "review",
       "accepted_answers": [
-        "58"
+        "56 or 58",
+        "56/58",
+        "56, 58",
+        "56 或 58",
+        "56または58"
       ],
       "image": "images/ja-short_fill-17.png",
-      "sha256": "120517239ee319490d597b5fd02b3ebe6a5455e14c4943cea34eaef68d8b567a",
+      "sha256": "363ccd72f90a86f4dc242f7784bb514de1374abfb89015afeea9cd66215c49d3",
       "requires_context": false
     },
     {
@@ -1948,10 +2662,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "A",
+        "8",
+        "A. 8",
+        "A (8)",
+        "A（8）"
       ],
       "image": "images/en-single_choice-01.png",
-      "sha256": "e073b88677958443bd105cfd211951105b2e930cd897307d21be35ec6365c64d",
+      "sha256": "03bb4949bdef7f87445716df32a9de869b81871ca9a02930c1680ffe2931775d",
       "requires_context": false
     },
     {
@@ -1960,10 +2678,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "D",
+        "10",
+        "D. 10",
+        "D (10)",
+        "D（10）"
       ],
       "image": "images/en-single_choice-02.png",
-      "sha256": "68e1319f48919eeef845ff47af4eec89514ee0b0ef2ee07b5e6c86432dfab744",
+      "sha256": "96d7aead5bdfa937bb4541780f87b1d502582b3bae90601bcc6cca5fcbda930d",
       "requires_context": false
     },
     {
@@ -1972,10 +2694,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "C",
+        "12",
+        "C. 12",
+        "C (12)",
+        "C（12）"
       ],
       "image": "images/en-single_choice-03.png",
-      "sha256": "c86d0f4385e1e149f3696da53796a2de2ca96db1055e8e7dfc1f7c20a6615116",
+      "sha256": "f711c403b1389432174fd2f8d0e1b719c34eb7f530c0a395f4384f497aaac8e8",
       "requires_context": false
     },
     {
@@ -1984,10 +2710,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "B",
+        "14",
+        "B. 14",
+        "B (14)",
+        "B（14）"
       ],
       "image": "images/en-single_choice-04.png",
-      "sha256": "f7ba171b98bb0a10ec1c046737c41defa7bb9aceb2194fabc2745a9dfd9fb54b",
+      "sha256": "29385a531eaaf9cf1a1f130b418eb74ec42aa7e9de839f94ff68a899ca672243",
       "requires_context": false
     },
     {
@@ -1996,10 +2726,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "A",
+        "16",
+        "A. 16",
+        "A (16)",
+        "A（16）"
       ],
       "image": "images/en-single_choice-05.png",
-      "sha256": "8d22ab20a0596d324a210659f09e1614e635aec5a924934305c2c6ffb5c6ed69",
+      "sha256": "8a4d5d15158c645f9f3bc8d378437394735b60c57067f7bc483d52d22826b066",
       "requires_context": false
     },
     {
@@ -2008,10 +2742,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "D",
+        "18",
+        "D. 18",
+        "D (18)",
+        "D（18）"
       ],
       "image": "images/en-single_choice-06.png",
-      "sha256": "ff8539d3e6f0577978812ceba8e642ae5fbaf1480336a80b63df5ffd303a43fb",
+      "sha256": "ba13cb9ecf0e7af583173ed6e3cbca2efe93afd2b695341f72fedd500a958a4d",
       "requires_context": false
     },
     {
@@ -2020,10 +2758,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "C",
+        "20",
+        "C. 20",
+        "C (20)",
+        "C（20）"
       ],
       "image": "images/en-single_choice-07.png",
-      "sha256": "fdadd903ac3d2a2766e9a91ef26e6540f706177292feafdf7b54d19321adcad6",
+      "sha256": "676e57ff95ed416245a06c7db3ac343fb07ccfeb411b0a7920c3acf6da080e56",
       "requires_context": false
     },
     {
@@ -2032,10 +2774,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "B",
+        "22",
+        "B. 22",
+        "B (22)",
+        "B（22）"
       ],
       "image": "images/en-single_choice-08.png",
-      "sha256": "168d71b6dd22ba670651596396175cb0f8411b3bc1ac69501cf38d0ac98148dc",
+      "sha256": "697ce3c406cc5e54a0715c9767d64ce45fafdf9dcfb93f2ed778128291bb1e32",
       "requires_context": false
     },
     {
@@ -2044,10 +2790,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "A",
+        "24",
+        "A. 24",
+        "A (24)",
+        "A（24）"
       ],
       "image": "images/en-single_choice-09.png",
-      "sha256": "4ba31498d08a11140d18c5acfbe2abd68662fdb78256a5fc5a817970e3360dc0",
+      "sha256": "23b6b8a294a4c6d90c313e7bf1871d5a79f6f69bee4261c81a3a92f156b68886",
       "requires_context": false
     },
     {
@@ -2056,10 +2806,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "D",
+        "26",
+        "D. 26",
+        "D (26)",
+        "D（26）"
       ],
       "image": "images/en-single_choice-10.png",
-      "sha256": "30a3642244c67b983487d697d8ede491f55ddd9ec6983501f3d651305efa2e20",
+      "sha256": "6334ee9ace421e06b5f00a622bc2597044c0e865b73c0b5f3e22e28074c5da95",
       "requires_context": false
     },
     {
@@ -2068,10 +2822,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "C",
+        "28",
+        "C. 28",
+        "C (28)",
+        "C（28）"
       ],
       "image": "images/en-single_choice-11.png",
-      "sha256": "90207f34cf6891e3f1d1eacbb3a3b1905b3fe34971314a4afd61352d5625586d",
+      "sha256": "8c0b8ca0111d49b2d1e99dd110bfe199400f1ca08adac7884817f190de44d608",
       "requires_context": false
     },
     {
@@ -2080,10 +2838,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "B",
+        "30",
+        "B. 30",
+        "B (30)",
+        "B（30）"
       ],
       "image": "images/en-single_choice-12.png",
-      "sha256": "367f708c2c65b30dc1fd61785a216eea3ed0457d97138ca92d4a93eb9b96830c",
+      "sha256": "f6baeffc7e20bca2d853c3ed7ea2ea9c689875ac0690d1f878248d3cb7d5d731",
       "requires_context": false
     },
     {
@@ -2092,10 +2854,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "A",
+        "32",
+        "A. 32",
+        "A (32)",
+        "A（32）"
       ],
       "image": "images/en-single_choice-13.png",
-      "sha256": "814ee3d10e71df66b2aeb8cdf5f7ffb20a572435023b6567d734083907b33992",
+      "sha256": "cea82cd52a51fd3521daef1253f842dc7979e941678673481e8ea48bd45c20af",
       "requires_context": false
     },
     {
@@ -2104,10 +2870,14 @@
       "kind": "single_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "B"
+        "D",
+        "34",
+        "D. 34",
+        "D (34)",
+        "D（34）"
       ],
       "image": "images/en-single_choice-14.png",
-      "sha256": "8dff3b9cf25805e2755c989ec5a616bbfc91920badfd9a47220f1c6664fc2d39",
+      "sha256": "9460db6a60aabc082b0b377aa4fd106fa5763d8cd921cc5735d0034383bb2c11",
       "requires_context": false
     },
     {
@@ -2116,10 +2886,11 @@
       "kind": "single_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "B"
+        "36",
+        "?. 36"
       ],
       "image": "images/en-single_choice-15.png",
-      "sha256": "59621538ba888eb91f4fdd4d847970661c8d51f274b51b5f00319d07ba05390e",
+      "sha256": "ffefa41ff41531431d09559aa31c0cb6e289466927a194e410c9a938c57672a1",
       "requires_context": false
     },
     {
@@ -2128,10 +2899,11 @@
       "kind": "single_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "B"
+        "38",
+        "?. 38"
       ],
       "image": "images/en-single_choice-16.png",
-      "sha256": "8b4a1556d019c5458df7cdfe699b15a019f9af0656d3bb627d5568f1e17bfbe0",
+      "sha256": "cd815780a17a40379811ea9d33e9a4a1719b57c21e903a174ac7e0c1fa887ea6",
       "requires_context": false
     },
     {
@@ -2140,10 +2912,11 @@
       "kind": "single_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "B"
+        "40",
+        "?. 40"
       ],
       "image": "images/en-single_choice-17.png",
-      "sha256": "0ab0b31ef5facce44f2117df4707ec1fa77df0bc2c19ddfa77d98f13188caa33",
+      "sha256": "877af3d119b5aab6d9bed5698b087ac931d184d414071e1095651ee30ffcb2a5",
       "requires_context": false
     },
     {
@@ -2153,7 +2926,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/en-single_choice-18.png",
-      "sha256": "951a114dac18a22c5dc5f3b8c3ecba019a4a663005ebb5d5e42ce039e6c5dcd2",
+      "sha256": "979379c5c08e9e5150f9ac9bc3c44b2f31342f1f79bf53af01c59a6f07710352",
       "requires_context": false
     },
     {
@@ -2163,7 +2936,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/en-single_choice-19.png",
-      "sha256": "1a47e73258f2ce31e7882f339bccc274baf80debc9fb65faaf8034f48d6aca97",
+      "sha256": "7d761b215bc19c90decdcd996adbf59810bb20b4545269a3c6c7df38353bdf4a",
       "requires_context": false
     },
     {
@@ -2173,7 +2946,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/en-single_choice-20.png",
-      "sha256": "2011077c714566f536a82226c7fecf66249ec78c8187b437a695da33867dfc0f",
+      "sha256": "e2ebf01e19e508b0d794ec6bc60223f01e16ad7c0ac3c2528475ce0e1480709e",
       "requires_context": false
     },
     {
@@ -2183,10 +2956,20 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "2, 5",
+        "2,5",
+        "2 and 5",
+        "2 和 5",
+        "2と5",
+        "A, C (2, 5)",
+        "A, C（2, 5）"
       ],
       "image": "images/en-multiple_choice-01.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "3437cf7303aace553da4f96282ba876552d9c6f61a66967df19153b84b543e21",
       "requires_context": false
     },
     {
@@ -2195,11 +2978,26 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "7, 3",
+        "7,3",
+        "7 and 3",
+        "7 和 3",
+        "7と3",
+        "B, D (7, 3)",
+        "B, D（7, 3）",
+        "3, 7",
+        "3,7",
+        "3 and 7",
+        "3 和 7",
+        "3と7"
       ],
       "image": "images/en-multiple_choice-02.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "4aa38d0d41bd499390dd6ebf3c03e0234e7f4f6da44bce91b8258ef01c47ed02",
       "requires_context": false
     },
     {
@@ -2209,10 +3007,25 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "13, 11",
+        "13,11",
+        "13 and 11",
+        "13 和 11",
+        "13と11",
+        "A, C (13, 11)",
+        "A, C（13, 11）",
+        "11, 13",
+        "11,13",
+        "11 and 13",
+        "11 和 13",
+        "11と13"
       ],
       "image": "images/en-multiple_choice-03.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "b4e8d94f4d50065803a4b6b60f3be8a77d6a59cd406554cc23da6f54a2213b03",
       "requires_context": false
     },
     {
@@ -2221,11 +3034,21 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "17, 19",
+        "17,19",
+        "17 and 19",
+        "17 和 19",
+        "17と19",
+        "B, D (17, 19)",
+        "B, D（17, 19）"
       ],
       "image": "images/en-multiple_choice-04.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "559aefc99ab6281888d5fd6413180c42ac190dca7652b018ac42a6aeea4970cf",
       "requires_context": false
     },
     {
@@ -2235,10 +3058,20 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "23, 29",
+        "23,29",
+        "23 and 29",
+        "23 和 29",
+        "23と29",
+        "A, C (23, 29)",
+        "A, C（23, 29）"
       ],
       "image": "images/en-multiple_choice-05.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "ec00c6bad9209a3c5ba404835a4b1c15645cad6d6fde689f365578176c67fc94",
       "requires_context": false
     },
     {
@@ -2247,11 +3080,26 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "37, 31",
+        "37,31",
+        "37 and 31",
+        "37 和 31",
+        "37と31",
+        "B, D (37, 31)",
+        "B, D（37, 31）",
+        "31, 37",
+        "31,37",
+        "31 and 37",
+        "31 和 37",
+        "31と37"
       ],
       "image": "images/en-multiple_choice-06.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "eaadb40fc09bc6df2f4d17bf5970825e9429ee99c3c9c8d01d745d83cb6233c5",
       "requires_context": false
     },
     {
@@ -2261,10 +3109,25 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "43, 41",
+        "43,41",
+        "43 and 41",
+        "43 和 41",
+        "43と41",
+        "A, C (43, 41)",
+        "A, C（43, 41）",
+        "41, 43",
+        "41,43",
+        "41 and 43",
+        "41 和 43",
+        "41と43"
       ],
       "image": "images/en-multiple_choice-07.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "7603152234b3062129e7fcd212a6d4da8d02ee73b9ad924f44075de350de1c75",
       "requires_context": false
     },
     {
@@ -2273,11 +3136,21 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "47, 53",
+        "47,53",
+        "47 and 53",
+        "47 和 53",
+        "47と53",
+        "B, D (47, 53)",
+        "B, D（47, 53）"
       ],
       "image": "images/en-multiple_choice-08.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "fc9c610f5c23ac2dece4a9cc0145d653b2bcb73b03b75926ce3b5361cdf79f0b",
       "requires_context": false
     },
     {
@@ -2287,10 +3160,20 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "59, 61",
+        "59,61",
+        "59 and 61",
+        "59 和 61",
+        "59と61",
+        "A, C (59, 61)",
+        "A, C（59, 61）"
       ],
       "image": "images/en-multiple_choice-09.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "eab5f4a3ca712b7775f9f5e3b079210149c8d1c8e94110322f3c0c04405b6879",
       "requires_context": false
     },
     {
@@ -2299,11 +3182,26 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "71, 67",
+        "71,67",
+        "71 and 67",
+        "71 和 67",
+        "71と67",
+        "B, D (71, 67)",
+        "B, D（71, 67）",
+        "67, 71",
+        "67,71",
+        "67 and 71",
+        "67 和 71",
+        "67と71"
       ],
       "image": "images/en-multiple_choice-10.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "1a5259612bad07585ddbb8b1373908d5ee663a43edc816c3c0125492bee0b475",
       "requires_context": false
     },
     {
@@ -2313,10 +3211,25 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "79, 73",
+        "79,73",
+        "79 and 73",
+        "79 和 73",
+        "79と73",
+        "A, C (79, 73)",
+        "A, C（79, 73）",
+        "73, 79",
+        "73,79",
+        "73 and 79",
+        "73 和 79",
+        "73と79"
       ],
       "image": "images/en-multiple_choice-11.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "0384cae1818c0622f5cd81d74a75085dbc5fac403740aa5996dd370068866cc0",
       "requires_context": false
     },
     {
@@ -2325,11 +3238,21 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "83, 89",
+        "83,89",
+        "83 and 89",
+        "83 和 89",
+        "83と89",
+        "B, D (83, 89)",
+        "B, D（83, 89）"
       ],
       "image": "images/en-multiple_choice-12.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "c7a4b5b035034e330b61cbbb9e08a63218172b9f8cbf2accfb51779c1d575196",
       "requires_context": false
     },
     {
@@ -2339,10 +3262,20 @@
       "expected_state": "ready",
       "accepted_answers": [
         "A, C",
-        "A,C"
+        "A,C",
+        "A and C",
+        "A 和 C",
+        "AとC",
+        "97, 101",
+        "97,101",
+        "97 and 101",
+        "97 和 101",
+        "97と101",
+        "A, C (97, 101)",
+        "A, C（97, 101）"
       ],
       "image": "images/en-multiple_choice-13.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "6ed202704d22984d9fff6f41b5d031ddb13b40cafe4052b17fded4c93c0b4d8e",
       "requires_context": false
     },
     {
@@ -2351,11 +3284,26 @@
       "kind": "multiple_choice",
       "expected_state": "ready",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, D",
+        "B,D",
+        "B and D",
+        "B 和 D",
+        "BとD",
+        "107, 103",
+        "107,103",
+        "107 and 103",
+        "107 和 103",
+        "107と103",
+        "B, D (107, 103)",
+        "B, D（107, 103）",
+        "103, 107",
+        "103,107",
+        "103 and 107",
+        "103 和 107",
+        "103と107"
       ],
       "image": "images/en-multiple_choice-14.png",
-      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "sha256": "b6e399d1b5b777154c28b6df1992b7e71321a62f85d0b91e291db59e6ac7a1f1",
       "requires_context": false
     },
     {
@@ -2364,11 +3312,26 @@
       "kind": "multiple_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "A, ?",
+        "A,?",
+        "A and ?",
+        "A 和 ?",
+        "Aと?",
+        "113, 109",
+        "113,109",
+        "113 and 109",
+        "113 和 109",
+        "113と109",
+        "A, ? (113, 109)",
+        "A, ?（113, 109）",
+        "109, 113",
+        "109,113",
+        "109 and 113",
+        "109 和 113",
+        "109と113"
       ],
       "image": "images/en-multiple_choice-15.png",
-      "sha256": "c19c38d62d4ab6d6b4b809a272c9b86fa6292a7ff073c2415d240ad3700a8b95",
+      "sha256": "306736a35699f7a994f4f3bf6a0112aad74af8eaec33d599d4a3b4e4ec4966ee",
       "requires_context": false
     },
     {
@@ -2377,11 +3340,21 @@
       "kind": "multiple_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "B, ?",
+        "B,?",
+        "B and ?",
+        "B 和 ?",
+        "Bと?",
+        "127, 131",
+        "127,131",
+        "127 and 131",
+        "127 和 131",
+        "127と131",
+        "B, ? (127, 131)",
+        "B, ?（127, 131）"
       ],
       "image": "images/en-multiple_choice-16.png",
-      "sha256": "c19c38d62d4ab6d6b4b809a272c9b86fa6292a7ff073c2415d240ad3700a8b95",
+      "sha256": "683d826dfa48692506645d95a56c020bb660b33b69c697edd34235e223cf44b7",
       "requires_context": false
     },
     {
@@ -2390,11 +3363,21 @@
       "kind": "multiple_choice",
       "expected_state": "review",
       "accepted_answers": [
-        "A, C",
-        "A,C"
+        "A, ?",
+        "A,?",
+        "A and ?",
+        "A 和 ?",
+        "Aと?",
+        "137, 139",
+        "137,139",
+        "137 and 139",
+        "137 和 139",
+        "137と139",
+        "A, ? (137, 139)",
+        "A, ?（137, 139）"
       ],
       "image": "images/en-multiple_choice-17.png",
-      "sha256": "c19c38d62d4ab6d6b4b809a272c9b86fa6292a7ff073c2415d240ad3700a8b95",
+      "sha256": "45c439daff39bb5cbb14fb73bf6a1e0e5ea0160edef626e9b18d2a417ac159e8",
       "requires_context": false
     },
     {
@@ -2404,7 +3387,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/en-multiple_choice-18.png",
-      "sha256": "fe0f0f5b614a7dd52612da5c0e0fd283b2dfed9f073696481ffca861c0af24b0",
+      "sha256": "d30edb29d0419b6e3936e4b07a658fe0cd38f087cf618d7fdb3336ad19b813ed",
       "requires_context": false
     },
     {
@@ -2414,7 +3397,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/en-multiple_choice-19.png",
-      "sha256": "e3c31416af5930c5e3ae6d1cf30963a569ab01ff68bb7b4b0dc6a5872d14a372",
+      "sha256": "a81386a9f3e0fe09cb791c095c29cf028495a261997b589d20b86240a785ef62",
       "requires_context": false
     },
     {
@@ -2424,7 +3407,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/en-multiple_choice-20.png",
-      "sha256": "fe0f0f5b614a7dd52612da5c0e0fd283b2dfed9f073696481ffca861c0af24b0",
+      "sha256": "19cc8c55756a8c7ef51dc256fe07b43050a786f7da005310081294377bfd264a",
       "requires_context": false
     },
     {
@@ -2434,10 +3417,15 @@
       "expected_state": "ready",
       "accepted_answers": [
         "B-D-A-C",
-        "B, D, A, C"
+        "B, D, A, C",
+        "B → D → A → C",
+        "2, 3, 5, 7",
+        "2 < 3 < 5 < 7",
+        "2 → 3 → 5 → 7",
+        "2-3-5-7"
       ],
       "image": "images/en-ordering-01.png",
-      "sha256": "0f104860e91beaa32909a99d414d98c63958a2d4bc83e5e6b553d191c7b5df78",
+      "sha256": "b69c4309f61b2b552a3511b886bf8171db900425093462de4109ecc3fca32aa3",
       "requires_context": false
     },
     {
@@ -2446,11 +3434,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "A-C-D-B",
+        "A, C, D, B",
+        "A → C → D → B",
+        "3, 4, 6, 8",
+        "3 < 4 < 6 < 8",
+        "3 → 4 → 6 → 8",
+        "3-4-6-8"
       ],
       "image": "images/en-ordering-02.png",
-      "sha256": "1944037763193ca5d3a881166a1290853ab82bdf98b34eab505ed0651d44d8c4",
+      "sha256": "f77c4297ec0497de55bd7fb81d1e14116315fb526b6b6909ef1a874fc9917630",
       "requires_context": false
     },
     {
@@ -2459,11 +3452,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "D-B-C-A",
+        "D, B, C, A",
+        "D → B → C → A",
+        "4, 5, 7, 9",
+        "4 < 5 < 7 < 9",
+        "4 → 5 → 7 → 9",
+        "4-5-7-9"
       ],
       "image": "images/en-ordering-03.png",
-      "sha256": "8144296c4770e3a5dc6393ce982789e5845ef4f2e559f0c3b8b9aa3e1a83b080",
+      "sha256": "3387f15b6bb8e30654d89a0d2af740c498cd6c55160efbd5832614ea90c7e516",
       "requires_context": false
     },
     {
@@ -2472,11 +3470,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "C-A-B-D",
+        "C, A, B, D",
+        "C → A → B → D",
+        "5, 6, 8, 10",
+        "5 < 6 < 8 < 10",
+        "5 → 6 → 8 → 10",
+        "5-6-8-10"
       ],
       "image": "images/en-ordering-04.png",
-      "sha256": "63317c690117ac319b226dd57022c4d2a700c01c460413b569e9266dfe3eaabc",
+      "sha256": "2b928f9520903a8eee4bdcdfb176d3923c61b15fe040f2b0dffa3e8cdf93e058",
       "requires_context": false
     },
     {
@@ -2486,10 +3489,15 @@
       "expected_state": "ready",
       "accepted_answers": [
         "B-D-A-C",
-        "B, D, A, C"
+        "B, D, A, C",
+        "B → D → A → C",
+        "6, 7, 9, 11",
+        "6 < 7 < 9 < 11",
+        "6 → 7 → 9 → 11",
+        "6-7-9-11"
       ],
       "image": "images/en-ordering-05.png",
-      "sha256": "20d7cc23d08954f140b58e9851c2f3990eeaafae49016a008d9206d56fca789d",
+      "sha256": "3ea526d3340e85346cc4407b2deec349adfe06967b8af4dfb3969f0b1bfb7fdf",
       "requires_context": false
     },
     {
@@ -2498,11 +3506,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "A-C-D-B",
+        "A, C, D, B",
+        "A → C → D → B",
+        "7, 8, 10, 12",
+        "7 < 8 < 10 < 12",
+        "7 → 8 → 10 → 12",
+        "7-8-10-12"
       ],
       "image": "images/en-ordering-06.png",
-      "sha256": "cda9362e4339f02ddefe2a55b0d09334f6e5acf78b4d8f65bc84c59451409c39",
+      "sha256": "320a98a534031c693c8c8a33b3e846f161448756745a96433c0cc23911e6e092",
       "requires_context": false
     },
     {
@@ -2511,11 +3524,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "D-B-C-A",
+        "D, B, C, A",
+        "D → B → C → A",
+        "8, 9, 11, 13",
+        "8 < 9 < 11 < 13",
+        "8 → 9 → 11 → 13",
+        "8-9-11-13"
       ],
       "image": "images/en-ordering-07.png",
-      "sha256": "a090d7e8bd32da3655d4b1b81f227bd68151aefc35f89f3fa829063a6eb65347",
+      "sha256": "15ee0934ac5226bb0424f174b5566bfafcd02330d8865fdfd7cbad6a0e43e132",
       "requires_context": false
     },
     {
@@ -2524,11 +3542,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "C-A-B-D",
+        "C, A, B, D",
+        "C → A → B → D",
+        "9, 10, 12, 14",
+        "9 < 10 < 12 < 14",
+        "9 → 10 → 12 → 14",
+        "9-10-12-14"
       ],
       "image": "images/en-ordering-08.png",
-      "sha256": "b92a0e578b3ea98d015657a9da6a785522f2b2f10b6e219d005d3f52b18f4a34",
+      "sha256": "ccec5f246a479de9c869ba748774ce2e28497d070d66da5c6f8dc0986558695e",
       "requires_context": false
     },
     {
@@ -2538,10 +3561,15 @@
       "expected_state": "ready",
       "accepted_answers": [
         "B-D-A-C",
-        "B, D, A, C"
+        "B, D, A, C",
+        "B → D → A → C",
+        "10, 11, 13, 15",
+        "10 < 11 < 13 < 15",
+        "10 → 11 → 13 → 15",
+        "10-11-13-15"
       ],
       "image": "images/en-ordering-09.png",
-      "sha256": "1e0f10f6e1b8fa38f48a0e07fed5b019a992b5136a93e3e0da00960a04795999",
+      "sha256": "2d30ae4d395d2f32a19d65fc36a0474879491eb8d455789d7af5fb7986284d0e",
       "requires_context": false
     },
     {
@@ -2550,11 +3578,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "A-C-D-B",
+        "A, C, D, B",
+        "A → C → D → B",
+        "11, 12, 14, 16",
+        "11 < 12 < 14 < 16",
+        "11 → 12 → 14 → 16",
+        "11-12-14-16"
       ],
       "image": "images/en-ordering-10.png",
-      "sha256": "d9b0965a650a841faf33e15d18cbd08fe5cff12fa0eccf266e588d8cb0f5e084",
+      "sha256": "1b80c2b2a8572e1b4acda55afaea3d2795460657c26518c66a5663e295a87b9a",
       "requires_context": false
     },
     {
@@ -2563,11 +3596,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "D-B-C-A",
+        "D, B, C, A",
+        "D → B → C → A",
+        "12, 13, 15, 17",
+        "12 < 13 < 15 < 17",
+        "12 → 13 → 15 → 17",
+        "12-13-15-17"
       ],
       "image": "images/en-ordering-11.png",
-      "sha256": "b1ce5b0f0cbc922620a1c9b15a046f2a961989fbef6b6b4f66b9f951bda7d396",
+      "sha256": "a4f7af55e1903b842b7cfc559ce9e98a18a1965c190bf5e67e2f65f2685abc90",
       "requires_context": false
     },
     {
@@ -2576,11 +3614,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "C-A-B-D",
+        "C, A, B, D",
+        "C → A → B → D",
+        "13, 14, 16, 18",
+        "13 < 14 < 16 < 18",
+        "13 → 14 → 16 → 18",
+        "13-14-16-18"
       ],
       "image": "images/en-ordering-12.png",
-      "sha256": "0b06f4730c3a4133872193c0aaf9f997822935098ea913f32035c7c356abbe9e",
+      "sha256": "0f40691e7728d3f2b438f9c3c113b2526c966ef5e5de712902aabec1cf7d3af3",
       "requires_context": false
     },
     {
@@ -2590,10 +3633,15 @@
       "expected_state": "ready",
       "accepted_answers": [
         "B-D-A-C",
-        "B, D, A, C"
+        "B, D, A, C",
+        "B → D → A → C",
+        "14, 15, 17, 19",
+        "14 < 15 < 17 < 19",
+        "14 → 15 → 17 → 19",
+        "14-15-17-19"
       ],
       "image": "images/en-ordering-13.png",
-      "sha256": "3078483ed7c4a1a12385c81c86e2f6d031f1e95530f84e73ac64e5ec29ffda62",
+      "sha256": "39a7603e2b21193395b658f03cfc437210c69875edd27ad853914391703f01c7",
       "requires_context": false
     },
     {
@@ -2602,11 +3650,16 @@
       "kind": "ordering",
       "expected_state": "ready",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "A-C-D-B",
+        "A, C, D, B",
+        "A → C → D → B",
+        "15, 16, 18, 20",
+        "15 < 16 < 18 < 20",
+        "15 → 16 → 18 → 20",
+        "15-16-18-20"
       ],
       "image": "images/en-ordering-14.png",
-      "sha256": "2211c833cb88491513cc4e675cb3a17fd87dc57097a59546f5199ca75b45ac9e",
+      "sha256": "4bd0fdce74378b2e6df9b26c3d6b5f367f0402d5d441bf1991678560e9150ad8",
       "requires_context": false
     },
     {
@@ -2615,11 +3668,13 @@
       "kind": "ordering",
       "expected_state": "review",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "16, 17, 19, 21",
+        "16 < 17 < 19 < 21",
+        "16 → 17 → 19 → 21",
+        "16-17-19-21"
       ],
       "image": "images/en-ordering-15.png",
-      "sha256": "7cdca6ee704f2dd05d6bad87bf91b0e5857ea1fe495ba63babd84f747a11d65b",
+      "sha256": "692b79200d35714968e653aeeac085c54ea514fd0b54e7c4d43d633c6f623293",
       "requires_context": false
     },
     {
@@ -2628,11 +3683,13 @@
       "kind": "ordering",
       "expected_state": "review",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "17, 18, 20, 22",
+        "17 < 18 < 20 < 22",
+        "17 → 18 → 20 → 22",
+        "17-18-20-22"
       ],
       "image": "images/en-ordering-16.png",
-      "sha256": "aec79919366277de469b5377f0d78565c7ffc4fc69daa4ff29b17293de4878ec",
+      "sha256": "796279172a78352130f99ba73a414a20e9ca99efe74e31f49d0db1d6028c73aa",
       "requires_context": false
     },
     {
@@ -2641,11 +3698,13 @@
       "kind": "ordering",
       "expected_state": "review",
       "accepted_answers": [
-        "B-D-A-C",
-        "B, D, A, C"
+        "18, 19, 21, 23",
+        "18 < 19 < 21 < 23",
+        "18 → 19 → 21 → 23",
+        "18-19-21-23"
       ],
       "image": "images/en-ordering-17.png",
-      "sha256": "b6bbb1d5d85311f570f3cdae98c0ad5fcb1406af5444286fe9f156660d3d4c50",
+      "sha256": "bc3a0d1ad84bd882fb3f440d50d94b6d4780469afed2add5f3a533c3360bd24f",
       "requires_context": false
     },
     {
@@ -2655,7 +3714,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/en-ordering-18.png",
-      "sha256": "5973fab38f1ad4360c4f26db249a6c8892c983e13c26b85417b4bbcba18471f2",
+      "sha256": "a392f5e5c31ce1aab295a5a02c1dbb8941fb991f7be627dcb8266b2b62cbf831",
       "requires_context": false
     },
     {
@@ -2665,7 +3724,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/en-ordering-19.png",
-      "sha256": "e475e55ace0a9cbb077f870a19648c2dc54d901f163ba2eff54825c35a3f2a08",
+      "sha256": "9029de1c98d92827fbc5d2ac3c4125fe53895ffae151dcdeefe68fb0a4192fca",
       "requires_context": false
     },
     {
@@ -2675,7 +3734,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/en-ordering-20.png",
-      "sha256": "f9907c559a63093be38f6be4b046b78104147a052d55087bfb84817b375e7eda",
+      "sha256": "f3c8738f17609669182dae4f3e6d66da81fc956dd98e725bd9fae778108e0862",
       "requires_context": false
     },
     {
@@ -2687,7 +3746,7 @@
         "10"
       ],
       "image": "images/en-short_fill-01.png",
-      "sha256": "09fb19fc8afd41353b58a374575268c4f92d8371d4be2061926220b8fb90c727",
+      "sha256": "be6bcadb21cd80fedeac5f40b1b099c8b2f5731be66affce8718c33c1ea56b2b",
       "requires_context": false
     },
     {
@@ -2699,7 +3758,7 @@
         "13"
       ],
       "image": "images/en-short_fill-02.png",
-      "sha256": "a7891fa4b43e23655a14425a425462f45c9456f0382471e6b911aff764e2ef90",
+      "sha256": "aa5fd842482046b66cee9b47cd1f8a18f997e778bf98c6b461a4365d6fd2c9c2",
       "requires_context": false
     },
     {
@@ -2711,7 +3770,7 @@
         "16"
       ],
       "image": "images/en-short_fill-03.png",
-      "sha256": "15a11c4cd4ccbe4f7c817540ac9430b307de57b64a2c1bad4b261649f83e4650",
+      "sha256": "f6fadd16b28d54c50d7e907297a4fb25f147a8e573b101c1f82aaac5f83eb56a",
       "requires_context": false
     },
     {
@@ -2723,7 +3782,7 @@
         "19"
       ],
       "image": "images/en-short_fill-04.png",
-      "sha256": "c9e23b5d95a19be039c32f8f8f10a51cb511f6b27926e08e5c98a6cdf77bed86",
+      "sha256": "873cfd8541517637c4e3a4992cbc3ac0f98a226779efd068b549dc28f61fabdc",
       "requires_context": false
     },
     {
@@ -2735,7 +3794,7 @@
         "22"
       ],
       "image": "images/en-short_fill-05.png",
-      "sha256": "abaa7752740fa0c01ca63fdaba8cd6401c0cdc813df08e055d6925d69b760f9e",
+      "sha256": "93050419e3890c164cb81b4f76ae8b1ecc481c7d01f2ca29a605fda478b210aa",
       "requires_context": false
     },
     {
@@ -2747,7 +3806,7 @@
         "25"
       ],
       "image": "images/en-short_fill-06.png",
-      "sha256": "3b22f49ed8d1225d408edd52c7db5c5786c274808f8d031c8d2f217e1acfb798",
+      "sha256": "29ccf1c87fca2be83cf094ab5020a1f6d36f1ac9ae831a32b6555befd3bf8c21",
       "requires_context": false
     },
     {
@@ -2759,7 +3818,7 @@
         "28"
       ],
       "image": "images/en-short_fill-07.png",
-      "sha256": "f5c3ac7c3f5d42f004c97d305b48da42e1270fe9fbe2cbf9f7398a97f5489ec0",
+      "sha256": "7a0edaf8b44697efb650d1ce1c0a390e653a12dd684cacb8a13ca7b88da0ede9",
       "requires_context": false
     },
     {
@@ -2771,7 +3830,7 @@
         "31"
       ],
       "image": "images/en-short_fill-08.png",
-      "sha256": "6fa5d95749eb35c56e2ffd73f492f03afec1e99fd2d7127df97228206385e6d0",
+      "sha256": "7c6c61a4613b7625011c46a3be7c5a5cfd1fc32b5b6e17d950c38cf63e7b481e",
       "requires_context": false
     },
     {
@@ -2783,7 +3842,7 @@
         "34"
       ],
       "image": "images/en-short_fill-09.png",
-      "sha256": "324ddb3295a6693cb9b95c903f699549324d8eb50bcdbfdd26d3f8c7f9b003e3",
+      "sha256": "a2488a41291487eed58ce8a64d28f826cf116a8f0c9347f833d4ec9ef394d014",
       "requires_context": false
     },
     {
@@ -2795,7 +3854,7 @@
         "37"
       ],
       "image": "images/en-short_fill-10.png",
-      "sha256": "c9d8a899c1a05655a6c8237e8884295c80547678e326bc19cc0cd1870fcd6656",
+      "sha256": "47268b6389ca8aeb0e4d56e300db20af8bce2198eeb72a7aeb26505369fc636a",
       "requires_context": false
     },
     {
@@ -2807,7 +3866,7 @@
         "40"
       ],
       "image": "images/en-short_fill-11.png",
-      "sha256": "19caa0ea27a95ff1314165c3eda24b6691de85e19c748e1d7cd4cfc484ea5136",
+      "sha256": "7fd4b914be863cb04fd86064df8948e37ef5b3af5aed839088ed75d4e18f8d03",
       "requires_context": false
     },
     {
@@ -2819,7 +3878,7 @@
         "43"
       ],
       "image": "images/en-short_fill-12.png",
-      "sha256": "e3b4fd839feb12bf4ca579d9fb496f5e3cc72dfacf241bfbc5eed004e7ed68dd",
+      "sha256": "048142ed4dccc9c032636f944fc6ddb7a90bf2eb817bf7543a3f20e8c5329deb",
       "requires_context": false
     },
     {
@@ -2831,7 +3890,7 @@
         "46"
       ],
       "image": "images/en-short_fill-13.png",
-      "sha256": "02cc7490cf7af8c3b75ad824adddec3e430378a53188a016aef9df660140492b",
+      "sha256": "af5af2942f46fdd4b5604e046e2c7b1d5f16e40f2b7df4e8045bd8ea5ed1a0b4",
       "requires_context": false
     },
     {
@@ -2843,7 +3902,7 @@
         "49"
       ],
       "image": "images/en-short_fill-14.png",
-      "sha256": "18c1b49deb27048e0552e9f13aa052c336e2d6105799eefd6a448b36d56eb824",
+      "sha256": "2788ce18d3df86d2c48f97929efbd765855ccde5ce08d2f3cf65fb07f9ba801b",
       "requires_context": false
     },
     {
@@ -2852,10 +3911,14 @@
       "kind": "short_fill",
       "expected_state": "review",
       "accepted_answers": [
-        "52"
+        "50 or 52",
+        "50/52",
+        "50, 52",
+        "50 或 52",
+        "50または52"
       ],
       "image": "images/en-short_fill-15.png",
-      "sha256": "b914fe0aa3b7b70ee6764d0006ae3fac88acb28a4fc9c45ba2b794b0e9ec4f9c",
+      "sha256": "374f0825fe124b59a633f59377a690f6579b3b2aa5600d9964bf6df587da0a0a",
       "requires_context": false
     },
     {
@@ -2864,10 +3927,14 @@
       "kind": "short_fill",
       "expected_state": "review",
       "accepted_answers": [
-        "55"
+        "53 or 55",
+        "53/55",
+        "53, 55",
+        "53 或 55",
+        "53または55"
       ],
       "image": "images/en-short_fill-16.png",
-      "sha256": "30d49f37c0c29d31bc49e41af6ecf90e116c69f84d8d7bde2a9b6b295014fa5e",
+      "sha256": "ca325b1d0cfb53b5a3d4c4033aac2efe56f30226b13d710409403a1409548c26",
       "requires_context": false
     },
     {
@@ -2876,10 +3943,14 @@
       "kind": "short_fill",
       "expected_state": "review",
       "accepted_answers": [
-        "58"
+        "56 or 58",
+        "56/58",
+        "56, 58",
+        "56 或 58",
+        "56または58"
       ],
       "image": "images/en-short_fill-17.png",
-      "sha256": "c578cf6af913f3b41c62ff04483cf9206172a5c572bfc115ec74f7e177d62ae5",
+      "sha256": "b1a23fddac6bbd2df748e9317d5a5a6ad1480b94e57edfbb446a86bf9facbe7e",
       "requires_context": false
     },
     {
@@ -2889,7 +3960,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/en-short_fill-18.png",
-      "sha256": "2f7570584ad280808d921fa53bf29726042fe93f3e67d29429fb5005db074d64",
+      "sha256": "307d43e376435354470b7f069d0542f3644991073a184494fb7688a41b6a4c0d",
       "requires_context": false
     },
     {
@@ -2899,7 +3970,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/en-short_fill-19.png",
-      "sha256": "2f99e83ed4e4a85568e601511112bbf938049231a4600e8c363b557901a538c1",
+      "sha256": "e962c2abd4142bdb1eea6479fd170c97d121104e23df46241cafc03020a464af",
       "requires_context": false
     },
     {
@@ -2909,7 +3980,7 @@
       "expected_state": "retake",
       "accepted_answers": [],
       "image": "images/en-short_fill-20.png",
-      "sha256": "0ced7e1ac1ab747cfa91d34b978a4dc6a5c7fae3071372e0665c5dc4e41d919d",
+      "sha256": "2cbe02bad15b38ee21650372637c540542c7c0a2df9d84be995ea7b94c59cbf8",
       "requires_context": false
     }
   ]
