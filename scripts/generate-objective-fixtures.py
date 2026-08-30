@@ -42,9 +42,9 @@ def font(size: int, language: str) -> ImageFont.FreeTypeFont | ImageFont.ImageFo
 
 
 TEXT = {
-    "zh": {"choose": "请选择正确答案", "multi": "请选择所有质数", "order": "按从小到大排序", "fill": "请填写结果"},
-    "ja": {"choose": "正しい答えを選んでください", "multi": "素数をすべて選んでください", "order": "小さい順に並べてください", "fill": "答えを記入してください"},
-    "en": {"choose": "Choose the correct answer", "multi": "Choose all prime numbers", "order": "Order from smallest to largest", "fill": "Fill in the answer"},
+    "zh": {"choose": "请选择正确答案", "multi": "请选择所有质数", "order": "按从小到大排序", "fill": "请填写结果", "unit": "单位标签模糊"},
+    "ja": {"choose": "正しい答えを選んでください", "multi": "素数をすべて選んでください", "order": "小さい順に並べてください", "fill": "答えを記入してください", "unit": "単位ラベルが不鮮明"},
+    "en": {"choose": "Choose the correct answer", "multi": "Choose all prime numbers", "order": "Order from smallest to largest", "fill": "Fill in the answer", "unit": "Unit label is unclear"},
 }
 
 
@@ -69,22 +69,15 @@ def next_composites(start: int, excluded: set[int], count: int) -> list[int]:
     return values
 
 
-def joined_answer_variants(labels: list[str], values: list[int]) -> list[str]:
-    label_csv = ", ".join(labels)
+def value_answer_variants(values: list[int]) -> list[str]:
     value_csv = ", ".join(map(str, values))
     variants = [
-        label_csv,
-        label_csv.replace(", ", ","),
-        " and ".join(labels),
-        " 和 ".join(labels),
-        "と".join(labels),
         value_csv,
         value_csv.replace(", ", ","),
+        "、".join(map(str, values)),
         " and ".join(map(str, values)),
         " 和 ".join(map(str, values)),
         "と".join(map(str, values)),
-        f"{label_csv} ({value_csv})",
-        f"{label_csv}（{value_csv}）",
     ]
     sorted_values = sorted(values)
     if sorted_values != values:
@@ -92,11 +85,41 @@ def joined_answer_variants(labels: list[str], values: list[int]) -> list[str]:
         variants.extend([
             sorted_csv,
             sorted_csv.replace(", ", ","),
+            "、".join(map(str, sorted_values)),
             " and ".join(map(str, sorted_values)),
             " 和 ".join(map(str, sorted_values)),
             "と".join(map(str, sorted_values)),
         ])
     return variants
+
+
+def joined_answer_variants(labels: list[str], values: list[int]) -> list[str]:
+    label_csv = ", ".join(labels)
+    value_csv = ", ".join(map(str, values))
+    return [
+        label_csv,
+        label_csv.replace(", ", ","),
+        "、".join(labels),
+        " and ".join(labels),
+        " 和 ".join(labels),
+        "と".join(labels),
+        *value_answer_variants(values),
+        f"{label_csv} ({value_csv})",
+        f"{label_csv}（{value_csv}）",
+        f"{'、'.join(labels)}({'、'.join(map(str, values))})",
+        f"{'、'.join(labels)}（{'、'.join(map(str, values))}）",
+    ]
+
+
+def ordering_answer_variants(labels: list[str], values: list[int]) -> list[str]:
+    return [
+        "-".join(labels), ", ".join(labels), ",".join(labels), "、".join(labels),
+        " → ".join(labels), "→".join(labels),
+        "-".join(map(str, values)), ", ".join(map(str, values)),
+        ",".join(map(str, values)), "、".join(map(str, values)),
+        " < ".join(map(str, values)), "<".join(map(str, values)),
+        " → ".join(map(str, values)), "→".join(map(str, values)),
+    ]
 
 
 def content(language: str, kind: str, index: int, state: str) -> tuple[list[str], list[str]]:
@@ -109,13 +132,14 @@ def content(language: str, kind: str, index: int, state: str) -> tuple[list[str]
         correct_label = "ABCD"[correct_index]
         shown_labels = list("ABCD")
         if state == "review":
-            shown_labels[correct_index] = "?"
+            shown_labels[correct_index] = shown_labels[(correct_index + 1) % 4]
         lines = [t["choose"], f"{n} + {n + 2} = ?",
                  *[f"{label}. {value}" for label, value in zip(shown_labels, values)]]
-        answers = ([str(correct), f"?. {correct}"] if state == "review" else [
+        answer_variants = [
             correct_label, str(correct), f"{correct_label}. {correct}",
             f"{correct_label} ({correct})", f"{correct_label}（{correct}）",
-        ])
+        ]
+        answers = answer_variants
     elif kind == "multiple_choice":
         prime_pairs = [
             (2, 5), (3, 7), (11, 13), (17, 19), (23, 29),
@@ -128,35 +152,33 @@ def content(language: str, kind: str, index: int, state: str) -> tuple[list[str]
         values = rotate([first, composites[0], second, composites[1]], index)
         prime_indexes = [i for i, value in enumerate(values) if is_prime(value)]
         labels = list("ABCD")
+        canonical_labels = list(labels)
         if state == "review":
-            labels[prime_indexes[-1]] = "?"
+            hidden_index = prime_indexes[-1]
+            labels[hidden_index] = labels[(hidden_index + 1) % 4]
         lines = [t["multi"], ", ".join(map(str, values)),
                  *[f"{label}. {value}" for label, value in zip(labels, values)]]
         prime_values = [values[i] for i in prime_indexes]
-        answers = joined_answer_variants(
-            [labels[i] for i in prime_indexes], prime_values)
+        answer_labels = [canonical_labels[i] for i in prime_indexes]
+        answers = joined_answer_variants(answer_labels, prime_values)
     elif kind == "ordering":
         values = rotate([n + 2, n - 1, n + 4, n], index)
         ordered_indexes = sorted(range(4), key=values.__getitem__)
         shown_labels = list("ABCD")
+        canonical_labels = list(shown_labels)
         if state == "review":
-            shown_labels[ordered_indexes[0]] = "?"
+            hidden_index = ordered_indexes[0]
+            shown_labels[hidden_index] = shown_labels[(hidden_index + 1) % 4]
         lines = [t["order"],
                  "   ".join(f"{label}. {value}" for label, value in zip(shown_labels, values))]
         ordered = [values[i] for i in ordered_indexes]
-        value_answers = [", ".join(map(str, ordered)), " < ".join(map(str, ordered)),
-                         " → ".join(map(str, ordered)), "-".join(map(str, ordered))]
-        ordered_labels = [shown_labels[i] for i in ordered_indexes]
-        answers = value_answers if state == "review" else [
-            "-".join(ordered_labels), ", ".join(ordered_labels),
-            " → ".join(ordered_labels), *value_answers,
-        ]
+        ordered_labels = [canonical_labels[i] for i in ordered_indexes]
+        answers = ordering_answer_variants(ordered_labels, ordered)
     else:
         if state == "review":
-            low, high = n * 3 - 1, n * 3 + 1
-            lines = [t["fill"], f"{n} × 3 ± 1 = ____"]
-            answers = [f"{low} or {high}", f"{low}/{high}", f"{low}, {high}",
-                       f"{low} 或 {high}", f"{low}または{high}"]
+            result = n * 3 + 1
+            lines = [t["fill"], f"{n} × 3 + 1 = ____", f"[!] {t['unit']}: ???"]
+            answers = [str(result)]
         else:
             lines = [t["fill"], f"{n} × 3 + 1 = ____"]
             answers = [str(n * 3 + 1)]
