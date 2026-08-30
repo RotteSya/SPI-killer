@@ -1213,7 +1213,7 @@
         "16→17→19→21"
       ],
       "image": "images/zh-ordering-15.png",
-      "sha256": "3c0929c8a142f4a671e230ce462f642fe609a2730509df6e39c623249381245d",
+      "sha256": "a671f16c00df2049eb4c3547995b04d3d943ac43cc3e765cd65b740e1b08a5ad",
       "requires_context": false
     },
     {
@@ -1238,7 +1238,7 @@
         "17→18→20→22"
       ],
       "image": "images/zh-ordering-16.png",
-      "sha256": "521b2959435491ba8b4be774e962d4f8bb538040f185a2d37fb900ae02a24325",
+      "sha256": "ff2eb5152a2e270e06e233ed6cb77e23f9865412b5bd285fa31d582faebae5de",
       "requires_context": false
     },
     {
@@ -1263,7 +1263,7 @@
         "18→19→21→23"
       ],
       "image": "images/zh-ordering-17.png",
-      "sha256": "5299f0fb918f68e0dcbbd91915bacc9739fdbdc270bc42a6f30ad41330bba777",
+      "sha256": "ca229a2335f1edf9608eed037dbc1510842df2017c5c77ae1aad1b5f09fc8913",
       "requires_context": false
     },
     {
@@ -2741,7 +2741,7 @@
         "16→17→19→21"
       ],
       "image": "images/ja-ordering-15.png",
-      "sha256": "10030b168614f331d56ac3ac50a380d5715f4e72cc4678bb3708beea979f5256",
+      "sha256": "14f81bf31091fba1260d73217bc81516544e9f368c0fea9d0b39ff8e474fc2e2",
       "requires_context": false
     },
     {
@@ -2766,7 +2766,7 @@
         "17→18→20→22"
       ],
       "image": "images/ja-ordering-16.png",
-      "sha256": "bd5eea5a1496bade5e82246c0b201e5ae5ecb9604e79ddd7d551c4e24e2b7b09",
+      "sha256": "e5ec9ba801a361006e6d0a8f9745b2483c7a92f9a35303504ff4ce5dd3de9b42",
       "requires_context": false
     },
     {
@@ -2791,7 +2791,7 @@
         "18→19→21→23"
       ],
       "image": "images/ja-ordering-17.png",
-      "sha256": "801a2ab3afa7455046edfd7d99c797eb9fbf9fa4cb06e8cdd63dcf896f65c355",
+      "sha256": "d14b76501236ca8a3fac2205a0cd876589244d55adb2571c80d9c56a9fa5d6f6",
       "requires_context": false
     },
     {
@@ -4269,7 +4269,7 @@
         "16→17→19→21"
       ],
       "image": "images/en-ordering-15.png",
-      "sha256": "5f45ca203a8af03c692aa606d6bff073ce35c3d08203a521e7c1d7f518636bd9",
+      "sha256": "32be597598efa25c5a5c509ae9ef40b8f3a50ed1f984361d0d5d681952d1aa39",
       "requires_context": false
     },
     {
@@ -4294,7 +4294,7 @@
         "17→18→20→22"
       ],
       "image": "images/en-ordering-16.png",
-      "sha256": "9d15cef44d5d1acffe6b1fe4e457709af7134347548605aba06ff884582660ff",
+      "sha256": "abf8d925631a471b781d2798275b794d64e147df509c3bdd2de5e48ce7cca76f",
       "requires_context": false
     },
     {
@@ -4319,7 +4319,7 @@
         "18→19→21→23"
       ],
       "image": "images/en-ordering-17.png",
-      "sha256": "451456911a549bce3159d37fe3068554cac1803dfd948d78d28e2307577ea36a",
+      "sha256": "af9e873ff4c9babe0b18ab29da4178219c7bcc804bee877493742e56d85bb9f7",
       "requires_context": false
     },
     {

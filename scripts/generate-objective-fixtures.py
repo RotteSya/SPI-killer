@@ -42,9 +42,9 @@ def font(size: int, language: str) -> ImageFont.FreeTypeFont | ImageFont.ImageFo
 
 
 TEXT = {
-    "zh": {"choose": "请选择正确答案", "multi": "请选择所有质数", "order": "按从小到大排序", "fill": "请填写结果", "option": "选项标签有印刷错误；请按数值回答", "unit": "单位标签模糊；请只填写数值"},
-    "ja": {"choose": "正しい答えを選んでください", "multi": "素数をすべて選んでください", "order": "小さい順に並べてください", "fill": "答えを記入してください", "option": "選択肢ラベルに印刷ミス；数値で回答", "unit": "単位ラベルが不鮮明；数値のみ回答"},
-    "en": {"choose": "Choose the correct answer", "multi": "Choose all prime numbers", "order": "Order from smallest to largest", "fill": "Fill in the answer", "option": "Option labels contain a misprint; answer by value", "unit": "Unit label is unclear; enter the number only"},
+    "zh": {"choose": "请选择正确答案", "multi": "请选择所有质数", "order": "按从小到大排序", "fill": "请填写结果", "option": "选项标签有印刷错误；请按数值回答", "order_note": "一个数值在 {low} 与 {high} 之间模糊；请按标签回答", "unit": "单位标签模糊；请只填写数值"},
+    "ja": {"choose": "正しい答えを選んでください", "multi": "素数をすべて選んでください", "order": "小さい順に並べてください", "fill": "答えを記入してください", "option": "選択肢ラベルに印刷ミス；数値で回答", "order_note": "一つの値が {low} と {high} の間で不鮮明；ラベルで回答", "unit": "単位ラベルが不鮮明；数値のみ回答"},
+    "en": {"choose": "Choose the correct answer", "multi": "Choose all prime numbers", "order": "Order from smallest to largest", "fill": "Fill in the answer", "option": "Option labels contain a misprint; answer by value", "order_note": "One value is unclear between {low} and {high}; answer by label", "unit": "Unit label is unclear; enter the number only"},
 }
 
 
@@ -170,13 +170,14 @@ def content(language: str, kind: str, index: int, state: str) -> tuple[list[str]
         ordered_indexes = sorted(range(4), key=values.__getitem__)
         shown_labels = list("ABCD")
         canonical_labels = list(shown_labels)
+        shown_values = list(map(str, values))
         if state == "review":
-            hidden_index = ordered_indexes[0]
-            shown_labels[hidden_index] = shown_labels[(hidden_index + 1) % 4]
+            ambiguous_index = values.index(n)
+            shown_values[ambiguous_index] = f"{n}/{n + 1}"
         lines = [t["order"],
-                 "   ".join(f"{label}. {value}" for label, value in zip(shown_labels, values))]
+                 "   ".join(f"{label}. {value}" for label, value in zip(shown_labels, shown_values))]
         if state == "review":
-            lines.append(f"[!] {t['option']}")
+            lines.append(f"[!] {t['order_note'].format(low=n, high=n + 1)}")
         ordered = [values[i] for i in ordered_indexes]
         ordered_labels = [canonical_labels[i] for i in ordered_indexes]
         answers = ordering_answer_variants(ordered_labels, ordered)
