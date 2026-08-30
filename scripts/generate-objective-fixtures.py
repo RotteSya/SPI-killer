@@ -42,9 +42,9 @@ def font(size: int, language: str) -> ImageFont.FreeTypeFont | ImageFont.ImageFo
 
 
 TEXT = {
-    "zh": {"choose": "请选择正确答案", "multi": "请选择所有质数", "order": "按从小到大排序", "fill": "请填写结果", "unit": "单位标签模糊"},
-    "ja": {"choose": "正しい答えを選んでください", "multi": "素数をすべて選んでください", "order": "小さい順に並べてください", "fill": "答えを記入してください", "unit": "単位ラベルが不鮮明"},
-    "en": {"choose": "Choose the correct answer", "multi": "Choose all prime numbers", "order": "Order from smallest to largest", "fill": "Fill in the answer", "unit": "Unit label is unclear"},
+    "zh": {"choose": "请选择正确答案", "multi": "请选择所有质数", "order": "按从小到大排序", "fill": "请填写结果", "option": "选项标签有印刷错误；请按数值回答", "unit": "单位标签模糊；请只填写数值"},
+    "ja": {"choose": "正しい答えを選んでください", "multi": "素数をすべて選んでください", "order": "小さい順に並べてください", "fill": "答えを記入してください", "option": "選択肢ラベルに印刷ミス；数値で回答", "unit": "単位ラベルが不鮮明；数値のみ回答"},
+    "en": {"choose": "Choose the correct answer", "multi": "Choose all prime numbers", "order": "Order from smallest to largest", "fill": "Fill in the answer", "option": "Option labels contain a misprint; answer by value", "unit": "Unit label is unclear; enter the number only"},
 }
 
 
@@ -135,6 +135,8 @@ def content(language: str, kind: str, index: int, state: str) -> tuple[list[str]
             shown_labels[correct_index] = shown_labels[(correct_index + 1) % 4]
         lines = [t["choose"], f"{n} + {n + 2} = ?",
                  *[f"{label}. {value}" for label, value in zip(shown_labels, values)]]
+        if state == "review":
+            lines.append(f"[!] {t['option']}")
         answer_variants = [
             correct_label, str(correct), f"{correct_label}. {correct}",
             f"{correct_label} ({correct})", f"{correct_label}（{correct}）",
@@ -158,6 +160,8 @@ def content(language: str, kind: str, index: int, state: str) -> tuple[list[str]
             labels[hidden_index] = labels[(hidden_index + 1) % 4]
         lines = [t["multi"], ", ".join(map(str, values)),
                  *[f"{label}. {value}" for label, value in zip(labels, values)]]
+        if state == "review":
+            lines.append(f"[!] {t['option']}")
         prime_values = [values[i] for i in prime_indexes]
         answer_labels = [canonical_labels[i] for i in prime_indexes]
         answers = joined_answer_variants(answer_labels, prime_values)
@@ -171,6 +175,8 @@ def content(language: str, kind: str, index: int, state: str) -> tuple[list[str]
             shown_labels[hidden_index] = shown_labels[(hidden_index + 1) % 4]
         lines = [t["order"],
                  "   ".join(f"{label}. {value}" for label, value in zip(shown_labels, values))]
+        if state == "review":
+            lines.append(f"[!] {t['option']}")
         ordered = [values[i] for i in ordered_indexes]
         ordered_labels = [canonical_labels[i] for i in ordered_indexes]
         answers = ordering_answer_variants(ordered_labels, ordered)
@@ -227,7 +233,7 @@ def main() -> None:
                     "requires_context": False,
                 })
     (OUT / "manifest.json").write_text(
-        json.dumps({"schema_version": 1, "prompt_version": "objective-v1-r1", "fixtures": manifest},
+        json.dumps({"schema_version": 1, "prompt_version": "objective-v1-r2", "fixtures": manifest},
                    ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )

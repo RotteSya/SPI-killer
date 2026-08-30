@@ -55,7 +55,7 @@ enum Prompts {
     - For a usable objective answer, end with exactly these two lines and nothing after them:
       FINAL: <the directly usable answer>
       NSPI_RESULT_V1: {"v":1,"kind":"<kind>","state":"ready","answer":"<exactly the same answer as FINAL>","reason":"none"}
-    - Use state review with a usable answer when the question/options are ambiguous or context is incomplete. Its reason is ambiguous_question, ambiguous_options, missing_context, or unsupported. An open-ended/unsupported item uses kind other, state review, and reason unsupported.
+    - Use state review with a usable answer when the question/options are ambiguous, a visible printing/OCR issue is flagged, or non-critical context such as a unit is missing. Its reason is ambiguous_question, ambiguous_options, missing_context, or unsupported. Put the uncertainty explanation before FINAL. FINAL and JSON answer must contain only the directly usable answer and must be character-for-character identical. An open-ended/unsupported item uses kind other, state review, and reason unsupported.
     - If cropping, unreadable content, or missing critical context prevents a usable answer, output only one line:
       NSPI_RESULT_V1: {"v":1,"kind":"<best identified kind>","state":"retake","answer":null,"reason":"cropped|unreadable|missing_context"}
     - The JSON must be one line, valid JSON with exactly v/kind/state/answer/reason, and be the final non-empty line. Never use a code fence or heading around either machine line. Never emit NSPI_RESULT_V1 more than once.

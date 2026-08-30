@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "prompt_version": "objective-v1-r1",
+  "prompt_version": "objective-v1-r2",
   "fixtures": [
     {
       "id": "zh-single_choice-01",
@@ -239,7 +239,7 @@
         "C（36）"
       ],
       "image": "images/zh-single_choice-15.png",
-      "sha256": "b4bed49c209be57b7d8789fa470590835bdd4a0c941349cc4d395b812cd9dc55",
+      "sha256": "9a57e1407fd9c38fde3892fd4264b56712e11326646b769c7aece452a5c34f11",
       "requires_context": false
     },
     {
@@ -255,7 +255,7 @@
         "B（38）"
       ],
       "image": "images/zh-single_choice-16.png",
-      "sha256": "cbc211b0aef2b50315846a03f5d048c236429404a4e88c57b403109041b0858d",
+      "sha256": "65539371435c48b056a47f08474f2cdd8ee6a521f0f50df5c9706671b5a98323",
       "requires_context": false
     },
     {
@@ -271,7 +271,7 @@
         "A（40）"
       ],
       "image": "images/zh-single_choice-17.png",
-      "sha256": "5135598506d984fea3f9ce02c2ab0c3acefa4d670e5baf18c8f889649c2b75cc",
+      "sha256": "0f8956cd8f2d07a2e9d66472c2fc81078c1a21926ac0e5f9b760340a3812e7f2",
       "requires_context": false
     },
     {
@@ -754,7 +754,7 @@
         "A、C（113、109）"
       ],
       "image": "images/zh-multiple_choice-15.png",
-      "sha256": "8fde0acf9906a2bf7c15fa9bcae164fea7f7d8d9825f2311cab38d0f50d93c82",
+      "sha256": "fbb81f8188d7e228efe933712c0c9f13188c91b40ce213ae1bd87566cba688c8",
       "requires_context": false
     },
     {
@@ -781,7 +781,7 @@
         "B、D（127、131）"
       ],
       "image": "images/zh-multiple_choice-16.png",
-      "sha256": "6a5c929431393d253ec75fc31530acfea63f34b7a05dd8766a0b5593f579115a",
+      "sha256": "8be83bec2dfff0c2113873115e0673b25bbc7d0a113bf324300117bab18dbd23",
       "requires_context": false
     },
     {
@@ -808,7 +808,7 @@
         "A、C（137、139）"
       ],
       "image": "images/zh-multiple_choice-17.png",
-      "sha256": "7ab63ae24df8598122e2fc9ec894eb11b07a8c3317b930321ec6e555a89e9c28",
+      "sha256": "07219ba9f89bdeefc4a370b733eed4f31e4d6a24cc690f6d0f349859781230d1",
       "requires_context": false
     },
     {
@@ -1213,7 +1213,7 @@
         "16→17→19→21"
       ],
       "image": "images/zh-ordering-15.png",
-      "sha256": "985c12e5bfb6a44a1cf69b97b7ebdb7171b32d97ddd19464003dec9ec14e8de9",
+      "sha256": "3c0929c8a142f4a671e230ce462f642fe609a2730509df6e39c623249381245d",
       "requires_context": false
     },
     {
@@ -1238,7 +1238,7 @@
         "17→18→20→22"
       ],
       "image": "images/zh-ordering-16.png",
-      "sha256": "0850fa2c5c1dd4b1c22ad999057beec015eab784caddc1b03a7c2fdacbd5faf5",
+      "sha256": "521b2959435491ba8b4be774e962d4f8bb538040f185a2d37fb900ae02a24325",
       "requires_context": false
     },
     {
@@ -1263,7 +1263,7 @@
         "18→19→21→23"
       ],
       "image": "images/zh-ordering-17.png",
-      "sha256": "c42ef4b6c830c2934020e19c84e024ed55a2e07f61977fc7f451117b50d5c01f",
+      "sha256": "5299f0fb918f68e0dcbbd91915bacc9739fdbdc270bc42a6f30ad41330bba777",
       "requires_context": false
     },
     {
@@ -1473,7 +1473,7 @@
         "52"
       ],
       "image": "images/zh-short_fill-15.png",
-      "sha256": "59a458066c96cc05947b8879e926fd5a203f97272c2a88bb928fc12b28682ca6",
+      "sha256": "1cba075fe18b34df97e28e7e26e4f39d77d31d2bb6d3886168b00ad5f7cacafb",
       "requires_context": false
     },
     {
@@ -1485,7 +1485,7 @@
         "55"
       ],
       "image": "images/zh-short_fill-16.png",
-      "sha256": "3676d087c0be737fa8f76944148887c7bced7da735351b14ce3e7382867e47c0",
+      "sha256": "90ca39c52a1b32352d21d66166bcb5a3f9a92cedacad10b4b1a6ada47d02d7e1",
       "requires_context": false
     },
     {
@@ -1497,7 +1497,7 @@
         "58"
       ],
       "image": "images/zh-short_fill-17.png",
-      "sha256": "54991309a11def8406f2c6208705f62852f97c4a34cd955cc06c00532e71c334",
+      "sha256": "a60524924154774e4368034e4b582c4e41cd1aaf6ee81400e542a8ab1288f52f",
       "requires_context": false
     },
     {
@@ -1767,7 +1767,7 @@
         "C（36）"
       ],
       "image": "images/ja-single_choice-15.png",
-      "sha256": "4db14b70a4af1f7c05defbda5fa37e2d006f88f9ee54a6c4d0ec42b0e18a310e",
+      "sha256": "bcd8d313144a2afbc43b1efd6011fdbb63eeb932cf2b5cc433457422749cd8cd",
       "requires_context": false
     },
     {
@@ -1783,7 +1783,7 @@
         "B（38）"
       ],
       "image": "images/ja-single_choice-16.png",
-      "sha256": "eaeae4ea284ac693253ea8f05d611d02f3d7c783bfe3050cabcdb16fd59fbd57",
+      "sha256": "4bdaded2b3575e2a12cdfd48e0b11aa301f8bf93727e8b565a8f01411a6c7503",
       "requires_context": false
     },
     {
@@ -1799,7 +1799,7 @@
         "A（40）"
       ],
       "image": "images/ja-single_choice-17.png",
-      "sha256": "223d63e74f8878a0f13a03cd4f33dac032adbb5dc5442012dbfaf67ceee3f77c",
+      "sha256": "516f84c12775eb194d62f4a671e62006fc4192a3374b2d40ceb5c868d6b93703",
       "requires_context": false
     },
     {
@@ -2282,7 +2282,7 @@
         "A、C（113、109）"
       ],
       "image": "images/ja-multiple_choice-15.png",
-      "sha256": "cf88ecd75f355a727ea06fff7b213a3b6140a6701de78b774f7ce2dacd70851e",
+      "sha256": "2db37ab6ea3b8fe853e7c5876a6da26eb47b7bfe940f74ffbd9c8d6d72ba2d83",
       "requires_context": false
     },
     {
@@ -2309,7 +2309,7 @@
         "B、D（127、131）"
       ],
       "image": "images/ja-multiple_choice-16.png",
-      "sha256": "c19afda892c4f0e55963bc1646278d7de970ca6e4ae3ba877d0d80ea62e38987",
+      "sha256": "3e451d151d9b5390d667a34b182cd29830118564542a3b475d9c208bee88bbc9",
       "requires_context": false
     },
     {
@@ -2336,7 +2336,7 @@
         "A、C（137、139）"
       ],
       "image": "images/ja-multiple_choice-17.png",
-      "sha256": "7b88c5182daba9544b8f67cb6ec98b181e423482bac25ba763d438fd9ce46e5a",
+      "sha256": "9bb0a2503587552579397f0e743207c6c8a261788f86e8154fe71586507f130e",
       "requires_context": false
     },
     {
@@ -2741,7 +2741,7 @@
         "16→17→19→21"
       ],
       "image": "images/ja-ordering-15.png",
-      "sha256": "8da94322689def4b20ab592198f38fd1ac16f79ddddbac7740c91f8faf91be31",
+      "sha256": "10030b168614f331d56ac3ac50a380d5715f4e72cc4678bb3708beea979f5256",
       "requires_context": false
     },
     {
@@ -2766,7 +2766,7 @@
         "17→18→20→22"
       ],
       "image": "images/ja-ordering-16.png",
-      "sha256": "a86a37f9cc3eadb76a7b9fdf22a2e38a259a58316d5eb0b978a58e8debc9f071",
+      "sha256": "bd5eea5a1496bade5e82246c0b201e5ae5ecb9604e79ddd7d551c4e24e2b7b09",
       "requires_context": false
     },
     {
@@ -2791,7 +2791,7 @@
         "18→19→21→23"
       ],
       "image": "images/ja-ordering-17.png",
-      "sha256": "636ca5b77fa3934acab062e433b84ec98c75c889b9af7f07e432745da15b12e2",
+      "sha256": "801a2ab3afa7455046edfd7d99c797eb9fbf9fa4cb06e8cdd63dcf896f65c355",
       "requires_context": false
     },
     {
@@ -3001,7 +3001,7 @@
         "52"
       ],
       "image": "images/ja-short_fill-15.png",
-      "sha256": "a91c49e8e9ca68e2b78711673ce892984a64d899085e8e3d422664abd463f74b",
+      "sha256": "5a9c1b474e8f8396fd5cffa3faca791aa69e770a6c6532ef25539e25c8ff4901",
       "requires_context": false
     },
     {
@@ -3013,7 +3013,7 @@
         "55"
       ],
       "image": "images/ja-short_fill-16.png",
-      "sha256": "413da2d23630d3f4b035e11cf1ffbb402f85b43eaff473d38aacd2ca7447f49e",
+      "sha256": "3d6ea10b7c0aee877b2a1d59cb83abfe5e454324c66b57c0b89d1e6083a8d278",
       "requires_context": false
     },
     {
@@ -3025,7 +3025,7 @@
         "58"
       ],
       "image": "images/ja-short_fill-17.png",
-      "sha256": "87a8bc5d6bb67af9beb11563391116d0ebe10b341cd9743501b81336c7f55690",
+      "sha256": "dea04de1d7dfc7cb87f63b57681e764bd4a4d6e5c49907341f04cd6cd6e9fc08",
       "requires_context": false
     },
     {
@@ -3295,7 +3295,7 @@
         "C（36）"
       ],
       "image": "images/en-single_choice-15.png",
-      "sha256": "b8fa683b583a022d4c18d14ff0f3ec11f9b92855332faf4cb6f96ad0e098e3b0",
+      "sha256": "26c6b3024723de07ba7d753db06698225c79e7ca3fec3fbdf3a2a2b595d6b748",
       "requires_context": false
     },
     {
@@ -3311,7 +3311,7 @@
         "B（38）"
       ],
       "image": "images/en-single_choice-16.png",
-      "sha256": "0df879fb9172633f72770ed426c392ef6b84ace2163049b4b6bd3887fdeb00ed",
+      "sha256": "3c5173cd7b7aca5280d1043879eaf1fee92b1a87fb04c60c3e5bf46f16517174",
       "requires_context": false
     },
     {
@@ -3327,7 +3327,7 @@
         "A（40）"
       ],
       "image": "images/en-single_choice-17.png",
-      "sha256": "e79b820185ba20a64c39d264be5de022e5659a62c175120699364234ff0fdbfc",
+      "sha256": "ef962107b5ba76f7cdddaee9b28b9b7221cb4709b09ee4f377386f55c9e2dcbf",
       "requires_context": false
     },
     {
@@ -3810,7 +3810,7 @@
         "A、C（113、109）"
       ],
       "image": "images/en-multiple_choice-15.png",
-      "sha256": "d249e1e011630601ccfd93e5d3d066eee10b89e21087e1be2ca387a99b531f8c",
+      "sha256": "f4d1a87964254d655d709cfdd27046b7785ee509b43f0575b8161554384bf8c9",
       "requires_context": false
     },
     {
@@ -3837,7 +3837,7 @@
         "B、D（127、131）"
       ],
       "image": "images/en-multiple_choice-16.png",
-      "sha256": "dbb73fa80c567eb2849050eb6b8f79e1f0aad8ba93b4187b5e7d298335540df1",
+      "sha256": "1fc8d864eb3efaff1f4584a8ad770a7460d6b62939b9fbea57423b1aa8d3edd5",
       "requires_context": false
     },
     {
@@ -3864,7 +3864,7 @@
         "A、C（137、139）"
       ],
       "image": "images/en-multiple_choice-17.png",
-      "sha256": "10a1e9ede28e8003e40760a1d18ea9da1179bde414437ede18ec6aad5ae5aafa",
+      "sha256": "e782642942a1e63ad510fe736d8d7b54c38cec36446087fdd5b5d610f9a1fc74",
       "requires_context": false
     },
     {
@@ -4269,7 +4269,7 @@
         "16→17→19→21"
       ],
       "image": "images/en-ordering-15.png",
-      "sha256": "53a9ff76dd51d594c0265faaa67514950742437466adb804c4321956eec87d75",
+      "sha256": "5f45ca203a8af03c692aa606d6bff073ce35c3d08203a521e7c1d7f518636bd9",
       "requires_context": false
     },
     {
@@ -4294,7 +4294,7 @@
         "17→18→20→22"
       ],
       "image": "images/en-ordering-16.png",
-      "sha256": "ca0910f30977dfbeb70659479d480bb6975e4129455717dc544b0f09ea1be426",
+      "sha256": "9d15cef44d5d1acffe6b1fe4e457709af7134347548605aba06ff884582660ff",
       "requires_context": false
     },
     {
@@ -4319,7 +4319,7 @@
         "18→19→21→23"
       ],
       "image": "images/en-ordering-17.png",
-      "sha256": "622028b7f86538c0fa284ed2276e436708af353d20349d4d5478c2e2e584169d",
+      "sha256": "451456911a549bce3159d37fe3068554cac1803dfd948d78d28e2307577ea36a",
       "requires_context": false
     },
     {
@@ -4529,7 +4529,7 @@
         "52"
       ],
       "image": "images/en-short_fill-15.png",
-      "sha256": "63c6faff16ab9ee6c3139be423e46abed24416a8d0bf66fb8bbdcc63109541f7",
+      "sha256": "1679ca7d3803d4073ba55fb747fbb6ee4b41747e59d9f42050852f6c7a82d059",
       "requires_context": false
     },
     {
@@ -4541,7 +4541,7 @@
         "55"
       ],
       "image": "images/en-short_fill-16.png",
-      "sha256": "84f30b372dd1ec1dbef57317c910fff277b1e1431cad3b48880819875a61b936",
+      "sha256": "20c5b62627a42ad9eea961f6877714bda80e0fbaa437a32a42b3cd242c6afab6",
       "requires_context": false
     },
     {
@@ -4553,7 +4553,7 @@
         "58"
       ],
       "image": "images/en-short_fill-17.png",
-      "sha256": "2b1483eff4a485179db7f61c1c1953fa5dda21274ee7897a69656ced57090d8b",
+      "sha256": "2b8e842e646391091d66df744805dc3766e5e3d9f585a0a6d344942cff6f9a42",
       "requires_context": false
     },
     {
