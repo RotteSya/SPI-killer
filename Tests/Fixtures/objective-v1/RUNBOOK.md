@@ -23,6 +23,13 @@ export NSPI_EVAL_REVIEWER=<different name>
 node scripts/run-objective-eval.mjs
 ```
 
+若 candidate 是受 Vercel Deployment Protection 保护的 Preview，另设临时 share URL 中的
+`_vercel_share` 值；runner 会交换 HttpOnly Cookie，Protection 必须保持开启：
+
+```sh
+export NSPI_EVAL_VERCEL_SHARE_TOKEN=<temporary-share-token>
+```
+
 Runner 对每张图片只调用一次，原始结果写入忽略跟踪的 `objective-eval-output/`。复核者只签署
 已有评分；不得重跑失败题来挑选较好结果。正式归档只保留脱敏 JSONL 和 Markdown 摘要。
 

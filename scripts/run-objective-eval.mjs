@@ -22,6 +22,21 @@ const outputDir = resolve(root, 'objective-eval-output');
 await mkdir(outputDir, { recursive: true });
 const stamp = new Date().toISOString().replaceAll(':', '-');
 const jsonl = resolve(outputDir, `${stamp}.jsonl`);
+const baseURL = process.env.NSPI_EVAL_BASE_URL.replace(/\/$/, '');
+
+// Preview deployments stay protected. A temporary Vercel share token is exchanged once for the
+// HttpOnly deployment cookie, then every evaluation request carries that cookie. Production or
+// otherwise-unprotected candidates omit NSPI_EVAL_VERCEL_SHARE_TOKEN and use no extra header.
+const evaluationHeaders = {};
+if (process.env.NSPI_EVAL_VERCEL_SHARE_TOKEN) {
+  const access = await fetch(
+    `${baseURL}/?_vercel_share=${encodeURIComponent(process.env.NSPI_EVAL_VERCEL_SHARE_TOKEN)}`,
+    { redirect: 'manual' },
+  );
+  const match = /(?:^|[, ])(_vercel_jwt=[^;]+)/u.exec(access.headers.get('set-cookie') ?? '');
+  if (!match) throw new Error('Vercel share token did not produce a deployment access cookie');
+  evaluationHeaders.cookie = match[1];
+}
 
 // Read the prompt from the Swift SSOT rather than maintaining an evaluation-only copy.
 const SYSTEM = execFileSync('swift', ['run', 'NotchSPI', '--print-objective-eval-prompt'], {
@@ -32,20 +47,24 @@ const records = [];
 for (const [index, fixture] of manifest.fixtures.entries()) {
   const image = (await readFile(resolve(fixtureRoot, fixture.image))).toString('base64');
   const started = performance.now();
-  const response = await fetch(`${process.env.NSPI_EVAL_BASE_URL.replace(/\/$/, '')}/v1/captures`, {
-    method: 'POST', headers: { authorization: `Bearer ${process.env.NSPI_EVAL_DEVICE_TOKEN}`,
+  const response = await fetch(`${baseURL}/v1/captures`, {
+    method: 'POST', headers: { ...evaluationHeaders,
+      authorization: `Bearer ${process.env.NSPI_EVAL_DEVICE_TOKEN}`,
       'content-type': 'application/json', 'x-app-version': process.env.NSPI_EVAL_APP_VERSION },
     body: JSON.stringify({ system: SYSTEM, task: 'Solve the attached objective question.',
       image_base64: image, image_media_type: 'image/png', result_protocol: 'objective_v1',
       capture_id: crypto.randomUUID() }),
   });
   const body = await response.text();
+  if (!response.ok) throw new Error(`fixture ${fixture.id} failed with HTTP ${response.status}`);
   const events = body.split(/\r?\n/).flatMap((line) => {
     if (!line.startsWith('data: ') || line === 'data: [DONE]') return [];
     try { return [JSON.parse(line.slice(6))]; } catch { return []; }
   });
   const raw = events.filter((event) => event.type === 'delta').map((event) => event.text).join('');
   const usage = events.find((event) => event.type === 'usage');
+  const streamError = events.find((event) => event.type === 'error');
+  if (streamError || !usage) throw new Error(`fixture ${fixture.id} ended without a usage result`);
   const parsed = composeObjectiveResult(raw, true);
   const answerHit = fixture.expected_state === 'retake'
     ? parsed.state === 'retake'
