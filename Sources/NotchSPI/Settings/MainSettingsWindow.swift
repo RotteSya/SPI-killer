@@ -416,6 +416,7 @@ private final class GeneralPageController: NSViewController, SettingsPage {
     private let autoCapPopup = NSPopUpButton()
     private let loginCheckbox = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let loginCaption = captionLabel("")
+    private let telemetryCheckbox = NSButton(checkboxWithTitle: "", target: nil, action: nil)
 
     private static let autoCapChoices = [5, 10, 20, 30, 50]
 
@@ -493,6 +494,24 @@ private final class GeneralPageController: NSViewController, SettingsPage {
         root.addSubview(loginCheckbox)
         loginCaption.frame = NSRect(x: 36 + 160, y: y + 24, width: contentWidth - 160, height: 30)
         root.addSubview(loginCaption)
+        y += 62
+
+        let privacyLabel = rowLabel(L10n.t("隐私与诊断", "プライバシーと診断", "Privacy & diagnostics"))
+        privacyLabel.alignment = .right
+        privacyLabel.frame = NSRect(x: 36, y: y + 1, width: 148, height: 18)
+        root.addSubview(privacyLabel)
+        telemetryCheckbox.title = L10n.t("共享匿名可靠性数据", "匿名の信頼性データを共有", "Share anonymous reliability data")
+        telemetryCheckbox.state = ProductTelemetry.shared.sharingEnabled ? .on : .off
+        telemetryCheckbox.target = self
+        telemetryCheckbox.action = #selector(telemetryToggled)
+        telemetryCheckbox.frame = NSRect(x: 36 + 160, y: y, width: 350, height: 20)
+        root.addSubview(telemetryCheckbox)
+        let telemetryCaption = captionLabel(L10n.t(
+            "仅发送固定类型的完成状态、解析路径、耗时和按钮动作；不发送截图、题目、答案、提示词或原始错误。",
+            "完了状態・解析経路・所要時間・操作のみを送信します。画像、問題、回答、プロンプト、元のエラーは送信しません。",
+            "Sends only fixed completion states, parser paths, timings, and actions—never screenshots, questions, answers, prompts, or raw errors."))
+        telemetryCaption.frame = NSRect(x: 36 + 160, y: y + 24, width: contentWidth - 160, height: 42)
+        root.addSubview(telemetryCaption)
 
         view = root
     }
@@ -509,6 +528,7 @@ private final class GeneralPageController: NSViewController, SettingsPage {
     func pageDidShow() {
         reloadTargets()
         reloadLoginState()
+        telemetryCheckbox.state = ProductTelemetry.shared.sharingEnabled ? .on : .off
     }
 
     private func reloadTargets() {
@@ -585,6 +605,10 @@ private final class GeneralPageController: NSViewController, SettingsPage {
         } catch {
             reloadLoginState() // revert the checkbox; the OS said no
         }
+    }
+
+    @objc private func telemetryToggled() {
+        ProductTelemetry.shared.sharingEnabled = telemetryCheckbox.state == .on
     }
 }
 

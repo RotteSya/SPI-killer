@@ -17,6 +17,10 @@ function envStr(name: string, fallback: string): string {
   return raw === undefined || raw.trim() === '' ? fallback : raw.trim();
 }
 
+function boundedInt(value: number, fallback: number, minimum: number, maximum: number): number {
+  return value >= minimum && value <= maximum ? value : fallback;
+}
+
 // Which vendor the official service proxies to. "mock" streams a canned answer with synthetic
 // usage so the whole billing pipeline runs end-to-end without any real API key.
 export type ProviderName = 'anthropic' | 'openai' | 'mock';
@@ -123,6 +127,16 @@ export const config = {
   deviceRegPerHour: envInt('DEVICE_REG_PER_HOUR', 30),
   // Max simultaneous in-flight captures for a single device token.
   captureConcurrencyPerToken: envInt('CAPTURE_CONCURRENCY_PER_TOKEN', 3),
+
+  // Objective Result V1 is remotely assigned per anonymous bearer token. Invalid percentages
+  // fail closed to control; changing the revision never reshuffles devices.
+  objectiveResultV1Bps: boundedInt(envInt('OBJECTIVE_RESULT_V1_BPS', 0), 0, 0, 10_000),
+  objectiveResultExperimentSalt: envStr('OBJECTIVE_RESULT_EXPERIMENT_SALT', ''),
+  clientConfigRevision: envStr('CLIENT_CONFIG_REVISION', '2026-objective-v1-r1'),
+  telemetryEnabled: envStr('TELEMETRY_ENABLED', '1') === '1',
+  eventBatchPerMinute: boundedInt(envInt('EVENT_BATCH_PER_MINUTE', 30), 30, 0, 10_000),
+  modelPricingJSON: envStr('MODEL_PRICING_JSON', '[]'),
+  modelPricingVersion: envStr('MODEL_PRICING_VERSION', 'unset'),
 } as const;
 
 export type Config = typeof config;

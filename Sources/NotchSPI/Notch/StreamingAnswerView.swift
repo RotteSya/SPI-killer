@@ -23,6 +23,8 @@ final class StreamingAnswerView: NSView {
 
     /// Fires when the "▸ 推理过程" line is clicked (brief mode's folded scratch work).
     var onToggleReasoning: (() -> Void)?
+    var canCopyAnswer: (() -> Bool)?
+    var onCopyAnswer: (() -> Void)?
     // UTF-16 ranges (on `attributed`) extracted from the composer's custom attributes.
     private var cardRange: NSRange?         // whole card: chip is drawn behind this
     private var toggleRange: NSRange?
@@ -284,6 +286,21 @@ final class StreamingAnswerView: NSView {
             }
         }
         super.mouseDown(with: event)
+    }
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard canCopyAnswer?() == true else { return nil }
+        let menu = NSMenu()
+        let item = NSMenuItem(
+            title: L10n.t("复制答案", "回答をコピー", "Copy Answer"),
+            action: #selector(copyAnswerFromMenu), keyEquivalent: "")
+        item.target = self
+        menu.addItem(item)
+        return menu
+    }
+
+    @objc private func copyAnswerFromMenu() {
+        onCopyAnswer?()
     }
 
     private static func utf16BirthTable(plain: String, births: [CFTimeInterval]) -> [CFTimeInterval] {

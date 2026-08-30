@@ -52,6 +52,22 @@ final class CapturePromptTests: XCTestCase {
         }
     }
 
+    func testObjectiveClauseIsFrozenAcrossTutorChannelsButExcludedFromHintAndPersonality() {
+        let objective = Prompts.capturePrompt(
+            mode: "tutor", depth: "brief", personaName: "", personaText: "", sessionContext: "",
+            objectiveProtocolEnabled: true)
+        XCTAssertTrue(objective.system.contains("OBJECTIVE RESULT V1"))
+        XCTAssertTrue(objective.system.contains("NSPI_RESULT_V1:"))
+        let hint = Prompts.capturePrompt(
+            mode: "tutor", depth: "hint", personaName: "", personaText: "", sessionContext: "",
+            objectiveProtocolEnabled: true)
+        XCTAssertFalse(hint.system.contains("OBJECTIVE RESULT V1"))
+        let personality = Prompts.capturePrompt(
+            mode: "personality", depth: "guided", personaName: "p", personaText: "p",
+            sessionContext: context, objectiveProtocolEnabled: true)
+        XCTAssertFalse(personality.system.contains("OBJECTIVE RESULT V1"))
+    }
+
     func testAllThreeChannelsConsumeTheSameFrozenPrompt() throws {
         let prompt = CapturePrompt(
             system: "SYSTEM\n" + context,

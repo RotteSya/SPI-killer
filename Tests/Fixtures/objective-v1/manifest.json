@@ -1,0 +1,2916 @@
+{
+  "schema_version": 1,
+  "prompt_version": "objective-v1-r1",
+  "fixtures": [
+    {
+      "id": "zh-single_choice-01",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-01.png",
+      "sha256": "b2ba1acb52fe2e984b04eab97da4b47e49f448a3b1ce06343153ca32a0b765af",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-02",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-02.png",
+      "sha256": "d1b4a2b1c44608a377d4f93e787ca8ad3838b72edc9fac60e2419d5feb191ae2",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-03",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-03.png",
+      "sha256": "c04085ef8f7fd915a34ec44654920c569b66f9349dce5a4522afd57d0d60079b",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-04",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-04.png",
+      "sha256": "9efce54400b98033fe80b6215c2c52799f3a722d38db7d636ac6f8bbd2d11b64",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-05",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-05.png",
+      "sha256": "3830c65c62d73647d86b0e59d713e32988335f41294dd45507aa4ea7d6e38389",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-06",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-06.png",
+      "sha256": "bdeaac40e3da86c4c9ceda73e909c6205ab87b147a5bc1865ba3d4a42aa2bfc1",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-07",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-07.png",
+      "sha256": "d1a5666eca097e4b0c35ef7cfd906c7d66835b52bae6dc595df361ade4e3348a",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-08",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-08.png",
+      "sha256": "a684ea319e609f76df4ad201a3f85ce8c48ac3811ec4a7368c9538798ee02d34",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-09",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-09.png",
+      "sha256": "d84ec32e820a937fdfb12ce0d727cae9ebbe2780d33db2b85c3015bb0f2798f5",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-10",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-10.png",
+      "sha256": "5e997a53798b45ac130d464c466b3fcb4a6c58c45292be77aebd487726574a79",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-11",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-11.png",
+      "sha256": "2af1aeb72a418c8b427e71c57bb2b7b551207afbffcb34ff6d3e49dc0353df2c",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-12",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-12.png",
+      "sha256": "2585a6d27a5e1891ef050aeafebac08d7e720716be720cc5b2c0c52cb17bad46",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-13",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-13.png",
+      "sha256": "917d9e03ccb5d4534a416ceab63cb9a1b6175931d191d7f7b1259e574e550e7c",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-14",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-14.png",
+      "sha256": "d13897ccd492344098e831e92c6a66fcd6b5f7a3a73a85fc409a3e131ec868e9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-15",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-15.png",
+      "sha256": "e0ad10663c998b8c7f3925c04200a8fe550b93735f6973a25a8133ec1af41bc8",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-16",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-16.png",
+      "sha256": "7ae5cb7f24c69b1d29302ee4c28b163af5ee00982bd776638988e88ac8c6c00a",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-17",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/zh-single_choice-17.png",
+      "sha256": "8d9bd67801c339a04c7206295b9ce3dd9c4cf2bbd528eba9f635b5abc61195d8",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-18",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/zh-single_choice-18.png",
+      "sha256": "88f5fdae9b39f958ccd939ee211fb865c13a99668765a2ef470dae06893d4bd3",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-19",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/zh-single_choice-19.png",
+      "sha256": "d7f313052cd03414b553f85b66550d6a9cb64d8a5a3e7cea15e22233052387a4",
+      "requires_context": false
+    },
+    {
+      "id": "zh-single_choice-20",
+      "language": "zh",
+      "kind": "single_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/zh-single_choice-20.png",
+      "sha256": "ac39cccef852e77a9b80a892ca23d0e9e03b2589a0e3747c4c10600fc2aa33ca",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-01",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-01.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-02",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-02.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-03",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-03.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-04",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-04.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-05",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-05.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-06",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-06.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-07",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-07.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-08",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-08.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-09",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-09.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-10",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-10.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-11",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-11.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-12",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-12.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-13",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-13.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-14",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-14.png",
+      "sha256": "a0d910ea2f359aaaf65fd07ba602e86e340d7cac8b52d5eb3e36f00b52903ab9",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-15",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-15.png",
+      "sha256": "45f3e4d68ee24dfc6a167e6c6014b43c568fedd418b4494263b8f30df88fb9a1",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-16",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-16.png",
+      "sha256": "45f3e4d68ee24dfc6a167e6c6014b43c568fedd418b4494263b8f30df88fb9a1",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-17",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/zh-multiple_choice-17.png",
+      "sha256": "45f3e4d68ee24dfc6a167e6c6014b43c568fedd418b4494263b8f30df88fb9a1",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-18",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/zh-multiple_choice-18.png",
+      "sha256": "739872bd1b79c59eac1ef481dd7789f6de5b21fb9e6d5304772bc232b5192ea7",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-19",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/zh-multiple_choice-19.png",
+      "sha256": "a91b3ca3bd6bcc2b67d66e9cbc57b571dda270a1fbc9966f66544bf6c9ba3bf4",
+      "requires_context": false
+    },
+    {
+      "id": "zh-multiple_choice-20",
+      "language": "zh",
+      "kind": "multiple_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/zh-multiple_choice-20.png",
+      "sha256": "739872bd1b79c59eac1ef481dd7789f6de5b21fb9e6d5304772bc232b5192ea7",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-01",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-01.png",
+      "sha256": "339508e76cf6667b716d40fe1e09b8b1bdba5c23768782942bbfdfa9ab9881b1",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-02",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-02.png",
+      "sha256": "51900a3d9f1df72039433a5290547a3472d28039e2c19e00fed3bff79dccda5a",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-03",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-03.png",
+      "sha256": "68ddce787cb0ada5e1b0542f993307000c0e98c29a5ccc5e8baa5ad7439a6456",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-04",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-04.png",
+      "sha256": "9e8f09ea73fc8b729069745ed25a31971dcd4daf1d78e20431624040e45f3c83",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-05",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-05.png",
+      "sha256": "65a9fa248e0ab271e7eb23e2c8ddf417243c498315c2937ea8cedac5d6b45bde",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-06",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-06.png",
+      "sha256": "008cb485eca040dc9615b069bedc9a295bf3f0f9060a4babf13a4967a7c73d4c",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-07",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-07.png",
+      "sha256": "ff9fbb3b3d8a1b2b7954181946a5687c41d4fcef850ca24038c7f2f548da3a7e",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-08",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-08.png",
+      "sha256": "ff90654cf34fd820c872e8d78991afe90fed880e0962409691d346a39647f7e5",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-09",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-09.png",
+      "sha256": "388121101a5b69c6362e3ca982cdeb944b84af3ce8109a45febcb26671778932",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-10",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-10.png",
+      "sha256": "2f5c67be05c8df397ab0b0919505bc8b6d37d235059e555340bbc5feefa9d355",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-11",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-11.png",
+      "sha256": "93d42c222fe7807a9b9b4372efb8b521ce05713ff321028c88ca8c4d7479f32c",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-12",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-12.png",
+      "sha256": "8a97853d2c95e218521630b9a4d79b250cd0c3270ee78c23f0e3aa357cabd924",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-13",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-13.png",
+      "sha256": "5aa3ef3e7837e759fb62323aaae72daff3be2c02632ef8adf8cb2cb86e951bcf",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-14",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-14.png",
+      "sha256": "a22da52029ee8f18ab816f6aea2d71dd0f28f66b7d9c6195121f65d86de97421",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-15",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-15.png",
+      "sha256": "d59ecaba53d3e524b8bbf546a15cdc72094a4a4d08ab313912f8fe659766bf39",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-16",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-16.png",
+      "sha256": "86d311f0d115af900adacbe78bb37269cb1ab5ee245ddb383dd37957dec4ac01",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-17",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/zh-ordering-17.png",
+      "sha256": "8230752512ff2b6bd4ab74e2d10d3e368b9fef3ce117228107d22f70241f4cfe",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-18",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/zh-ordering-18.png",
+      "sha256": "ddafcbb686df24d26c255cc4a6a7fd4b88f1d75dbb2d79ee73f861e5784f5a43",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-19",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/zh-ordering-19.png",
+      "sha256": "59aad36042159ee42a2385e6f08620feff2442560b652f012ec4df4b326f904c",
+      "requires_context": false
+    },
+    {
+      "id": "zh-ordering-20",
+      "language": "zh",
+      "kind": "ordering",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/zh-ordering-20.png",
+      "sha256": "5f370b1ee20afbf2724ceed4ac68bd3311bf23c1e751ec0a5f3a55429923a135",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-01",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "10"
+      ],
+      "image": "images/zh-short_fill-01.png",
+      "sha256": "c757295859bf0adc2fd064d778be48cb90db94fcd2b3e13687a49f3c8e2dd211",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-02",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "13"
+      ],
+      "image": "images/zh-short_fill-02.png",
+      "sha256": "b5eba49ba1e42250994471a38aba455f135da084c7c967f74a9c8c469cd36880",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-03",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "16"
+      ],
+      "image": "images/zh-short_fill-03.png",
+      "sha256": "cddba70ab256d919a602714aee9bf9d5538fa40aeec5748c6c9af8ca9e1c8de1",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-04",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "19"
+      ],
+      "image": "images/zh-short_fill-04.png",
+      "sha256": "fc398661e3549c7de046467deff872f4884f93db5a732567cb6d720e5e86cef4",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-05",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "22"
+      ],
+      "image": "images/zh-short_fill-05.png",
+      "sha256": "87c5f73c2198308308f4ad4c0ae86ad64a7fb5de5c8c108ef049696575565ee2",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-06",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "25"
+      ],
+      "image": "images/zh-short_fill-06.png",
+      "sha256": "d15599ce8bae2e86472d755191307b16e271f25926ca87134674d995ce6c144a",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-07",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "28"
+      ],
+      "image": "images/zh-short_fill-07.png",
+      "sha256": "908c0434957163169d56d90f28f71c3efc806a1dcbd6ea0e1c02b1ded2a0f94c",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-08",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "31"
+      ],
+      "image": "images/zh-short_fill-08.png",
+      "sha256": "0ca67612c6640c64e6ac25d8ceda693b2c7d9507f9009099ca6df37ff99ec2eb",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-09",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "34"
+      ],
+      "image": "images/zh-short_fill-09.png",
+      "sha256": "2c5cd0180ebb38aaa950d30d38e272831308956c379e4b9cc7d9d2bbca4034d5",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-10",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "37"
+      ],
+      "image": "images/zh-short_fill-10.png",
+      "sha256": "7d3581d116bfc088d79b222a75d6da314f8ce76a23cf1aed3cc63d5783dded85",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-11",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "40"
+      ],
+      "image": "images/zh-short_fill-11.png",
+      "sha256": "5dd48d102a0bfd7a9998dbf4cfc2e4820cd7941d60311384d0af96ba78a5cf7b",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-12",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "43"
+      ],
+      "image": "images/zh-short_fill-12.png",
+      "sha256": "08228cd3068a8a951fdb0ea68e344ec4a3161a9cf6b6eb8beb867657d1e84654",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-13",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "46"
+      ],
+      "image": "images/zh-short_fill-13.png",
+      "sha256": "812692ee37e5087f1a34f831f25783e93f29e2df2c5286b79c581014152e938c",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-14",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "49"
+      ],
+      "image": "images/zh-short_fill-14.png",
+      "sha256": "da06eebda0f111e9e3279ccc96cf6d2880a99355a6cd28324074f2e25273339c",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-15",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "review",
+      "accepted_answers": [
+        "52"
+      ],
+      "image": "images/zh-short_fill-15.png",
+      "sha256": "f88098ff2a157a0699e68961e2dc4fe67a4f0ebad055c13022e8f8acabb3d905",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-16",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "review",
+      "accepted_answers": [
+        "55"
+      ],
+      "image": "images/zh-short_fill-16.png",
+      "sha256": "da8af61b77e8741e4572a4551b04e0797f05863af303ab50666549defe15c2ca",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-17",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "review",
+      "accepted_answers": [
+        "58"
+      ],
+      "image": "images/zh-short_fill-17.png",
+      "sha256": "f318bcc3e81fb8454916f6b4eb6716d654a8b5de87f98e714e59766f7e90cb8d",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-18",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/zh-short_fill-18.png",
+      "sha256": "e4c25d9ff5b0b66ab24c14cd10d90edb51c8ef7df3057dab6c2a459b94dd99b7",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-19",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/zh-short_fill-19.png",
+      "sha256": "0f98eca97e962970e5b59436a30de7fc7bde5e450529cefb224a2826c753064c",
+      "requires_context": false
+    },
+    {
+      "id": "zh-short_fill-20",
+      "language": "zh",
+      "kind": "short_fill",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/zh-short_fill-20.png",
+      "sha256": "f9b5ca5910b90391f05e8aa5e68c2c4451acdf6c1d2c66ae5231025bcd97ceca",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-01",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-01.png",
+      "sha256": "a70ec39608fea2666d8a7744c9dee7721d3d56463b47cea7bb36466449c397da",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-02",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-02.png",
+      "sha256": "dc58be66229f1062bb842cc8c1acd4482ff11e9bc148ab0c2f8d8383f512874b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-03",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-03.png",
+      "sha256": "753238533480c448f9c2fbd3f61973629e325962b78ec6cbca4d333700b38297",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-04",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-04.png",
+      "sha256": "f6210d068221c244476499c28d0ab244abee902350713cb47b3c62e646660f49",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-05",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-05.png",
+      "sha256": "e6a640b04144a7d0631f8c7cd54483ed3cd99e45598ba087700cf90b753c69e6",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-06",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-06.png",
+      "sha256": "6d8e195ee6df08fa3c3582f54f72199c2b284eaaa06c160f8b966b82aa0e2ee0",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-07",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-07.png",
+      "sha256": "6a6c5fd34ed358a00ce946382dbda8d425d556c23a9ef5ad6f3c99ff056e615c",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-08",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-08.png",
+      "sha256": "1624911fb187504718f61e275591a8cbc0cc8c03a67b0a6a8362a9221b847e7e",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-09",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-09.png",
+      "sha256": "c82000b0e88f418091cf207cdc0436310e35a6e2db1460f51c381ad2a3024acd",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-10",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-10.png",
+      "sha256": "fcbdfef690862373f5d880df14f0dc1eaa54045015faf4e4ef3b7def69d0a5bb",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-11",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-11.png",
+      "sha256": "3acd3f90e1574750733cd5767d723ce3c93e504480923d8a44fdadcb8f98487c",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-12",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-12.png",
+      "sha256": "57c0e607593e7642f28ccc5b14d9d7452349d8d21ee2bae3783a5fa7841b7ccc",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-13",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-13.png",
+      "sha256": "28ab4cb883003d1af8480b7f1c7d65802606704a654495a972deee04f70c9f2d",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-14",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-14.png",
+      "sha256": "142aefb38d45a4d6fe10afb9f42da9107088c713fd4ba9bafb6cc47e72860c89",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-15",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-15.png",
+      "sha256": "33c17ee25a7c162f6d0e0f5c2d00da3dac3bb6f2acac3bdb0c54c4ce49643552",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-16",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-16.png",
+      "sha256": "a97c5a6a863d87cfd927b350172318e3fd936e5553a9647719aefd385d71adfa",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-17",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/ja-single_choice-17.png",
+      "sha256": "8fceb9a35d559e71655b2275b7b3de44cd71542da9937a74813f5e44cb6b8409",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-18",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/ja-single_choice-18.png",
+      "sha256": "fe729735e700eba00060d40dde1e1bf12076adfc6faa6ab6998941c58e41fdd6",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-19",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/ja-single_choice-19.png",
+      "sha256": "d8cd85ae210c99fe98be52ee3b266084bd5333b631acc84f1b7c8c4bc7700e22",
+      "requires_context": false
+    },
+    {
+      "id": "ja-single_choice-20",
+      "language": "ja",
+      "kind": "single_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/ja-single_choice-20.png",
+      "sha256": "7d2d39b0df1284ca4345c31c8ef3a8ec776bc7089caf53aee8666551309def9a",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-01",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-01.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-02",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-02.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-03",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-03.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-04",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-04.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-05",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-05.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-06",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-06.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-07",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-07.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-08",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-08.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-09",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-09.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-10",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-10.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-11",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-11.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-12",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-12.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-13",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-13.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-14",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-14.png",
+      "sha256": "ac424699aa9493dacbe6e7af75c80e94168b4a5849f6e753882af6715c53117b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-15",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-15.png",
+      "sha256": "b743c22420c5dd2c1d8b78f61796c1bbf5454ed2b482fbe02056f2deef297e23",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-16",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-16.png",
+      "sha256": "b743c22420c5dd2c1d8b78f61796c1bbf5454ed2b482fbe02056f2deef297e23",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-17",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/ja-multiple_choice-17.png",
+      "sha256": "b743c22420c5dd2c1d8b78f61796c1bbf5454ed2b482fbe02056f2deef297e23",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-18",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/ja-multiple_choice-18.png",
+      "sha256": "7d57bec69e5d46ce6c1fc9fe754cc9e607e5e41555463b24fd4bb9c2a872bdf2",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-19",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/ja-multiple_choice-19.png",
+      "sha256": "c3e9be6300ef9e1f90ed8ec4276c439c06b543ed467c82ab210b01e56f968a0d",
+      "requires_context": false
+    },
+    {
+      "id": "ja-multiple_choice-20",
+      "language": "ja",
+      "kind": "multiple_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/ja-multiple_choice-20.png",
+      "sha256": "7d57bec69e5d46ce6c1fc9fe754cc9e607e5e41555463b24fd4bb9c2a872bdf2",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-01",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-01.png",
+      "sha256": "db9839e4bb621b038ced1f4c515cd5055e4caf2ee3afd84e3e9e184cb7b8848f",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-02",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-02.png",
+      "sha256": "2e8e213c29f3edb216974f137cb7158f3fb6fe7a8f873940bdf13fc529b1e672",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-03",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-03.png",
+      "sha256": "633cc9773fb0f1ec8168b01e474686acc03eb4bab21b5146240a7e7b3ff9787a",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-04",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-04.png",
+      "sha256": "57fca5d705730175075dc74ae91f15b536a9ed6a3435677213ac5d053b157667",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-05",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-05.png",
+      "sha256": "28d712d2bcce170b895b140e11f7ee8dab63837ed4ad6b6b297e2820b1c4ea06",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-06",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-06.png",
+      "sha256": "3c30aea7401d382703b925de40cbb711563d9daac92cb05428fd3ad3b1200bc6",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-07",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-07.png",
+      "sha256": "f288d0d7245dca01b33f6d5c934541bd9fc03a43d7f1022da61175179de19951",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-08",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-08.png",
+      "sha256": "f78a7fdfe7924b141f7385ca0fec4c1b6f78891e8195b37b0eb1a214d1685a03",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-09",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-09.png",
+      "sha256": "b3d194bd387f495a6ec14ef0a2b0e2b7d582bc61f947a9f8447a5eb2ffaa2016",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-10",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-10.png",
+      "sha256": "7225d89f4d62b454393e3f562a48261d5e1f7c970468599087ccc7e1e2a311be",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-11",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-11.png",
+      "sha256": "271db4e835ca449328c01f210758e00a142de250e621058ff9a51cdbc95cb3ca",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-12",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-12.png",
+      "sha256": "ecc72d2124988182db0edd0a088291a45a72255c4924a1f7237a7378a643ccdc",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-13",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-13.png",
+      "sha256": "c1c66db8e39c1a2a050a64b5e7108e8ac58f4aa5fcf2f965718e39f337092fa5",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-14",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-14.png",
+      "sha256": "9190a9daa29fcc706a92d15bc48ea5db3032cd94df1f561df19798dfad419379",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-15",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-15.png",
+      "sha256": "0f3e8c91f1dea81d30f96b79f03dc6ab4957ce15b72ae1509466a4d4887f2f9b",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-16",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-16.png",
+      "sha256": "766815fb82e07fb074485148860a785441e4993800dea9b266fe2bd9e9b4f7cf",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-17",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/ja-ordering-17.png",
+      "sha256": "bf0787f389f29fa1c6904a22ea9c7d2978ece4eb1a6dfe6422c34f425bcc6732",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-18",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/ja-ordering-18.png",
+      "sha256": "041672e10643c66373136304c159000778e0da04a786bfc2d17b170feaf3021a",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-19",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/ja-ordering-19.png",
+      "sha256": "a38afc0918dc39f9a9d88dd3547e95bfcc39e40f66a1a6143b9a404c788154b8",
+      "requires_context": false
+    },
+    {
+      "id": "ja-ordering-20",
+      "language": "ja",
+      "kind": "ordering",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/ja-ordering-20.png",
+      "sha256": "d919aa1f9d4efa48b18c0f434ff7775f405a4063a5db78431b7a7f5e7313899a",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-01",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "10"
+      ],
+      "image": "images/ja-short_fill-01.png",
+      "sha256": "d9fb484bce7e8b45d7e276ee3e78d20c10e1e918f438e608b3c77fd7a43ac35e",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-02",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "13"
+      ],
+      "image": "images/ja-short_fill-02.png",
+      "sha256": "accfcb12690bf9d53e9d3207599b267d47d7d1caef7b4c4226364d0a4956a848",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-03",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "16"
+      ],
+      "image": "images/ja-short_fill-03.png",
+      "sha256": "5ab30eb4feba6e21d736e26bffc68cdbbfa75f8250263729fb5357a3d9eb2ea7",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-04",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "19"
+      ],
+      "image": "images/ja-short_fill-04.png",
+      "sha256": "2092d2a4865197cfa44c480674eabbe401ec6798759fe6630c47df0f8881d610",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-05",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "22"
+      ],
+      "image": "images/ja-short_fill-05.png",
+      "sha256": "47b89af11088457d4a86ee1de2ffcac7250d8d69d65a2e129a231a277dded0b6",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-06",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "25"
+      ],
+      "image": "images/ja-short_fill-06.png",
+      "sha256": "5677d7b80ed8d164151583efc3064bf166d97a95c5687bbbd629552d7f2d0b4d",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-07",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "28"
+      ],
+      "image": "images/ja-short_fill-07.png",
+      "sha256": "66c8abb8fbcb350c02deb2a82e049ec65756d194a5c3e05383bddc2b36a75d61",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-08",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "31"
+      ],
+      "image": "images/ja-short_fill-08.png",
+      "sha256": "934a8ac38246545303299100fff5ad7f9fd06dbb9c89d26d37cc4a6779ac8807",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-09",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "34"
+      ],
+      "image": "images/ja-short_fill-09.png",
+      "sha256": "cfc96d3302c2bba7750e1f85e2d88824781dc405e6900f222cfed3e54788d726",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-10",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "37"
+      ],
+      "image": "images/ja-short_fill-10.png",
+      "sha256": "6a074ba362e902f6f8dfcf4427db91929f99b35b746fb2d67c29fa92c7263bac",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-11",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "40"
+      ],
+      "image": "images/ja-short_fill-11.png",
+      "sha256": "90dc2e883f1c704a969e48c7ba2881688c91d7ec46c28b5aeeab00804d670bb1",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-12",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "43"
+      ],
+      "image": "images/ja-short_fill-12.png",
+      "sha256": "ae9c0b034597578a832eccc3387ffde16a383f0c37e9201ea231405656336e44",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-13",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "46"
+      ],
+      "image": "images/ja-short_fill-13.png",
+      "sha256": "ef416f28795e40413cd151027729793dad4b9be03febae57f91dbe062c7c69ce",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-14",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "49"
+      ],
+      "image": "images/ja-short_fill-14.png",
+      "sha256": "001d44194c7edfab9f40a6513205aae19265ef9f658dccfbf74ec677e7d43a5d",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-15",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "review",
+      "accepted_answers": [
+        "52"
+      ],
+      "image": "images/ja-short_fill-15.png",
+      "sha256": "7694e35fc6e7eb958146bf0213fad5d900a1f40785374f158881cb8563d1b825",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-16",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "review",
+      "accepted_answers": [
+        "55"
+      ],
+      "image": "images/ja-short_fill-16.png",
+      "sha256": "98bfa474ba19fe81c02f94876e8bf5d186b7dd4ead53a36e4965c20f38877f17",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-17",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "review",
+      "accepted_answers": [
+        "58"
+      ],
+      "image": "images/ja-short_fill-17.png",
+      "sha256": "120517239ee319490d597b5fd02b3ebe6a5455e14c4943cea34eaef68d8b567a",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-18",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/ja-short_fill-18.png",
+      "sha256": "bd994c7d4a767fe84a0ee1dd54bf239f29de1ae3c0ec20326294c32940336898",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-19",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/ja-short_fill-19.png",
+      "sha256": "e272b49cce45a9555a5089fa3e4914c092415961b09b9c0921b0efd6eaaec9ba",
+      "requires_context": false
+    },
+    {
+      "id": "ja-short_fill-20",
+      "language": "ja",
+      "kind": "short_fill",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/ja-short_fill-20.png",
+      "sha256": "2bce5fcd202e0a1628fc5d73bc10b998f3ef1235fc6a6c6366177a308e03f581",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-01",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-01.png",
+      "sha256": "e073b88677958443bd105cfd211951105b2e930cd897307d21be35ec6365c64d",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-02",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-02.png",
+      "sha256": "68e1319f48919eeef845ff47af4eec89514ee0b0ef2ee07b5e6c86432dfab744",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-03",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-03.png",
+      "sha256": "c86d0f4385e1e149f3696da53796a2de2ca96db1055e8e7dfc1f7c20a6615116",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-04",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-04.png",
+      "sha256": "f7ba171b98bb0a10ec1c046737c41defa7bb9aceb2194fabc2745a9dfd9fb54b",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-05",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-05.png",
+      "sha256": "8d22ab20a0596d324a210659f09e1614e635aec5a924934305c2c6ffb5c6ed69",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-06",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-06.png",
+      "sha256": "ff8539d3e6f0577978812ceba8e642ae5fbaf1480336a80b63df5ffd303a43fb",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-07",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-07.png",
+      "sha256": "fdadd903ac3d2a2766e9a91ef26e6540f706177292feafdf7b54d19321adcad6",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-08",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-08.png",
+      "sha256": "168d71b6dd22ba670651596396175cb0f8411b3bc1ac69501cf38d0ac98148dc",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-09",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-09.png",
+      "sha256": "4ba31498d08a11140d18c5acfbe2abd68662fdb78256a5fc5a817970e3360dc0",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-10",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-10.png",
+      "sha256": "30a3642244c67b983487d697d8ede491f55ddd9ec6983501f3d651305efa2e20",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-11",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-11.png",
+      "sha256": "90207f34cf6891e3f1d1eacbb3a3b1905b3fe34971314a4afd61352d5625586d",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-12",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-12.png",
+      "sha256": "367f708c2c65b30dc1fd61785a216eea3ed0457d97138ca92d4a93eb9b96830c",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-13",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-13.png",
+      "sha256": "814ee3d10e71df66b2aeb8cdf5f7ffb20a572435023b6567d734083907b33992",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-14",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-14.png",
+      "sha256": "8dff3b9cf25805e2755c989ec5a616bbfc91920badfd9a47220f1c6664fc2d39",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-15",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-15.png",
+      "sha256": "59621538ba888eb91f4fdd4d847970661c8d51f274b51b5f00319d07ba05390e",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-16",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-16.png",
+      "sha256": "8b4a1556d019c5458df7cdfe699b15a019f9af0656d3bb627d5568f1e17bfbe0",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-17",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B"
+      ],
+      "image": "images/en-single_choice-17.png",
+      "sha256": "0ab0b31ef5facce44f2117df4707ec1fa77df0bc2c19ddfa77d98f13188caa33",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-18",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/en-single_choice-18.png",
+      "sha256": "951a114dac18a22c5dc5f3b8c3ecba019a4a663005ebb5d5e42ce039e6c5dcd2",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-19",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/en-single_choice-19.png",
+      "sha256": "1a47e73258f2ce31e7882f339bccc274baf80debc9fb65faaf8034f48d6aca97",
+      "requires_context": false
+    },
+    {
+      "id": "en-single_choice-20",
+      "language": "en",
+      "kind": "single_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/en-single_choice-20.png",
+      "sha256": "2011077c714566f536a82226c7fecf66249ec78c8187b437a695da33867dfc0f",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-01",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-01.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-02",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-02.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-03",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-03.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-04",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-04.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-05",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-05.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-06",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-06.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-07",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-07.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-08",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-08.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-09",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-09.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-10",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-10.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-11",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-11.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-12",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-12.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-13",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-13.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-14",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-14.png",
+      "sha256": "f7d34b9da498254f2f98d734134ffcf9b496d9528fb11a3949291f6362e4019c",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-15",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-15.png",
+      "sha256": "c19c38d62d4ab6d6b4b809a272c9b86fa6292a7ff073c2415d240ad3700a8b95",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-16",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-16.png",
+      "sha256": "c19c38d62d4ab6d6b4b809a272c9b86fa6292a7ff073c2415d240ad3700a8b95",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-17",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "review",
+      "accepted_answers": [
+        "A, C",
+        "A,C"
+      ],
+      "image": "images/en-multiple_choice-17.png",
+      "sha256": "c19c38d62d4ab6d6b4b809a272c9b86fa6292a7ff073c2415d240ad3700a8b95",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-18",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/en-multiple_choice-18.png",
+      "sha256": "fe0f0f5b614a7dd52612da5c0e0fd283b2dfed9f073696481ffca861c0af24b0",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-19",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/en-multiple_choice-19.png",
+      "sha256": "e3c31416af5930c5e3ae6d1cf30963a569ab01ff68bb7b4b0dc6a5872d14a372",
+      "requires_context": false
+    },
+    {
+      "id": "en-multiple_choice-20",
+      "language": "en",
+      "kind": "multiple_choice",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/en-multiple_choice-20.png",
+      "sha256": "fe0f0f5b614a7dd52612da5c0e0fd283b2dfed9f073696481ffca861c0af24b0",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-01",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-01.png",
+      "sha256": "0f104860e91beaa32909a99d414d98c63958a2d4bc83e5e6b553d191c7b5df78",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-02",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-02.png",
+      "sha256": "1944037763193ca5d3a881166a1290853ab82bdf98b34eab505ed0651d44d8c4",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-03",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-03.png",
+      "sha256": "8144296c4770e3a5dc6393ce982789e5845ef4f2e559f0c3b8b9aa3e1a83b080",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-04",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-04.png",
+      "sha256": "63317c690117ac319b226dd57022c4d2a700c01c460413b569e9266dfe3eaabc",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-05",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-05.png",
+      "sha256": "20d7cc23d08954f140b58e9851c2f3990eeaafae49016a008d9206d56fca789d",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-06",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-06.png",
+      "sha256": "cda9362e4339f02ddefe2a55b0d09334f6e5acf78b4d8f65bc84c59451409c39",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-07",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-07.png",
+      "sha256": "a090d7e8bd32da3655d4b1b81f227bd68151aefc35f89f3fa829063a6eb65347",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-08",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-08.png",
+      "sha256": "b92a0e578b3ea98d015657a9da6a785522f2b2f10b6e219d005d3f52b18f4a34",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-09",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-09.png",
+      "sha256": "1e0f10f6e1b8fa38f48a0e07fed5b019a992b5136a93e3e0da00960a04795999",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-10",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-10.png",
+      "sha256": "d9b0965a650a841faf33e15d18cbd08fe5cff12fa0eccf266e588d8cb0f5e084",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-11",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-11.png",
+      "sha256": "b1ce5b0f0cbc922620a1c9b15a046f2a961989fbef6b6b4f66b9f951bda7d396",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-12",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-12.png",
+      "sha256": "0b06f4730c3a4133872193c0aaf9f997822935098ea913f32035c7c356abbe9e",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-13",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-13.png",
+      "sha256": "3078483ed7c4a1a12385c81c86e2f6d031f1e95530f84e73ac64e5ec29ffda62",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-14",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-14.png",
+      "sha256": "2211c833cb88491513cc4e675cb3a17fd87dc57097a59546f5199ca75b45ac9e",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-15",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-15.png",
+      "sha256": "7cdca6ee704f2dd05d6bad87bf91b0e5857ea1fe495ba63babd84f747a11d65b",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-16",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-16.png",
+      "sha256": "aec79919366277de469b5377f0d78565c7ffc4fc69daa4ff29b17293de4878ec",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-17",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "review",
+      "accepted_answers": [
+        "B-D-A-C",
+        "B, D, A, C"
+      ],
+      "image": "images/en-ordering-17.png",
+      "sha256": "b6bbb1d5d85311f570f3cdae98c0ad5fcb1406af5444286fe9f156660d3d4c50",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-18",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/en-ordering-18.png",
+      "sha256": "5973fab38f1ad4360c4f26db249a6c8892c983e13c26b85417b4bbcba18471f2",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-19",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/en-ordering-19.png",
+      "sha256": "e475e55ace0a9cbb077f870a19648c2dc54d901f163ba2eff54825c35a3f2a08",
+      "requires_context": false
+    },
+    {
+      "id": "en-ordering-20",
+      "language": "en",
+      "kind": "ordering",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/en-ordering-20.png",
+      "sha256": "f9907c559a63093be38f6be4b046b78104147a052d55087bfb84817b375e7eda",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-01",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "10"
+      ],
+      "image": "images/en-short_fill-01.png",
+      "sha256": "09fb19fc8afd41353b58a374575268c4f92d8371d4be2061926220b8fb90c727",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-02",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "13"
+      ],
+      "image": "images/en-short_fill-02.png",
+      "sha256": "a7891fa4b43e23655a14425a425462f45c9456f0382471e6b911aff764e2ef90",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-03",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "16"
+      ],
+      "image": "images/en-short_fill-03.png",
+      "sha256": "15a11c4cd4ccbe4f7c817540ac9430b307de57b64a2c1bad4b261649f83e4650",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-04",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "19"
+      ],
+      "image": "images/en-short_fill-04.png",
+      "sha256": "c9e23b5d95a19be039c32f8f8f10a51cb511f6b27926e08e5c98a6cdf77bed86",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-05",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "22"
+      ],
+      "image": "images/en-short_fill-05.png",
+      "sha256": "abaa7752740fa0c01ca63fdaba8cd6401c0cdc813df08e055d6925d69b760f9e",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-06",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "25"
+      ],
+      "image": "images/en-short_fill-06.png",
+      "sha256": "3b22f49ed8d1225d408edd52c7db5c5786c274808f8d031c8d2f217e1acfb798",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-07",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "28"
+      ],
+      "image": "images/en-short_fill-07.png",
+      "sha256": "f5c3ac7c3f5d42f004c97d305b48da42e1270fe9fbe2cbf9f7398a97f5489ec0",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-08",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "31"
+      ],
+      "image": "images/en-short_fill-08.png",
+      "sha256": "6fa5d95749eb35c56e2ffd73f492f03afec1e99fd2d7127df97228206385e6d0",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-09",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "34"
+      ],
+      "image": "images/en-short_fill-09.png",
+      "sha256": "324ddb3295a6693cb9b95c903f699549324d8eb50bcdbfdd26d3f8c7f9b003e3",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-10",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "37"
+      ],
+      "image": "images/en-short_fill-10.png",
+      "sha256": "c9d8a899c1a05655a6c8237e8884295c80547678e326bc19cc0cd1870fcd6656",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-11",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "40"
+      ],
+      "image": "images/en-short_fill-11.png",
+      "sha256": "19caa0ea27a95ff1314165c3eda24b6691de85e19c748e1d7cd4cfc484ea5136",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-12",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "43"
+      ],
+      "image": "images/en-short_fill-12.png",
+      "sha256": "e3b4fd839feb12bf4ca579d9fb496f5e3cc72dfacf241bfbc5eed004e7ed68dd",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-13",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "46"
+      ],
+      "image": "images/en-short_fill-13.png",
+      "sha256": "02cc7490cf7af8c3b75ad824adddec3e430378a53188a016aef9df660140492b",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-14",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "ready",
+      "accepted_answers": [
+        "49"
+      ],
+      "image": "images/en-short_fill-14.png",
+      "sha256": "18c1b49deb27048e0552e9f13aa052c336e2d6105799eefd6a448b36d56eb824",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-15",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "review",
+      "accepted_answers": [
+        "52"
+      ],
+      "image": "images/en-short_fill-15.png",
+      "sha256": "b914fe0aa3b7b70ee6764d0006ae3fac88acb28a4fc9c45ba2b794b0e9ec4f9c",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-16",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "review",
+      "accepted_answers": [
+        "55"
+      ],
+      "image": "images/en-short_fill-16.png",
+      "sha256": "30d49f37c0c29d31bc49e41af6ecf90e116c69f84d8d7bde2a9b6b295014fa5e",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-17",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "review",
+      "accepted_answers": [
+        "58"
+      ],
+      "image": "images/en-short_fill-17.png",
+      "sha256": "c578cf6af913f3b41c62ff04483cf9206172a5c572bfc115ec74f7e177d62ae5",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-18",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/en-short_fill-18.png",
+      "sha256": "2f7570584ad280808d921fa53bf29726042fe93f3e67d29429fb5005db074d64",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-19",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/en-short_fill-19.png",
+      "sha256": "2f99e83ed4e4a85568e601511112bbf938049231a4600e8c363b557901a538c1",
+      "requires_context": false
+    },
+    {
+      "id": "en-short_fill-20",
+      "language": "en",
+      "kind": "short_fill",
+      "expected_state": "retake",
+      "accepted_answers": [],
+      "image": "images/en-short_fill-20.png",
+      "sha256": "0ced7e1ac1ab747cfa91d34b978a4dc6a5c7fae3071372e0665c5dc4e41d919d",
+      "requires_context": false
+    }
+  ]
+}

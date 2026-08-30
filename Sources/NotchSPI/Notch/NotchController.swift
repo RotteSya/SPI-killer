@@ -29,10 +29,19 @@ final class NotchController: NSObject {
     private var onboardingWindow: NSWindow?
     private var observers: [NSObjectProtocol] = []
     private var observedPersonalityScope: PersonalitySessionScope?
+    private var currentCaptureID: UUID?
+    private var telemetryStartedCaptureIDs = Set<UUID>()
+    private var telemetryCompletedCaptureIDs = Set<UUID>()
 
     private let expandedWidth: CGFloat = 600
 
     private struct RunSnapshot {
+        let captureID: UUID
+        let trigger: String
+        let resultProtocol: String?
+        let configRevision: String
+        let experimentVariant: String
+        let telemetryEnabled: Bool
         let mode: String
         let depth: String
         let personaID: String
@@ -77,6 +86,9 @@ final class NotchController: NSObject {
     override init() {
         panel = NotchPanel(contentRect: .zero)
         super.init()
+        ClientConfigService.shared.refresh()
+        ProductTelemetry.shared.flush()
+        showReliabilityNoticeIfNeeded()
         refreshCLILabel()
         model.statusText = L10n.statusReady
         model.depthLabel = L10n.depthLabel(Settings.shared.depth)
@@ -91,8 +103,12 @@ final class NotchController: NSObject {
             onToggleReasoning: { [weak self] in
                 guard let self else { return }
                 self.model.reasoningRevealed.toggle()
+                if self.model.reasoningRevealed, let captureID = self.currentCaptureID {
+                    self.recordTelemetry(name: "answer_action", captureID: captureID, action: "reveal_reasoning")
+                }
                 self.resizeToFit() // the height spring glides the fold/unfold
             },
+            onCopyAnswer: { [weak self] in _ = self?.copyCurrentAnswer(requireAutoCopy: false) },
             onStopAuto: { [weak self] in self?.stopAutoSession(.stopButton) }
         )
         view.autoresizingMask = [.width, .height]
@@ -154,7 +170,12 @@ final class NotchController: NSObject {
         refreshCLILabel()
         refreshModeLabels()
         model.depthLabel = L10n.depthLabel(Settings.shared.depth)
-        if !running { model.statusText = L10n.statusReady }
+        if !running {
+            if model.resultState == .review { model.statusText = objectiveReviewMessage(model.resultReason) }
+            else if model.resultState == .retake { model.statusText = objectiveRetakeMessage(model.resultReason) }
+            else if model.status == .idle, !model.answer.isEmpty { model.statusText = L10n.statusDone }
+            else { model.statusText = model.status == .error ? L10n.statusError : L10n.statusReady }
+        }
     }
 
     private func refreshAppearance() {
@@ -703,10 +724,19 @@ final class NotchController: NSObject {
         scheduleCollapse(after: delay)
     }
 
-    private func makeRunSnapshot(mode: String) -> RunSnapshot {
+    private func makeRunSnapshot(mode: String, trigger: String? = nil) -> RunSnapshot {
         let settings = Settings.shared
         let provider = settings.activeProvider
+        let remote = ClientConfigService.shared.current
+        let resultProtocol = mode == "tutor" && settings.depth != "hint"
+            && remote.objectiveResultV1.protocol == "objective_v1" ? "objective_v1" : nil
         return RunSnapshot(
+            captureID: UUID(),
+            trigger: trigger ?? (mode == "personality" ? "personality_hotkey" : "capture_hotkey"),
+            resultProtocol: resultProtocol,
+            configRevision: remote.revision,
+            experimentVariant: remote.objectiveResultV1.variant,
+            telemetryEnabled: ProductTelemetry.shared.sharingEnabled && remote.telemetry.enabled,
             mode: mode,
             depth: settings.depth,
             personaID: PersonaStore.shared.activeID ?? "unsaved-persona",
@@ -784,6 +814,7 @@ final class NotchController: NSObject {
         autoEngine.start(config: .init(maxQuestions: Settings.shared.autoModeMaxQuestions))
         model.autoActive = true
         model.autoProgress = "0/\(autoEngine.config.maxQuestions)"
+        recordTelemetry(name: "auto_session_started", captureID: nil, trigger: "auto")
         #if DEBUG
         print("[NotchSPI] auto: locked to \(autoLockedBundleID ?? "none")")
         #endif
@@ -898,6 +929,19 @@ final class NotchController: NSObject {
         #endif
         model.autoActive = false
         model.autoProgress = ""
+        let stopCode: String
+        switch reason {
+        case .userToggled: stopCode = "user_toggled"
+        case .captureHotkey: stopCode = "capture_hotkey"
+        case .stopButton: stopCode = "stop_button"
+        case .questionCap: stopCode = "question_cap"
+        case .quotaExhausted: stopCode = "quota_exhausted"
+        case .runFailed: stopCode = "run_failed"
+        case .idleTimeout: stopCode = "idle_timeout"
+        case .hashFailures: stopCode = "hash_failures"
+        }
+        recordTelemetry(name: "auto_session_ended", captureID: nil,
+                        trigger: "auto", errorCode: stopCode)
         if !running {
             switch reason {
             case .userToggled, .captureHotkey, .stopButton:
@@ -922,6 +966,10 @@ final class NotchController: NSObject {
     /// capture, so a question whose passage has scrolled away still gets its context.
     private func runTapped(mode: String, withContext: Bool = false) {
         guard !running else { return }
+        if let prior = currentCaptureID,
+           model.resultState == .retake || model.parserPath == .none && model.status == .error {
+            recordTelemetry(name: "answer_action", captureID: prior, action: "retry")
+        }
         // The hotkey selects the mode for this capture, so the user never switches modes by hand:
         // ⌘⇧1/⌘⇧2 → tutor, ⌘⇧9 → personality. Set it first so every downstream read agrees.
         if Settings.shared.mode != mode {
@@ -964,7 +1012,10 @@ final class NotchController: NSObject {
 
         // Freeze every request input before the Task's first await. From here on, settings edits
         // may change the NEXT capture only; they cannot create a mixed prompt/channel/target run.
-        let snapshot = makeRunSnapshot(mode: mode)
+        let trigger = model.autoActive ? "auto"
+            : withContext ? "context_hotkey"
+            : mode == "personality" ? "personality_hotkey" : "capture_hotkey"
+        let snapshot = makeRunSnapshot(mode: mode, trigger: trigger)
         let sessionToken: PersonalitySessionToken?
         if mode == "personality" {
             let token = personalitySession.begin(scope: snapshot.personalityScope)
@@ -979,7 +1030,8 @@ final class NotchController: NSObject {
             depth: snapshot.depth,
             personaName: snapshot.personaName,
             personaText: snapshot.personaText,
-            sessionContext: sessionToken?.contextBlock ?? ""
+            sessionContext: sessionToken?.contextBlock ?? "",
+            objectiveProtocolEnabled: snapshot.resultProtocol == "objective_v1"
         )
         // Context runs keep the tutor system prompt (depth contract, FINAL line) and swap only
         // the task line, which explains the two-image order to the model.
@@ -993,6 +1045,10 @@ final class NotchController: NSObject {
         pinned = true
         if !visible { visible = true; panel.orderFrontRegardless() }
         model.answer = ""
+        model.resultState = nil
+        model.resultReason = nil
+        model.parserPath = .none
+        currentCaptureID = snapshot.captureID
         // Freeze this answer's presentation inputs: cycling the depth mid-stream must not
         // restyle an answer that was captured under another contract.
         model.answerDepth = snapshot.depth
@@ -1003,9 +1059,11 @@ final class NotchController: NSObject {
         setExpanded(true) // expands to a small empty panel; grows as the answer streams
 
         Task { @MainActor in
+            let runStartedAt = Date()
             // The screenshot takes a few hundred ms — use that window to warm the network path
             // (DNS + TLS + serverless cold start + DB wake for official; vendor TLS for custom
             // key) so the capture POST rides a hot connection. Fire-and-forget.
+            ClientConfigService.shared.refresh()
             switch snapshot.channel {
             case .official: OfficialAPI.warmUp()
             case .customKey: APIKeyRunner.warmUp(endpoint: snapshot.apiEndpoint)
@@ -1078,6 +1136,9 @@ final class NotchController: NSObject {
             #if DEBUG
             let captureStart = Date()
             #endif
+            let captureClock = Date()
+            self.recordCaptureTelemetry(name: "capture_started", snapshot: snapshot,
+                                        contextCount: contextImagePath == nil ? 0 : 1)
             let result: Result<ScreenCapture.Shot, CaptureError>
             if snapshot.captureTarget == .fullScreen {
                 result = await self.captureFullScreenExcludingPanel()
@@ -1087,12 +1148,20 @@ final class NotchController: NSObject {
             #if DEBUG
             print("[NotchSPI] capture took \(Int(Date().timeIntervalSince(captureStart) * 1000))ms")
             #endif
+            let captureMilliseconds = Int(Date().timeIntervalSince(captureClock) * 1_000)
 
             let shot: ScreenCapture.Shot
             switch result {
             case .success(let s):
                 if s.blank {
                     try? FileManager.default.removeItem(atPath: s.path)
+                    self.recordCaptureTelemetry(
+                        name: "capture_completed", snapshot: snapshot,
+                        contextCount: contextImagePath == nil ? 0 : 1,
+                        parserPath: "none", errorCode: "blank_capture",
+                        captureMS: captureMilliseconds,
+                        totalMS: Int(Date().timeIntervalSince(runStartedAt) * 1_000)
+                    )
                     self.finishError(L10n.t(
                         "画面为空，通常是缺少屏幕录制权限。请在「系统设置 → 隐私与安全性 → 屏幕录制」勾选 NotchSPI 并重启应用。",
                         "画面が空です。多くの場合、画面収録の許可がありません。「システム設定→プライバシーとセキュリティ→画面収録」で NotchSPI を有効にして再起動してください。",
@@ -1101,6 +1170,13 @@ final class NotchController: NSObject {
                 }
                 shot = s
             case .failure(let error):
+                self.recordCaptureTelemetry(
+                    name: "capture_completed", snapshot: snapshot,
+                    contextCount: contextImagePath == nil ? 0 : 1,
+                    parserPath: "none", errorCode: "capture_failed",
+                    captureMS: captureMilliseconds,
+                    totalMS: Int(Date().timeIntervalSince(runStartedAt) * 1_000)
+                )
                 self.finishError(Self.message(for: error))
                 return
             }
@@ -1113,13 +1189,19 @@ final class NotchController: NSObject {
             // moment the FINAL marker lands the line flips to 作答中… — the status text tells
             // the same story the de-emphasized text + answer card are telling.
             let briefRun = snapshot.mode != "personality" && snapshot.depth == "brief"
+            var objectiveFilter = ObjectiveResultStreamFilter()
+            var firstTokenAt: Date?
+            var completionRecorded = false
             // Shared by both channels so CLI mode and direct-API mode render identically.
             let onDelta: (String) -> Void = { [weak self] delta in
                 // A run the watchdog gave up on may still be streaming; its output must not land
                 // in the panel the user is now watching.
                 guard let self, self.runGeneration == generation else { return }
                 if let personalityRun { personalityRun.append(delta, to: self.model) }
-                else { self.model.answer += delta }
+                else if snapshot.resultProtocol == "objective_v1" {
+                    self.model.answer = objectiveFilter.append(delta)
+                } else { self.model.answer += delta }
+                if firstTokenAt == nil { firstTokenAt = Date() }
                 self.model.status = .streaming
                 self.model.statusText = briefRun
                     ? (AnswerComposer.hasMarker(self.model.answer) ? L10n.statusAnswering : L10n.statusReasoning)
@@ -1130,6 +1212,31 @@ final class NotchController: NSObject {
                 // Same guard as onDelta: a timed-out run must not reset `running` or overwrite the
                 // status of the capture the user started after it.
                 guard let self, self.runGeneration == generation else { return }
+                let composition: ObjectiveResultComposition?
+                if snapshot.resultProtocol == "objective_v1", snapshot.mode == "tutor" {
+                    let parsed = objectiveFilter.finish()
+                    self.model.answer = parsed.visibleText
+                    self.model.resultState = parsed.state
+                    self.model.resultReason = parsed.result?.reason
+                    self.model.parserPath = parsed.parserPath
+                    composition = parsed
+                } else {
+                    composition = nil
+                }
+                if !completionRecorded {
+                    completionRecorded = true
+                    self.recordCaptureTelemetry(
+                        name: "capture_completed", snapshot: snapshot,
+                        contextCount: contextImagePath == nil ? 0 : 1,
+                        questionKind: composition?.result?.kind.rawValue,
+                        resultState: composition?.state?.rawValue,
+                        parserPath: composition?.parserPath.rawValue ?? (ok ? "legacy" : "none"),
+                        errorCode: ok ? nil : "transport_error",
+                        captureMS: captureMilliseconds,
+                        firstTokenMS: firstTokenAt.map { Int($0.timeIntervalSince(runStartedAt) * 1_000) },
+                        totalMS: Int(Date().timeIntervalSince(runStartedAt) * 1_000)
+                    )
+                }
                 if !ok, case .cli = snapshot.channel {
                     // The failure may mean the CLI was uninstalled or logged out since the
                     // cached probe — drop the cache so the next press re-checks.
@@ -1159,7 +1266,14 @@ final class NotchController: NSObject {
                     }
                     self.model.statusText = outcome.statusText(suffixes: suffixes)
                 } else {
-                    if self.model.answer.isEmpty {
+                    if snapshot.resultProtocol == "objective_v1",
+                       composition?.parserPath == ObjectiveParserPath.none {
+                        self.model.answer = ""
+                        self.model.status = .error
+                        self.model.statusText = L10n.t(
+                            "没有得到可用答案，请重新截图。", "利用可能な回答がありません。再度キャプチャしてください。",
+                            "No usable answer was returned. Capture the question again.")
+                    } else if self.model.answer.isEmpty {
                         self.model.answer = ok
                             ? L10n.noOutput
                             : L10n.t("出错了：", "エラー：", "Something went wrong:") + "\n\n```\n\(String(stderr.suffix(600)))\n```"
@@ -1167,7 +1281,15 @@ final class NotchController: NSObject {
                     } else {
                         self.model.status = .idle
                     }
-                    self.model.statusText = ok ? L10n.statusDone : L10n.statusError
+                    if !(snapshot.resultProtocol == "objective_v1"
+                         && composition?.parserPath == ObjectiveParserPath.none) {
+                        self.model.statusText = ok ? L10n.statusDone : L10n.statusError
+                    }
+                    if composition?.state == .review {
+                        self.model.statusText = self.objectiveReviewMessage(composition?.result?.reason)
+                    } else if composition?.state == .retake {
+                        self.model.statusText = self.objectiveRetakeMessage(composition?.result?.reason)
+                    }
                     if ok, contextImagePath != nil {
                         self.model.statusText += " · " + L10n.statusContextAttached
                     }
@@ -1226,6 +1348,7 @@ final class NotchController: NSObject {
             case .official:
                 OfficialAPI.run(
                     imagePaths: imagePaths, prompt: prompt,
+                    resultProtocol: snapshot.resultProtocol, captureID: snapshot.captureID,
                     onDelta: onDelta, onDone: onDone
                 )
             }
@@ -1281,11 +1404,110 @@ final class NotchController: NSObject {
     /// answer card (personality lists, hints, error text — `clipboardAnswer` returns nil).
     @discardableResult
     private func autoCopyAnswerIfEnabled() -> Bool {
-        guard Appearance.autoCopyAnswer, model.mode != "personality",
+        copyCurrentAnswer(requireAutoCopy: true)
+    }
+
+    @discardableResult
+    private func copyCurrentAnswer(requireAutoCopy: Bool) -> Bool {
+        guard (!requireAutoCopy || Appearance.autoCopyAnswer), model.mode != "personality",
+              model.resultState != .retake,
               let answer = AnswerComposer.clipboardAnswer(model.answer) else { return false }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(answer, forType: .string)
+        if let captureID = currentCaptureID {
+            recordTelemetry(name: "answer_action", captureID: captureID, action: "copy")
+        }
         return true
+    }
+
+    private func objectiveRetakeMessage(_ reason: ObjectiveResultReason?) -> String {
+        let shortcut = Settings.displayString(Settings.shared.captureCombo)
+        switch reason {
+        case .cropped:
+            return L10n.t("题目被裁切，请按 \(shortcut) 重新截图。", "問題が切れています。\(shortcut) でもう一度キャプチャしてください。", "The question is cropped. Press \(shortcut) to capture it again.")
+        case .unreadable:
+            return L10n.t("题目无法辨认，请按 \(shortcut) 重新截图。", "問題を読み取れません。\(shortcut) でもう一度キャプチャしてください。", "The question is unreadable. Press \(shortcut) to capture it again.")
+        default:
+            return L10n.t("缺少关键上下文，请补全画面后按 \(shortcut) 重试。", "重要な文脈が不足しています。画面を含めて \(shortcut) で再試行してください。", "Critical context is missing. Include it and press \(shortcut) again.")
+        }
+    }
+
+    private func objectiveReviewMessage(_ reason: ObjectiveResultReason?) -> String {
+        switch reason {
+        case .ambiguousQuestion:
+            return L10n.t("题意存在歧义，建议核对", "問題文が曖昧です。要確認", "The question is ambiguous—check the answer")
+        case .ambiguousOptions:
+            return L10n.t("选项存在歧义，建议核对", "選択肢が曖昧です。要確認", "The options are ambiguous—check the answer")
+        case .missingContext:
+            return L10n.t("上下文不完整，建议核对", "文脈が不足しています。要確認", "Context is incomplete—check the answer")
+        case .unsupported:
+            return L10n.t("此题型需人工核对", "この形式は手動確認が必要です", "This question type needs a manual check")
+        default:
+            return L10n.t("建议核对", "要確認", "Check this answer")
+        }
+    }
+
+    private func showReliabilityNoticeIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard Settings.shared.onboardingDone,
+              defaults.string(forKey: ProductTelemetry.noticeKey) != OfficialAPI.appVersion else { return }
+        defaults.set(OfficialAPI.appVersion, forKey: ProductTelemetry.noticeKey)
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = L10n.t("匿名可靠性数据", "匿名の信頼性データ", "Anonymous reliability data")
+            alert.informativeText = L10n.t(
+                "此版本会默认共享固定类型的完成状态、解析路径和耗时，用于发现错误答案与流式协议问题；不包含截图、题目或答案。可随时在设置 → 通用中关闭。",
+                "このバージョンでは、完了状態・解析経路・所要時間を既定で共有し、回答やストリームの問題を検出します。画像・問題・回答は含みません。設定→一般でいつでも停止できます。",
+                "This version shares fixed completion states, parser paths, and timings by default to detect answer and streaming issues. It never includes screenshots, questions, or answers, and can be disabled in Settings → General.")
+            alert.addButton(withTitle: L10n.t("知道了", "了解", "OK"))
+            alert.runModal()
+        }
+    }
+
+    private func recordTelemetry(name: String, captureID: UUID?, trigger: String? = nil,
+                                 action: String? = nil,
+                                 errorCode: String? = nil) {
+        if name == "capture_completed" {
+            guard let captureID, telemetryStartedCaptureIDs.contains(captureID),
+                  telemetryCompletedCaptureIDs.insert(captureID).inserted else { return }
+        }
+        let config = ClientConfigService.shared.current
+        ProductTelemetry.shared.record(.init(
+            eventID: UUID(), captureID: captureID, occurredAt: Date(), eventName: name,
+            trigger: trigger, channel: nil, mode: nil, depth: nil, contextCount: nil,
+            questionKind: nil, resultState: nil, parserPath: nil, errorCode: errorCode,
+            action: action, captureMs: nil, firstTokenMs: nil, totalMs: nil,
+            configRevision: config.revision, variant: config.objectiveResultV1.variant
+        ))
+    }
+
+    private func recordCaptureTelemetry(
+        name: String, snapshot: RunSnapshot, contextCount: Int,
+        questionKind: String? = nil, resultState: String? = nil, parserPath: String? = nil,
+        errorCode: String? = nil, captureMS: Int? = nil, firstTokenMS: Int? = nil,
+        totalMS: Int? = nil
+    ) {
+        guard snapshot.telemetryEnabled else { return }
+        if name == "capture_started" {
+            guard telemetryStartedCaptureIDs.insert(snapshot.captureID).inserted else { return }
+        } else if name == "capture_completed" {
+            guard telemetryStartedCaptureIDs.contains(snapshot.captureID),
+                  telemetryCompletedCaptureIDs.insert(snapshot.captureID).inserted else { return }
+        }
+        let channel: String
+        switch snapshot.channel {
+        case .official: channel = "official"
+        case .customKey: channel = "custom_key"
+        case .cli: channel = "cli"
+        }
+        ProductTelemetry.shared.record(.init(
+            eventID: UUID(), captureID: snapshot.captureID, occurredAt: Date(), eventName: name,
+            trigger: snapshot.trigger, channel: channel, mode: snapshot.mode, depth: snapshot.depth,
+            contextCount: contextCount, questionKind: questionKind, resultState: resultState,
+            parserPath: parserPath, errorCode: errorCode, action: nil, captureMs: captureMS,
+            firstTokenMs: firstTokenMS, totalMs: totalMS, configRevision: snapshot.configRevision,
+            variant: snapshot.experimentVariant
+        ))
     }
 
     /// Hard deadline for one capture, comfortably past the 120 s request timeout.
@@ -1308,6 +1530,8 @@ final class NotchController: NSObject {
             MainActor.assumeIsolated {
                 guard let self, self.running else { return }
                 self.runGeneration &+= 1 // orphan the stuck run's callbacks
+                self.recordTelemetry(name: "capture_completed", captureID: self.currentCaptureID,
+                                     errorCode: "watchdog_timeout")
                 self.finishError(L10n.t(
                     "这次讲题超时了，没有消耗额度。请再按一次快捷键重试。",
                     "今回はタイムアウトしました(質問数は消費されていません)。もう一度ショートカットを押してください。",

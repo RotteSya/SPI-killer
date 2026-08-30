@@ -1,7 +1,10 @@
 import type {
-  Account, DeviceSummary, RegisteredDevice, ReserveResult, Store, TopUpSummary,
+  Account, DeviceSummary, ProductEventInput, ProductEventWriteResult, ProductMetrics,
+  ProductMetricsQuery, RegisteredDevice, ReserveResult, Store, StoredProductEvent,
+  StoredUsageMetric, TopUpSummary,
 } from './db.ts';
 import { hashToken, newToken } from './db.ts';
+import { aggregateProductMetrics } from './telemetry.ts';
 
 // Pure-JS in-memory store. Used as the EPHEMERAL fallback on serverless platforms when no
 // POSTGRES_URL is configured (data vanishes per instance — /healthz reports db:"memory" so a
@@ -29,6 +32,8 @@ export class MemoryStore implements Store {
   private topups: Array<TopUpSummary & { deviceHash: string }> = [];
   private creditedReferences = new Set<string>();
   private counters = new Map<string, number>();
+  private productEvents: StoredProductEvent[] = [];
+  private usageEvents: Array<StoredUsageMetric & { createdAt: string }> = [];
   private nextId = 1;
 
   async registerDevice(input: {
@@ -97,6 +102,12 @@ export class MemoryStore implements Store {
     inputTokens: number;
     outputTokens: number;
     model: string;
+    captureId?: string;
+    resultProtocol?: string;
+    resultState?: string;
+    parserPath?: string;
+    estimatedCostMicros?: number;
+    pricingVersion?: string;
   }): Promise<void> {
     const d = this.devices.get(hashToken(input.token));
     if (!d) return;
@@ -104,6 +115,51 @@ export class MemoryStore implements Store {
     d.totalInputTokens += input.inputTokens;
     d.totalOutputTokens += input.outputTokens;
     d.updatedAt = new Date().toISOString();
+    this.usageEvents.push({
+      captureId: input.captureId ?? null, inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens, questions: input.questions,
+      estimatedCostMicros: input.estimatedCostMicros ?? null, createdAt: new Date().toISOString(),
+    });
+  }
+
+  async recordProductEvents(token: string, events: ProductEventInput[]): Promise<ProductEventWriteResult> {
+    const device = this.devices.get(hashToken(token));
+    if (!device) return { accepted: 0, duplicate: 0 };
+    const known = new Set(this.productEvents.map((event) => event.eventId));
+    let accepted = 0;
+    let duplicate = 0;
+    const receivedAt = new Date().toISOString();
+    for (const event of events) {
+      if (known.has(event.eventId)) { duplicate += 1; continue; }
+      known.add(event.eventId);
+      this.productEvents.push({ ...event, deviceId: device.id, receivedAt });
+      accepted += 1;
+    }
+    if (this.productEvents.length > 10_000) {
+      this.productEvents.splice(0, this.productEvents.length - 10_000);
+    }
+    return { accepted, duplicate };
+  }
+
+  async getProductMetrics(input: ProductMetricsQuery): Promise<ProductMetrics> {
+    const from = Date.parse(input.from);
+    const to = Date.parse(input.to);
+    const events = this.productEvents.filter((event) => {
+      const at = Date.parse(event.receivedAt);
+      return at >= from && at < to;
+    });
+    const usage = this.usageEvents.filter((event) => {
+      const at = Date.parse(event.createdAt);
+      return at >= from && at < to;
+    });
+    return aggregateProductMetrics(events, input, usage);
+  }
+
+  async pruneProductEvents(before: string): Promise<number> {
+    const cutoff = Date.parse(before);
+    const previous = this.productEvents.length;
+    this.productEvents = this.productEvents.filter((event) => Date.parse(event.receivedAt) >= cutoff);
+    return previous - this.productEvents.length;
   }
 
   async releaseReservation(input: { token: string; questions: number }): Promise<number | null> {

@@ -19,7 +19,7 @@ process.env.CAPTURE_CONCURRENCY_PER_TOKEN = '1000';
 const { buildApp } = await import('../src/index.ts');
 
 // Scripted provider whose behavior is flipped per test via `mode`.
-let mode: 'throw' | 'empty' | 'ok' | 'slow' | 'answerThenStall' = 'ok';
+let mode: 'throw' | 'empty' | 'ok' | 'slow' | 'answerThenStall' | 'objectiveReady' | 'objectiveRetake' = 'ok';
 
 /** Comfortably past the route's MIN_BILLABLE_CHARS — a complete answer, not a false start. */
 const LONG_ANSWER = 'x'.repeat(400);
@@ -48,6 +48,10 @@ const provider: Provider = {
       // and closing the connection rather than waiting for the trailing usage frame.
       onDelta(LONG_ANSWER);
       await sleepHonoringAbort(2_000, signal);
+    } else if (mode === 'objectiveReady') {
+      onDelta('work\nFINAL: B\nNSPI_RESULT_V1: {"v":1,"kind":"single_choice","state":"ready","answer":"B","reason":"none"}');
+    } else if (mode === 'objectiveRetake') {
+      onDelta('NSPI_RESULT_V1: {"v":1,"kind":"single_choice","state":"retake","answer":null,"reason":"cropped"}');
     } else if (mode === 'ok') {
       onDelta('hello');
     }
@@ -90,6 +94,16 @@ async function capture(token: string): Promise<string> {
   return res.text();
 }
 
+async function objectiveCapture(token: string): Promise<string> {
+  const res = await fetch(`${base}/v1/captures`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ system: 's', task: 't', image_base64: 'QUJD', image_media_type: 'image/jpeg',
+      result_protocol: 'objective_v1', capture_id: '3e7979c6-20cb-4c12-a23e-ece6eb3aa52d' }),
+  });
+  return res.text();
+}
+
 async function balance(token: string): Promise<{ balance_questions: number; total_questions: number }> {
   const res = await fetch(`${base}/v1/account`, { headers: { authorization: `Bearer ${token}` } });
   return (await res.json()) as { balance_questions: number; total_questions: number };
@@ -128,6 +142,32 @@ test('a normal answer charges exactly one question', async () => {
   const acct = await balance(token);
   assert.equal(acct.balance_questions, 2);
   assert.equal(acct.total_questions, 1);
+});
+
+test('objective ready charges once and objective retake releases the hold', async () => {
+  const token = await register();
+  mode = 'objectiveReady';
+  const ready = await objectiveCapture(token);
+  assert.match(ready, /"questions_charged":1/);
+  assert.equal((await balance(token)).balance_questions, 2);
+
+  mode = 'objectiveRetake';
+  const retake = await objectiveCapture(token);
+  assert.match(retake, /"questions_charged":0/);
+  assert.match(retake, /"balance_questions":2/);
+  const acct = await balance(token);
+  assert.equal(acct.balance_questions, 2);
+  assert.equal(acct.total_questions, 1);
+});
+
+test('objective request with no usable result is released', async () => {
+  const token = await register();
+  mode = 'ok'; // "hello" has neither FINAL nor V1
+  const text = await objectiveCapture(token);
+  assert.match(text, /"questions_charged":0/);
+  const acct = await balance(token);
+  assert.equal(acct.balance_questions, 3);
+  assert.equal(acct.total_questions, 0);
 });
 
 test('a client that hangs up before receiving an answer gets its question back', async () => {

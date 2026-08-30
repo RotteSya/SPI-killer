@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { Config } from './config.ts';
 import type { Store } from './db.ts';
 import type { Provider, CaptureRequest } from './providers/types.ts';
@@ -13,6 +13,8 @@ import { verifyStripeSignature, createCheckoutSession, type StripeEvent } from '
 import { renderLandingPage, resolveSiteLang } from './site.ts';
 import { renderAdminPage } from './admin.ts';
 import { createFixedWindowLimiter, createConcurrencyLimiter, clientIp } from './rateLimit.ts';
+import { composeObjectiveResult, objectiveResultIsBillable } from './objective-result.ts';
+import { estimateModelCostMicros, validateProductEvent } from './telemetry.ts';
 
 export interface AppContext {
   config: Config;
@@ -36,7 +38,10 @@ interface CaptureBody {
   image_media_type?: unknown;
   /** 上下文追问: ordered image list (context first, fresh capture last). Wins over image_base64. */
   images_base64?: unknown;
+  result_protocol?: unknown;
+  capture_id?: unknown;
 }
+interface EventBatchBody { schema_version?: unknown; events?: unknown }
 interface StubTopUpBody {
   device_token?: unknown;
   pack_id?: unknown;
@@ -79,6 +84,13 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'i
  * reasoning tokens) and well below any complete answer this product produces.
  */
 const MIN_BILLABLE_CHARS = 200;
+const MAX_OBJECTIVE_BUFFER_BYTES = 64 * 1024;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function objectiveExperimentBucket(token: string, salt: string): number {
+  const digest = createHmac('sha256', salt).update(token).digest();
+  return digest.readUInt32BE(0) % 10_000;
+}
 
 /** Constant-time compare of a caller-supplied admin token against the configured secret. */
 function adminTokenMatches(provided: string, expected: string): boolean {
@@ -105,6 +117,8 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
   // per-token cap on concurrent captures. Instantiated once so state lives for the process.
   const registerLimiter = createFixedWindowLimiter(config.deviceRegPerHour, 60 * 60 * 1000);
   const captureLimiter = createConcurrencyLimiter(config.captureConcurrencyPerToken);
+  const eventLimiter = createFixedWindowLimiter(config.eventBatchPerMinute, 60 * 1000);
+  let lastEventPruneDay = '';
 
   // Config-at-a-glance for operators: which provider answers, where data lives, how payments
   // are wired. `db: "memory"` on a production deployment means POSTGRES_URL is missing.
@@ -250,6 +264,52 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     });
   });
 
+  app.get('/v1/client-config', async (req, reply) => {
+    const { token } = await requireAccount(req, store);
+    const treatment = config.objectiveResultV1Bps > 0
+      && config.objectiveResultExperimentSalt !== ''
+      && objectiveExperimentBucket(token, config.objectiveResultExperimentSalt) < config.objectiveResultV1Bps;
+    return reply.header('Cache-Control', 'private, max-age=300').send({
+      schema_version: 1,
+      revision: config.clientConfigRevision,
+      objective_result_v1: treatment
+        ? { variant: 'objective_v1', protocol: 'objective_v1', prompt_variant: 'objective_v1' }
+        : { variant: 'control', protocol: null, prompt_variant: 'legacy' },
+      telemetry: { enabled: config.telemetryEnabled, max_batch_size: 50, max_queue_age_days: 7 },
+    });
+  });
+
+  app.post('/v1/events/batch', async (req, reply) => {
+    const { token } = await requireAccount(req, store);
+    if (!eventLimiter.hit(token)) throw new ApiError(429, '事件上传过于频繁', 'rate_limited');
+    const body = (req.body ?? {}) as EventBatchBody;
+    const encodedSize = Buffer.byteLength(JSON.stringify(req.body ?? {}), 'utf8');
+    if (encodedSize > 64 * 1024) throw new ApiError(413, '事件批次过大');
+    if (body.schema_version !== 1 || !Array.isArray(body.events)
+        || body.events.length < 1 || body.events.length > 50) {
+      throw new ApiError(400, '事件批次格式无效');
+    }
+    if (!config.telemetryEnabled) {
+      return reply.code(202).send({ accepted: 0, duplicate: 0, rejected: 0 });
+    }
+    const appVersion = typeof req.headers['x-app-version'] === 'string'
+      ? req.headers['x-app-version'].slice(0, 32) : null;
+    const valid = body.events.flatMap((event) => {
+      const parsed = validateProductEvent(event, appVersion);
+      return parsed ? [parsed] : [];
+    });
+    const result = await store.recordProductEvents(token, valid);
+    const today = new Date().toISOString().slice(0, 10);
+    if (today !== lastEventPruneDay) {
+      lastEventPruneDay = today;
+      const before = new Date(Date.now() - 90 * 86_400_000).toISOString();
+      void store.pruneProductEvents(before).catch((err: unknown) => req.log.error({ err }, 'event prune failed'));
+    }
+    const rejected = body.events.length - valid.length;
+    req.log.info({ count: body.events.length, accepted: result.accepted, rejected }, 'product events');
+    return reply.code(202).send({ accepted: result.accepted, duplicate: result.duplicate, rejected });
+  });
+
   // POST /v1/captures — streamed answer; one successful capture costs one question. Auth.
   //
   // Billing is RESERVE-then-SETTLE. The question is held against the balance in one atomic
@@ -265,6 +325,12 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
       throw new ApiError(503, '答案生成服务暂时不可用，本次未消耗额度', 'upstream_error');
     }
     const body = (req.body ?? {}) as CaptureBody;
+    const resultProtocol = body.result_protocol === undefined ? null : str(body.result_protocol);
+    const captureId = body.capture_id === undefined ? null : str(body.capture_id);
+    if (resultProtocol !== null && resultProtocol !== 'objective_v1') {
+      throw new ApiError(400, 'result_protocol 无效');
+    }
+    if (captureId !== null && !UUID.test(captureId)) throw new ApiError(400, 'capture_id 必须是 UUID');
 
     // Image list: `images_base64` (ordered, context first) wins when present; the legacy
     // single `image_base64` remains the wire shape for plain captures and old clients.
@@ -337,12 +403,34 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     const abort = new AbortController();
     let settled = false;
     let deliveredChars = 0;
+    let objectiveRaw = '';
+    let objectiveBufferOverflow = false;
     let done = false;
     let send: (event: StreamEvent) => void = () => {};
-    const settle = async (inputTokens: number, outputTokens: number): Promise<void> => {
-      await store.settleReservation({ token, questions: 1, inputTokens, outputTokens, model });
+    const settle = async (
+      inputTokens: number, outputTokens: number,
+      resultState?: string, parserPath?: string,
+    ): Promise<void> => {
+      await store.settleReservation({
+        token, questions: 1, inputTokens, outputTokens, model,
+        captureId: captureId ?? undefined,
+        resultProtocol: resultProtocol ?? undefined,
+        resultState, parserPath,
+        estimatedCostMicros: estimateModelCostMicros(
+          config.modelPricingJSON, model, inputTokens, outputTokens,
+        ) ?? estimateModelCostMicros(config.modelPricingJSON, config.model, inputTokens, outputTokens),
+        pricingVersion: config.modelPricingVersion,
+      });
       settled = true;
     };
+    const release = async (): Promise<number> => {
+      const balance = await store.releaseReservation({ token, questions: 1 });
+      settled = true; // reservation is resolved; the historical name means "do not release again"
+      return balance ?? balanceAfterHold + 1;
+    };
+    const objectiveComposition = () => objectiveBufferOverflow
+      ? composeObjectiveResult('', true)
+      : composeObjectiveResult(objectiveRaw, true);
 
     try {
       const rawSend = beginSSE(reply);
@@ -369,13 +457,34 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
         captureReq,
         (text) => {
           deliveredChars += text.length;
+          if (resultProtocol === 'objective_v1' && !objectiveBufferOverflow) {
+            const candidate = objectiveRaw + text;
+            if (Buffer.byteLength(candidate, 'utf8') <= MAX_OBJECTIVE_BUFFER_BYTES) objectiveRaw = candidate;
+            else objectiveBufferOverflow = true;
+          }
           send({ type: 'delta', text });
         },
         abort.signal,
       );
       // A vendor can resolve an HTTP-200 stream with no deltas (empty completion, content-filter
       // block). That is not an answer, so it is not a charge.
-      if (deliveredChars === 0) {
+      if (resultProtocol === 'objective_v1') {
+        const composition = objectiveComposition();
+        if (objectiveResultIsBillable(composition)) {
+          await settle(usage.inputTokens, usage.outputTokens, composition.state ?? undefined, composition.parserPath);
+          send({
+            type: 'usage', input_tokens: usage.inputTokens, output_tokens: usage.outputTokens,
+            questions_charged: 1, balance_questions: balanceAfterHold,
+          });
+        } else {
+          const restored = await release();
+          send({
+            type: 'usage', input_tokens: usage.inputTokens, output_tokens: usage.outputTokens,
+            questions_charged: 0, balance_questions: restored,
+          });
+        }
+        if (!reply.raw.writableEnded && !reply.raw.destroyed) reply.raw.write(SSE_DONE);
+      } else if (deliveredChars === 0) {
         send({
           type: 'error',
           error: { message: '答案生成服务未返回内容，本次未消耗额度，请重试', code: 'upstream_error' },
@@ -395,7 +504,27 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
       // A client that walked away AFTER receiving a usable answer keeps the charge: it was
       // delivered, and refunding it would make `curl --max-time 2` in a loop a free-answer tap.
       // A vendor failure always refunds, so "失败不扣题" still holds for every real failure.
-      if (abort.signal.aborted && deliveredChars >= MIN_BILLABLE_CHARS) {
+      const objective = resultProtocol === 'objective_v1' ? objectiveComposition() : null;
+      if (objective && objectiveResultIsBillable(objective)) {
+        await settle(0, 0, objective.state ?? undefined, objective.parserPath).catch((e: unknown) => {
+          req.log.error({ err: e }, 'settle failed after a delivered objective result; hold will be refunded');
+        });
+        if (settled) {
+          send({ type: 'usage', input_tokens: 0, output_tokens: 0,
+            questions_charged: 1, balance_questions: balanceAfterHold });
+          if (!reply.raw.writableEnded && !reply.raw.destroyed) reply.raw.write(SSE_DONE);
+        }
+      } else if (objective?.parserPath === 'v1' && objective.state === 'retake') {
+        const restored = await release().catch((e: unknown) => {
+          req.log.error({ err: e }, 'release failed after delivered retake result');
+          return balanceAfterHold;
+        });
+        if (settled) {
+          send({ type: 'usage', input_tokens: 0, output_tokens: 0,
+            questions_charged: 0, balance_questions: restored });
+          if (!reply.raw.writableEnded && !reply.raw.destroyed) reply.raw.write(SSE_DONE);
+        }
+      } else if (abort.signal.aborted && resultProtocol === null && deliveredChars >= MIN_BILLABLE_CHARS) {
         // Token counts are unknown on this path (the vendor never reported usage); the question
         // count is what bills, so it stays exact and only the lifetime token stats under-count.
         await settle(0, 0).catch((e: unknown) => {
@@ -565,6 +694,26 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
       .header('Cache-Control', 'no-store')
       .type('text/html; charset=utf-8')
       .send(renderAdminPage());
+  });
+
+  app.get('/admin/metrics', async (req, reply) => {
+    requireAdmin(req);
+    const query = (req.query ?? {}) as { from?: unknown; to?: unknown; variant?: unknown };
+    const now = new Date();
+    const defaultFrom = new Date(now.getTime() - 7 * 86_400_000);
+    const from = query.from === undefined ? defaultFrom : new Date(str(query.from));
+    const to = query.to === undefined ? now : new Date(str(query.to));
+    if (!Number.isFinite(from.getTime()) || !Number.isFinite(to.getTime())
+        || from >= to || to.getTime() - from.getTime() > 90 * 86_400_000) {
+      throw new ApiError(400, '指标时间范围必须有效且不超过 90 天');
+    }
+    const variant = query.variant === undefined ? undefined : str(query.variant);
+    if (variant !== undefined && !['control', 'objective_v1'].includes(variant)) {
+      throw new ApiError(400, 'variant 无效');
+    }
+    return reply.send(await store.getProductMetrics({
+      from: from.toISOString(), to: to.toISOString(), ...(variant ? { variant } : {}),
+    }));
   });
 
   // POST /admin/grant — grant N free questions to a device, authorized by the admin secret in the

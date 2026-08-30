@@ -25,6 +25,7 @@ final class NotchView: NSView {
     private let onEditPersona: () -> Void
     private let onSettings: () -> Void
     private let onToggleReasoning: () -> Void
+    private let onCopyAnswer: () -> Void
     private let onStopAuto: () -> Void
     /// Supplies the CURRENT collapsed/expanded panel frames (screen coords). Geometry stays owned
     /// by the controller; this view owns the clock that travels between the two.
@@ -88,6 +89,7 @@ final class NotchView: NSView {
          onEditPersona: @escaping () -> Void,
          onSettings: @escaping () -> Void,
          onToggleReasoning: @escaping () -> Void,
+         onCopyAnswer: @escaping () -> Void,
          onStopAuto: @escaping () -> Void) {
         self.model = model
         self.frameProvider = frameProvider
@@ -96,6 +98,7 @@ final class NotchView: NSView {
         self.onEditPersona = onEditPersona
         self.onSettings = onSettings
         self.onToggleReasoning = onToggleReasoning
+        self.onCopyAnswer = onCopyAnswer
         self.onStopAuto = onStopAuto
         super.init(frame: .zero)
         build()
@@ -158,6 +161,12 @@ final class NotchView: NSView {
         answerScroll.horizontalScrollElasticity = .none
         answerScroll.documentView = answerStream
         answerStream.onToggleReasoning = { [weak self] in self?.onToggleReasoning() }
+        answerStream.canCopyAnswer = { [weak self] in
+            guard let self else { return false }
+            return self.model.mode != "personality" && self.model.resultState != .retake
+                && AnswerComposer.clipboardAnswer(self.model.answer) != nil
+        }
+        answerStream.onCopyAnswer = { [weak self] in self?.onCopyAnswer() }
         answerScroll.onUserScroll = { [weak self] in self?.noteUserScroll() }
         answerScroll.wantsLayer = true
         answerScroll.layer?.mask = scrollFade
@@ -183,6 +192,9 @@ final class NotchView: NSView {
         lastAnswerLen = model.answer.count
 
         statusText.stringValue = model.statusText
+        statusText.textColor = model.resultState == .review
+            ? NSColor(calibratedRed: 0.95, green: 0.66, blue: 0.20, alpha: 1)
+            : NotchPalette.secondary
 
         let isPersona = model.mode == "personality"
         capsule.title = model.autoActive

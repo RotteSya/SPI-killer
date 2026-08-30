@@ -79,6 +79,20 @@
 
 `total_*` 覆盖本地累计镜像。`cli_enabled` 由运营按设备打开后，客户端在下次账户同步时镜像。
 
+## GET /v1/client-config — 稳定分桶配置
+
+Bearer 鉴权。客户端启动与热键预热异步刷新，缓存 24 小时；失败使用 `control` 基础配置。服务端以
+`HMAC-SHA256(OBJECTIVE_RESULT_EXPERIMENT_SALT, device_token)` 前 32 位 `% 10000` 稳定分桶。
+
+```json
+{
+  "schema_version": 1,
+  "revision": "2026-objective-v1-r1",
+  "objective_result_v1": {"variant":"objective_v1","protocol":"objective_v1","prompt_variant":"objective_v1"},
+  "telemetry": {"enabled":true,"max_batch_size":50,"max_queue_age_days":7}
+}
+```
+
 ## POST /v1/captures — 截图问答（SSE，1 题/次）
 
 请求：
@@ -92,6 +106,17 @@
   "stream": true
 }
 ```
+
+Objective V1 为可选扩展；旧客户端字段缺省时行为完全不变：
+
+```json
+{"result_protocol":"objective_v1","capture_id":"3e7979c6-20cb-4c12-a23e-ece6eb3aa52d"}
+```
+
+模型最后一行固定为 `NSPI_RESULT_V1: <strict JSON>`。`ready/review` 前一行必须为与
+`answer` 规范化后一致的 `FINAL:`；`retake` 只输出机器行。合法 `ready/review` 或
+`legacy_fallback` 扣 1 题；`retake`、无可用结果、供应商失败且没有已交付结果均释放预扣，
+并在正常流末发送 `questions_charged: 0`。协议解析在 route 层统一完成，Provider 接口不变。
 
 上下文追问（⌘⇧2）可追加 `images_base64`（有序：老上下文在前、新截图在后，单张上限与
 `image_base64` 相同，数量上限 4，仍只扣 1 题）。该字段存在时优先；客户端同时把**最后一张**
@@ -124,6 +149,24 @@ data: [DONE]
 - 指定了真实厂商但 Key 为空：HTTP `503` `upstream_error`，不扣题。
 
 扣题采用「预扣 — 结算」。客户端在收到足量答案后主动断开，这一题仍然计费。
+
+## POST /v1/events/batch — 匿名可靠性事件
+
+Bearer 鉴权，单批 1–50 条、解压后不超过 64 KiB、每设备默认每分钟 30 批。事件严格白名单，
+逐条校验并以 `event_id` 幂等；部分非法不影响合法事件。响应始终不回显事件内容：
+
+```json
+{"accepted":1,"duplicate":0,"rejected":0}
+```
+
+服务端总开关关闭时返回 `202` 且不写入。事件仅包含捕获生命周期、固定结果枚举、耗时与动作，
+不允许截图路径、题目、答案、Prompt 或原始错误文本。详细事件保留 90 天。
+
+## GET /admin/metrics — 产品可靠性指标
+
+`X-Admin-Token` 鉴权；范围默认 7 天、最大 90 天，可选 `variant=control|objective_v1`。
+响应按分组聚合成功率、协议有效率、结果状态、深度、动作与 p50/p95，绝不返回设备令牌、题目、
+答案或模型原文。
 
 ## GET /topup?device=\<token\>&lang=\<zh|ja|en\> — 题包购买页
 

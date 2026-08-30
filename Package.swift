@@ -12,7 +12,9 @@ let package = Package(
         .testTarget(
             name: "NotchSPITests",
             dependencies: ["NotchSPI"],
-            path: "Tests/NotchSPITests"
+            path: "Tests",
+            sources: ["NotchSPITests"],
+            resources: [.copy("Fixtures")]
         )
     ]
 )

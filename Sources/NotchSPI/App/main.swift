@@ -1,5 +1,13 @@
 import AppKit
 
+if CommandLine.arguments.contains("--print-objective-eval-prompt") {
+    let prompt = Prompts.capturePrompt(
+        mode: "tutor", depth: "brief", personaName: "", personaText: "", sessionContext: "",
+        objectiveProtocolEnabled: true)
+    print(prompt.system)
+    exit(0)
+}
+
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate

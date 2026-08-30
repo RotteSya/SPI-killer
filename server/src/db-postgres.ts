@@ -1,8 +1,11 @@
 import pg from 'pg';
 import type {
-  Account, DeviceSummary, RegisteredDevice, ReserveResult, Store, TopUpSummary,
+  Account, DeviceSummary, ProductEventInput, ProductEventWriteResult, ProductMetrics,
+  ProductMetricsQuery, RegisteredDevice, ReserveResult, Store, StoredProductEvent,
+  StoredUsageMetric, TopUpSummary,
 } from './db.ts';
 import { hashToken, newToken } from './db.ts';
+import { aggregateProductMetrics } from './telemetry.ts';
 
 // Production store: Postgres via the standard `pg` driver. Works with any provider (Neon,
 // Supabase, RDS, …); on serverless platforms use the provider's POOLED connection string.
@@ -32,6 +35,19 @@ CREATE TABLE IF NOT EXISTS usage_events (
   model         TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE TABLE IF NOT EXISTS product_events (
+  id BIGSERIAL PRIMARY KEY,
+  event_id TEXT NOT NULL UNIQUE,
+  device_id BIGINT NOT NULL REFERENCES devices(id),
+  capture_id TEXT,
+  occurred_at TIMESTAMPTZ NOT NULL,
+  received_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  event_name TEXT NOT NULL,
+  trigger TEXT, channel TEXT, mode TEXT, depth TEXT, context_count INTEGER,
+  question_kind TEXT, result_state TEXT, parser_path TEXT, error_code TEXT, action TEXT,
+  capture_ms BIGINT, first_token_ms BIGINT, total_ms BIGINT,
+  app_version TEXT, config_revision TEXT, variant TEXT
+);
 CREATE TABLE IF NOT EXISTS topups (
   id           BIGSERIAL PRIMARY KEY,
   device_id    BIGINT NOT NULL REFERENCES devices(id),
@@ -53,6 +69,12 @@ ALTER TABLE devices ADD COLUMN IF NOT EXISTS cli_enabled BOOLEAN NOT NULL DEFAUL
 -- silently failed" — the two are indistinguishable from usage counts alone.
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS onboarded BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS hotkey_presses BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS capture_id TEXT;
+ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS result_protocol TEXT;
+ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS result_state TEXT;
+ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS parser_path TEXT;
+ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS estimated_cost_micros BIGINT;
+ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS pricing_version TEXT;
 -- Simple named counters (e.g. download-button clicks on the public site).
 CREATE TABLE IF NOT EXISTS counters (
   name  TEXT PRIMARY KEY,
@@ -61,6 +83,11 @@ CREATE TABLE IF NOT EXISTS counters (
 CREATE INDEX IF NOT EXISTS idx_usage_device ON usage_events(device_id);
 CREATE INDEX IF NOT EXISTS idx_topups_device ON topups(device_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_topups_reference ON topups(reference);
+CREATE INDEX IF NOT EXISTS idx_product_received ON product_events(received_at);
+CREATE INDEX IF NOT EXISTS idx_product_name_received ON product_events(event_name, received_at);
+CREATE INDEX IF NOT EXISTS idx_product_variant_received ON product_events(variant, received_at);
+CREATE INDEX IF NOT EXISTS idx_product_device_received ON product_events(device_id, received_at);
+CREATE INDEX IF NOT EXISTS idx_product_capture ON product_events(capture_id);
 `;
 
 interface DeviceRow {
@@ -231,6 +258,12 @@ export class PostgresStore implements Store {
     inputTokens: number;
     outputTokens: number;
     model: string;
+    captureId?: string;
+    resultProtocol?: string;
+    resultState?: string;
+    parserPath?: string;
+    estimatedCostMicros?: number;
+    pricingVersion?: string;
   }): Promise<void> {
     await this.ensureSchema();
     await this.tx(async (client) => {
@@ -245,11 +278,87 @@ export class PostgresStore implements Store {
       const dev = rows[0];
       if (!dev) return;
       await client.query(
-        `INSERT INTO usage_events (device_id, questions, input_tokens, output_tokens, model)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [dev.id, input.questions, input.inputTokens, input.outputTokens, input.model],
+        `INSERT INTO usage_events
+         (device_id, questions, input_tokens, output_tokens, model, capture_id, result_protocol,
+          result_state, parser_path, estimated_cost_micros, pricing_version)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [dev.id, input.questions, input.inputTokens, input.outputTokens, input.model,
+          input.captureId ?? null, input.resultProtocol ?? null, input.resultState ?? null,
+          input.parserPath ?? null, input.estimatedCostMicros ?? null, input.pricingVersion ?? null],
       );
     });
+  }
+
+  async recordProductEvents(token: string, events: ProductEventInput[]): Promise<ProductEventWriteResult> {
+    await this.ensureSchema();
+    return this.tx(async (client) => {
+      const device = await client.query<{ id: string }>(
+        `SELECT id FROM devices WHERE token_hash = $1`, [hashToken(token)],
+      );
+      const id = device.rows[0]?.id;
+      if (!id) return { accepted: 0, duplicate: 0 };
+      let accepted = 0;
+      for (const event of events) {
+        const result = await client.query(
+          `INSERT INTO product_events
+           (event_id, device_id, capture_id, occurred_at, event_name, trigger, channel, mode, depth,
+            context_count, question_kind, result_state, parser_path, error_code, action, capture_ms,
+            first_token_ms, total_ms, app_version, config_revision, variant)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+           ON CONFLICT (event_id) DO NOTHING`,
+          [event.eventId, id, event.captureId, event.occurredAt, event.eventName, event.trigger,
+            event.channel, event.mode, event.depth, event.contextCount, event.questionKind,
+            event.resultState, event.parserPath, event.errorCode, event.action, event.captureMs,
+            event.firstTokenMs, event.totalMs, event.appVersion, event.configRevision, event.variant],
+        );
+        accepted += result.rowCount ?? 0;
+      }
+      return { accepted, duplicate: events.length - accepted };
+    });
+  }
+
+  async getProductMetrics(input: ProductMetricsQuery): Promise<ProductMetrics> {
+    await this.ensureSchema();
+    const { rows } = await this.pool.query<Record<string, unknown>>(
+      `SELECT device_id, event_id, capture_id, occurred_at, received_at, event_name, trigger,
+              channel, mode, depth, context_count, question_kind, result_state, parser_path,
+              error_code, action, capture_ms, first_token_ms, total_ms, app_version,
+              config_revision, variant
+       FROM product_events WHERE received_at >= $1 AND received_at < $2`, [input.from, input.to],
+    );
+    const mapped: StoredProductEvent[] = rows.map((r) => ({
+      deviceId: Number(r.device_id), eventId: String(r.event_id),
+      captureId: r.capture_id as string | null, occurredAt: new Date(r.occurred_at as string).toISOString(),
+      receivedAt: new Date(r.received_at as string).toISOString(), eventName: String(r.event_name),
+      trigger: r.trigger as string | null, channel: r.channel as string | null,
+      mode: r.mode as string | null, depth: r.depth as string | null,
+      contextCount: r.context_count === null ? null : Number(r.context_count),
+      questionKind: r.question_kind as string | null, resultState: r.result_state as string | null,
+      parserPath: r.parser_path as string | null, errorCode: r.error_code as string | null,
+      action: r.action as string | null, captureMs: r.capture_ms === null ? null : Number(r.capture_ms),
+      firstTokenMs: r.first_token_ms === null ? null : Number(r.first_token_ms),
+      totalMs: r.total_ms === null ? null : Number(r.total_ms), appVersion: r.app_version as string | null,
+      configRevision: r.config_revision as string | null, variant: r.variant as string | null,
+    }));
+    const usageResult = await this.pool.query<{
+      capture_id: string | null; input_tokens: string; output_tokens: string;
+      questions: string; estimated_cost_micros: string | null;
+    }>(
+      `SELECT capture_id, input_tokens, output_tokens, questions, estimated_cost_micros
+       FROM usage_events WHERE created_at >= $1 AND created_at < $2`, [input.from, input.to],
+    );
+    const usage: StoredUsageMetric[] = usageResult.rows.map((row) => ({
+      captureId: row.capture_id, inputTokens: Number(row.input_tokens),
+      outputTokens: Number(row.output_tokens), questions: Number(row.questions),
+      estimatedCostMicros: row.estimated_cost_micros === null ? null : Number(row.estimated_cost_micros),
+    }));
+    return aggregateProductMetrics(mapped, input, usage);
+  }
+
+  async pruneProductEvents(before: string): Promise<number> {
+    await this.ensureSchema();
+    const result = await this.pool.query(`DELETE FROM product_events WHERE received_at < $1`, [before]);
+    return result.rowCount ?? 0;
   }
 
   async releaseReservation(input: { token: string; questions: number }): Promise<number | null> {

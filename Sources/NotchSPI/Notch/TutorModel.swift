@@ -19,6 +19,9 @@ final class TutorModel: ObservableObject {
     @Published var depthLabel = ""
     @Published var answerDepth = "guided" // depth the CURRENT answer was captured with (frozen per run)
     @Published var reasoningRevealed = false // brief mode: the folded scratch work is open
+    @Published var resultState: ObjectiveResultState?
+    @Published var resultReason: ObjectiveResultReason?
+    @Published var parserPath: ObjectiveParserPath = .none
     @Published var mode = "tutor"        // active mode id: "tutor" | "personality"
     @Published var personaLabel = ""      // current persona name (empty = not set)
     @Published var autoActive = false    // an auto session is live (any phase)

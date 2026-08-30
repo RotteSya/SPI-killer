@@ -237,4 +237,31 @@ for (const impl of IMPLEMENTATIONS) {
     assert.equal((await store.getAccount(b.token))?.balanceQuestions, 180);
     await store.close();
   });
+
+  test(`[${impl.name}] product events are idempotent, aggregate usage cost, and prune`, async () => {
+    const store = await impl.make();
+    const dev = await store.registerDevice({ platform: 'm', appVersion: '3', trialQuestions: 1 });
+    const captureId = '3e7979c6-20cb-4c12-a23e-ece6eb3aa52d';
+    const now = new Date().toISOString();
+    const event = {
+      eventId: '772359ba-172f-4e20-ab13-1a3e147ca260', captureId, occurredAt: now,
+      eventName: 'capture_started', trigger: 'capture_hotkey', channel: 'official', mode: 'tutor',
+      depth: 'brief', contextCount: 0, questionKind: null, resultState: null, parserPath: null,
+      errorCode: null, action: null, captureMs: null, firstTokenMs: null, totalMs: null,
+      appVersion: '3', configRevision: 'r1', variant: 'objective_v1',
+    };
+    assert.deepEqual(await store.recordProductEvents(dev.token, [event]), { accepted: 1, duplicate: 0 });
+    assert.deepEqual(await store.recordProductEvents(dev.token, [event]), { accepted: 0, duplicate: 1 });
+    await store.reserveQuestions({ token: dev.token, questions: 1 });
+    await store.settleReservation({ token: dev.token, questions: 1, inputTokens: 1200,
+      outputTokens: 300, model: 'mock', captureId, estimatedCostMicros: 42 });
+    const metrics = await store.getProductMetrics({
+      from: new Date(Date.now() - 60_000).toISOString(), to: new Date(Date.now() + 60_000).toISOString(),
+    });
+    assert.equal(metrics.variants[0]?.captures_started, 1);
+    assert.equal(metrics.variants[0]?.tokens.avg_input, 1200);
+    assert.equal(metrics.variants[0]?.estimated_cost_micros.total, 42);
+    assert.equal(await store.pruneProductEvents(new Date(Date.now() + 60_000).toISOString()), 1);
+    await store.close();
+  });
 }
