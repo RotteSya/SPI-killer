@@ -33,6 +33,11 @@ export NSPI_EVAL_VERCEL_SHARE_TOKEN=<temporary-share-token>
 Runner 对每张图片只调用一次，原始结果写入忽略跟踪的 `objective-eval-output/`。复核者只签署
 已有评分；不得重跑失败题来挑选较好结果。正式归档只保留脱敏 JSONL 和 Markdown 摘要。
 
+当前 r3 候选的脱敏归档是
+[`objective-eval-output/2026-08-30T17-03-15.896Z.jsonl`](../../../objective-eval-output/2026-08-30T17-03-15.896Z.jsonl)
+及其 `-summary.json` / `-summary.md`。自动绝对阈值已通过；`reviewer` 仍为
+`pending-independent-review`，在独立复核和固定基线对比签署前不得据此开启生产灰度。
+
 ## 3. 发版阈值
 
 | 指标 | 阈值 |
