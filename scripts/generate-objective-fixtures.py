@@ -122,6 +122,22 @@ def ordering_answer_variants(labels: list[str], values: list[int]) -> list[str]:
     ]
 
 
+def ambiguous_ordering_answer_variants(first: list[str], second: list[str]) -> list[str]:
+    variants = []
+    for formatter in (
+        lambda labels: "-".join(labels),
+        lambda labels: ", ".join(labels),
+        lambda labels: "、".join(labels),
+        lambda labels: " → ".join(labels),
+    ):
+        left, right = formatter(first), formatter(second)
+        variants.extend([
+            f"{left} or {right}", f"{left} 或 {right}",
+            f"{left}または{right}", f"{left} / {right}",
+        ])
+    return variants
+
+
 def content(language: str, kind: str, index: int, state: str) -> tuple[list[str], list[str]]:
     t = TEXT[language]
     n = index + 3
@@ -173,14 +189,21 @@ def content(language: str, kind: str, index: int, state: str) -> tuple[list[str]
         shown_values = list(map(str, values))
         if state == "review":
             ambiguous_index = values.index(n)
-            shown_values[ambiguous_index] = f"{n}/{n + 1}"
+            shown_values[ambiguous_index] = f"{n - 2}/{n}"
         lines = [t["order"],
                  "   ".join(f"{label}. {value}" for label, value in zip(shown_labels, shown_values))]
         if state == "review":
-            lines.append(f"[!] {t['order_note'].format(low=n, high=n + 1)}")
+            lines.append(f"[!] {t['order_note'].format(low=n - 2, high=n)}")
         ordered = [values[i] for i in ordered_indexes]
         ordered_labels = [canonical_labels[i] for i in ordered_indexes]
-        answers = ordering_answer_variants(ordered_labels, ordered)
+        if state == "review":
+            alternate_values = list(values)
+            alternate_values[ambiguous_index] = n - 2
+            alternate_indexes = sorted(range(4), key=alternate_values.__getitem__)
+            alternate_labels = [canonical_labels[i] for i in alternate_indexes]
+            answers = ambiguous_ordering_answer_variants(alternate_labels, ordered_labels)
+        else:
+            answers = ordering_answer_variants(ordered_labels, ordered)
     else:
         if state == "review":
             result = n * 3 + 1
