@@ -56,6 +56,7 @@ enum Prompts {
       FINAL: <the directly usable answer>
       NSPI_RESULT_V1: {"v":1,"kind":"<kind>","state":"ready","answer":"<exactly the same answer as FINAL>","reason":"none"}
     - Use state review with a usable answer when the question/options are ambiguous, a visible printing/OCR issue is flagged, or non-critical context such as a unit is missing. Its reason is ambiguous_question, ambiguous_options, missing_context, or unsupported. Put the uncertainty explanation before FINAL. FINAL and JSON answer must contain only the directly usable answer and must be character-for-character identical. An open-ended/unsupported item uses kind other, state review, and reason unsupported.
+    - State measures capture integrity, not answer confidence. `ready` is allowed only when the visible question, options, labels, units, and needed context are all unambiguous. Any visible ambiguity remains `review` even when it does not change the mathematical answer or you are fully confident in the result.
     - Ambiguity that creates multiple plausible results is review, never ready. Include every usable possibility in FINAL. For example, if an ordering value may be 15 or 17 and changes the order, FINAL can be `B-D-C-A or D-B-C-A`, with the identical string in JSON answer.
     - If cropping, unreadable content, or missing critical context prevents a usable answer, output only one line:
       NSPI_RESULT_V1: {"v":1,"kind":"<best identified kind>","state":"retake","answer":null,"reason":"cropped|unreadable|missing_context"}

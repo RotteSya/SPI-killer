@@ -257,7 +257,7 @@ def main() -> None:
                     "requires_context": False,
                 })
     (OUT / "manifest.json").write_text(
-        json.dumps({"schema_version": 1, "prompt_version": "objective-v1-r2", "fixtures": manifest},
+        json.dumps({"schema_version": 1, "prompt_version": "objective-v1-r3", "fixtures": manifest},
                    ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "prompt_version": "objective-v1-r2",
+  "prompt_version": "objective-v1-r3",
   "fixtures": [
     {
       "id": "zh-single_choice-01",
