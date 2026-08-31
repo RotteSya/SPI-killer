@@ -33,11 +33,21 @@ export NSPI_EVAL_VERCEL_SHARE_TOKEN=<temporary-share-token>
 Runner 对每张图片只调用一次，原始结果写入忽略跟踪的 `objective-eval-output/`。复核者只签署
 已有评分；不得重跑失败题来挑选较好结果。正式归档只保留脱敏 JSONL 和 Markdown 摘要。
 
-DeepSeek `deepseek-v4-flash-vision-exp` 非思考候选已于 2026-08-31 完成 240 题运行，归档见
+DeepSeek `deepseek-v4-flash-vision-exp` 非思考候选的初始运行归档见
 [`JSONL`](../../../objective-eval-output/2026-08-31T10-04-29.595Z.jsonl) 与
 [`summary`](../../../objective-eval-output/2026-08-31T10-04-29.595Z-summary.md)。闸门为 **FAIL**：
 V1 合法率 97.50%、`ready` 精确率 87.37%、排序题准确率 80.39%。低强度思考只做失败集合诊断，
-平均耗时 12.6 秒，不能替代完整评测或据此放行。生产 Provider 不得切换到该候选。
+平均耗时 12.6 秒，不能替代完整评测。
+
+随后冻结的 Objective r5 运行归档见
+[`JSONL`](../../../objective-eval-output/2026-08-31T13-20-54.674Z.jsonl) 与
+[`summary`](../../../objective-eval-output/2026-08-31T13-20-54.674Z-summary.md)，固定 legacy 基线见
+[`JSONL`](../../../objective-eval-output/2026-08-31T13-06-26.590Z-legacy.jsonl) 与
+[`summary`](../../../objective-eval-output/2026-08-31T13-06-26.590Z-legacy-summary.md)。离线比较见
+[`comparison`](../../../objective-eval-output/2026-08-31T13-25-50.386Z-r5-vs-legacy-comparison.md)：
+绝对准确率 96.57%、V1/状态/retake 100%，相对基线准确率 +20.10pp、平均 Token +5.92%、
+p95 -43.58%，自动阈值全部 **PASS**。比较状态为 `pending_owner_review`；签署前生产 Provider 与
+`OBJECTIVE_RESULT_V1_BPS=0` 保持不变。
 
 当前 r3 候选的脱敏归档是
 [`objective-eval-output/2026-08-30T17-03-15.896Z.jsonl`](../../../objective-eval-output/2026-08-30T17-03-15.896Z.jsonl)
@@ -59,7 +69,20 @@ V1 合法率 97.50%、`ready` 精确率 87.37%、排序题准确率 80.39%。低
 | 平均 Token 增幅 | ≤8% |
 | p95 总耗时增幅 | ≤10% |
 
-Runner 强制绝对正确率阈值；Token、耗时和基线差异由评测摘要与上一份签署摘要对比后签署。
+Runner 强制绝对正确率阈值。同模型 legacy 基线使用 `scripts/run-objective-legacy-baseline.mjs`；
+已有不可变归档可用以下离线比较，不产生模型调用：
+
+```sh
+export NSPI_COMPARE_OBJECTIVE_EVALS=1
+export NSPI_BASELINE_SUMMARY=objective-eval-output/<legacy>-summary.json
+export NSPI_BASELINE_JSONL=objective-eval-output/<legacy>.jsonl
+export NSPI_TREATMENT_SUMMARY=objective-eval-output/<objective>-summary.json
+export NSPI_TREATMENT_JSONL=objective-eval-output/<objective>.jsonl
+node scripts/compare-objective-evals.mjs
+```
+
+比较器验证模型、各自提交中的完整 fixture 集和 240 行记录，再执行准确率、Token 与 p95 阈值；
+复核者只签署生成的比较结果。
 
 ## 4. 灰度与回滚
 

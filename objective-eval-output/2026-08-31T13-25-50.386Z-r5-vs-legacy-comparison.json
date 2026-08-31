@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-08-31T13:25:50.385Z",
+  "status": "pending_owner_review",
+  "fixture_set_sha256": "5b5a16cc5d793911a7b29dcceb586e86fbe72ca04477aaa6980abf3d1c917a15",
+  "model": "deepseek-v4-flash-vision-exp",
+  "baseline": {
+    "source": "objective-eval-output/2026-08-31T13-06-26.590Z-legacy-summary.json",
+    "commit": "fbcb6eb9823571e028921c3c1b94f04c47d77734",
+    "answerable_accuracy": 0.7647058823529411,
+    "avg_tokens": 749.7333333333333,
+    "p95_total_ms": 2228
+  },
+  "treatment": {
+    "source": "objective-eval-output/2026-08-31T13-20-54.674Z-summary.json",
+    "commit": "d02f45f997b1b050b4378d9582a51c275c8ad1f5",
+    "answerable_accuracy": 0.9656862745098039,
+    "avg_tokens": 794.1333333333333,
+    "p95_total_ms": 1257
+  },
+  "deltas": {
+    "accuracy_percentage_points": 20.09803921568628,
+    "average_tokens_ratio": 0.059221056375600156,
+    "p95_latency_ratio": -0.43581687612208253
+  },
+  "thresholds": {
+    "max_accuracy_regression_percentage_points": 1,
+    "max_average_tokens_ratio": 0.08,
+    "max_p95_latency_ratio": 0.1
+  },
+  "failures": []
+}

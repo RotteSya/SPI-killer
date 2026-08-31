@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-08-31T13:11:13.857Z",
+  "calls": 240,
+  "variant": "legacy",
+  "manifest_sha256": "57b6a2a6ae61be3cfd1dfc067df084d2389405fd1211c03108514de613af119f",
+  "model": "deepseek-v4-flash-vision-exp",
+  "answerable_accuracy": 0.7647058823529411,
+  "by_kind": {
+    "single_choice": 0.9803921568627451,
+    "multiple_choice": 0.45098039215686275,
+    "ordering": 0.6274509803921569,
+    "short_fill": 1
+  },
+  "by_language": {
+    "zh": 0.8970588235294118,
+    "ja": 0.6176470588235294,
+    "en": 0.7794117647058824
+  },
+  "avg_tokens": 749.7333333333333,
+  "p95_total_ms": 2228
+}
