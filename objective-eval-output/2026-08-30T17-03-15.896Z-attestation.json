@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "evaluation_id": "2026-08-30T17-03-15.896Z",
+  "evaluation_commit": "6b3c796ee1c55563c4c4b7a62c361154d5e22aed",
+  "prompt_version": "objective-v1-r3",
+  "reviewer": "RotteSya",
+  "reviewed_at": "2026-08-31T00:25:39Z",
+  "status": "signed",
+  "assertions": {
+    "existing_240_call_record_reviewed": true,
+    "failed_items_not_rerun_for_selection": true,
+    "automatic_absolute_gate_accepted": true,
+    "fixed_baseline_comparison_included": false,
+    "production_rollout_authorized": false
+  },
+  "source": "Project owner confirmation in Codex task"
+}

@@ -35,8 +35,9 @@ Runner 对每张图片只调用一次，原始结果写入忽略跟踪的 `objec
 
 当前 r3 候选的脱敏归档是
 [`objective-eval-output/2026-08-30T17-03-15.896Z.jsonl`](../../../objective-eval-output/2026-08-30T17-03-15.896Z.jsonl)
-及其 `-summary.json` / `-summary.md`。自动绝对阈值已通过；`reviewer` 仍为
-`pending-independent-review`，在独立复核和固定基线对比签署前不得据此开启生产灰度。
+及其 `-summary.json` / `-summary.md`。自动绝对阈值已通过，RotteSya 已签署独立
+[`attestation`](../../../objective-eval-output/2026-08-30T17-03-15.896Z-attestation.json)；固定基线
+对比仍未包含在该签署中，在基线签署前不得据此开启生产灰度。
 
 ## 3. 发版阈值
 

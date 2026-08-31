@@ -20,5 +20,12 @@
   },
   "avg_tokens": 2557.1666666666665,
   "p95_total_ms": 4531,
-  "failures": []
+  "failures": [],
+  "review": {
+    "status": "signed",
+    "reviewer": "RotteSya",
+    "reviewed_at": "2026-08-31T00:25:39Z",
+    "attestation": "2026-08-30T17-03-15.896Z-attestation.json",
+    "baseline_comparison_included": false
+  }
 }
