@@ -10,10 +10,14 @@
 
 服务端代持厂商 API Key。客户端只持有匿名设备令牌。
 
-DeepSeek 视觉候选的配置为 `OFFICIAL_PROVIDER=deepseek`、
-`OFFICIAL_MODEL=deepseek-v4-flash-vision-exp`、`DEEPSEEK_BASE_URL=https://api.deepseek.com`；
-密钥只通过 `DEEPSEEK_API_KEY` 注入运行环境。普通 DeepSeek 文本模型不接受截图，不能用于该通道。
-该候选的 Objective r5 自动绝对/相对闸门已通过，归档见评测 Runbook；仍须所有者复核签署后才可替换生产 Provider。Anthropic 与 OpenAI 继续保留为兼容路径。
+DeepSeek 视觉候选通过独立 treatment slot 配置：
+`OBJECTIVE_RESULT_V1_PROVIDER=deepseek`、
+`OBJECTIVE_RESULT_V1_MODEL=deepseek-v4-flash-vision-exp`、
+`DEEPSEEK_BASE_URL=https://api.deepseek.com`。密钥只通过 `DEEPSEEK_API_KEY` 注入运行环境。
+未携带 `result_protocol` 的旧客户端和 control 流量继续走 `OFFICIAL_PROVIDER`；携带
+`objective_v1` 的请求才走 treatment slot。普通 DeepSeek 文本模型不接受截图，不能用于该通道。
+该候选的 Objective r5 自动绝对/相对闸门已通过，归档见评测 Runbook；仍须所有者复核签署后
+才可开启生产灰度。Anthropic 与 OpenAI 继续保留为兼容路径。
 
 通用约定：
 
@@ -43,11 +47,21 @@ DeepSeek 视觉候选的配置为 `OFFICIAL_PROVIDER=deepseek`、
 判定服务就绪。正常响应 200：
 
 ```json
-{ "ok": true, "provider": "mock", "db": "sqlite", "payments": "stub", "webhook": "n/a" }
+{
+  "ok": true,
+  "provider": "mock",
+  "objective_provider": "mock",
+  "objective_provider_active": false,
+  "db": "sqlite",
+  "payments": "stub",
+  "webhook": "n/a"
+}
 ```
 
-真实厂商被选中但密钥缺失时响应 503，`ok=false` 并附带 `provider_error`；不得将此状态
-误报为健康。
+control 厂商被选中但密钥缺失时响应 503，`ok=false` 并附带 `provider_error`。当
+`OBJECTIVE_RESULT_V1_BPS>0` 时，treatment 厂商缺少密钥也响应 503，并附带
+`objective_provider_error`；BPS 为 0 时 treatment 错误不会阻断 control 捕获。错误字段只包含
+配置项名称，不包含密钥值。
 
 ## POST /v1/devices — 匿名设备注册
 
@@ -122,6 +136,9 @@ Objective V1 为可选扩展；旧客户端字段缺省时行为完全不变：
 `answer` 规范化后一致的 `FINAL:`；`retake` 只输出机器行。合法 `ready/review` 或
 `legacy_fallback` 扣 1 题；`retake`、无可用结果、供应商失败且没有已交付结果均释放预扣，
 并在正常流末发送 `questions_charged: 0`。协议解析在 route 层统一完成，Provider 接口不变。
+服务端以 `result_protocol` 选择 Provider slot：缺省走 `OFFICIAL_PROVIDER/OFFICIAL_MODEL`，
+`objective_v1` 走 `OBJECTIVE_RESULT_V1_PROVIDER/OBJECTIVE_RESULT_V1_MODEL`。treatment 配置缺省时
+完整继承 control，因此旧部署行为不变；任一 slot 配置错误只拒绝选中该 slot 的请求且不预扣。
 
 上下文追问（⌘⇧2）可追加 `images_base64`（有序：老上下文在前、新截图在后，单张上限与
 `image_base64` 相同，数量上限 4，仍只扣 1 题）。该字段存在时优先；客户端同时把**最后一张**

@@ -4,6 +4,14 @@ import { MockProvider } from './mock.ts';
 import { AnthropicProvider } from './anthropic.ts';
 import { OpenAIProvider } from './openai.ts';
 
+interface ProviderSelection {
+  provider: Config['provider'];
+  model: string;
+  maxTokens: number;
+  configurationError: string | null;
+  settingName: 'OFFICIAL_PROVIDER' | 'OBJECTIVE_RESULT_V1_PROVIDER';
+}
+
 /**
  * Build the configured provider once at boot.
  *
@@ -18,10 +26,42 @@ export function makeProvider(
   config: Config,
   warn: (msg: string) => void,
 ): { provider: Provider; degraded: string | null } {
-  switch (config.provider) {
+  return makeSelectedProvider(config, {
+    provider: config.provider,
+    model: config.model,
+    maxTokens: config.maxTokens,
+    configurationError: config.providerConfigurationError,
+    settingName: 'OFFICIAL_PROVIDER',
+  }, warn);
+}
+
+/** Build the provider used only by requests carrying the Objective Result V1 protocol. */
+export function makeObjectiveProvider(
+  config: Config,
+  warn: (msg: string) => void,
+): { provider: Provider; degraded: string | null } {
+  return makeSelectedProvider(config, {
+    provider: config.objectiveProvider,
+    model: config.objectiveModel,
+    maxTokens: config.objectiveMaxTokens,
+    configurationError: config.objectiveProviderConfigurationError,
+    settingName: 'OBJECTIVE_RESULT_V1_PROVIDER',
+  }, warn);
+}
+
+function makeSelectedProvider(
+  config: Config,
+  selection: ProviderSelection,
+  warn: (msg: string) => void,
+): { provider: Provider; degraded: string | null } {
+  if (selection.configurationError !== null) {
+    warn(`${selection.configurationError} — captures are DISABLED until it is fixed.`);
+    return { provider: new MockProvider(), degraded: selection.configurationError };
+  }
+  switch (selection.provider) {
     case 'anthropic':
       if (!config.anthropicKey) {
-        const why = 'OFFICIAL_PROVIDER=anthropic but ANTHROPIC_API_KEY is empty';
+        const why = `${selection.settingName}=anthropic but ANTHROPIC_API_KEY is empty`;
         warn(`${why} — captures are DISABLED until it is set.`);
         return { provider: new MockProvider(), degraded: why };
       }
@@ -29,14 +69,14 @@ export function makeProvider(
         provider: new AnthropicProvider(
           config.anthropicKey,
           config.anthropicBaseURL,
-          config.model,
-          config.maxTokens,
+          selection.model,
+          selection.maxTokens,
         ),
         degraded: null,
       };
     case 'deepseek':
       if (!config.deepseekKey) {
-        const why = 'OFFICIAL_PROVIDER=deepseek but DEEPSEEK_API_KEY is empty';
+        const why = `${selection.settingName}=deepseek but DEEPSEEK_API_KEY is empty`;
         warn(`${why} — captures are DISABLED until it is set.`);
         return { provider: new MockProvider(), degraded: why };
       }
@@ -44,8 +84,8 @@ export function makeProvider(
         provider: new OpenAIProvider(
           config.deepseekKey,
           config.deepseekBaseURL,
-          config.model,
-          config.maxTokens,
+          selection.model,
+          selection.maxTokens,
           {
             name: 'deepseek',
             endpointPath: 'chat/completions',
@@ -59,7 +99,7 @@ export function makeProvider(
       };
     case 'openai':
       if (!config.openaiKey) {
-        const why = 'OFFICIAL_PROVIDER=openai but OPENAI_API_KEY is empty';
+        const why = `${selection.settingName}=openai but OPENAI_API_KEY is empty`;
         warn(`${why} — captures are DISABLED until it is set.`);
         return { provider: new MockProvider(), degraded: why };
       }
@@ -67,8 +107,8 @@ export function makeProvider(
         provider: new OpenAIProvider(
           config.openaiKey,
           config.openaiBaseURL,
-          config.model,
-          config.maxTokens,
+          selection.model,
+          selection.maxTokens,
         ),
         degraded: null,
       };

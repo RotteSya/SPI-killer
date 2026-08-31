@@ -25,12 +25,31 @@ function boundedInt(value: number, fallback: number, minimum: number, maximum: n
 // usage so the whole billing pipeline runs end-to-end without any real API key.
 export type ProviderName = 'anthropic' | 'deepseek' | 'openai' | 'mock';
 
-function envProvider(): ProviderName {
-  const v = envStr('OFFICIAL_PROVIDER', 'mock').toLowerCase();
-  return v === 'anthropic' || v === 'deepseek' || v === 'openai' ? v : 'mock';
+function parseProvider(value: string): ProviderName | null {
+  const v = value.toLowerCase();
+  return v === 'anthropic' || v === 'deepseek' || v === 'openai' || v === 'mock' ? v : null;
 }
 
-const officialProvider = envProvider();
+const officialProviderRaw = envStr('OFFICIAL_PROVIDER', 'mock');
+const officialProvider = parseProvider(officialProviderRaw) ?? 'mock';
+const officialModel = envStr(
+  'OFFICIAL_MODEL',
+  officialProvider === 'deepseek' ? 'deepseek-v4-flash-vision-exp' : 'claude-opus-4-8',
+);
+
+// Objective treatment can use a different vendor without moving legacy/control traffic. An
+// omitted value inherits the official provider byte-for-byte; an explicitly invalid value is
+// retained as a configuration error so a typo can never silently contaminate an experiment.
+const objectiveProviderRaw = envStr('OBJECTIVE_RESULT_V1_PROVIDER', '');
+const parsedObjectiveProvider = objectiveProviderRaw === '' ? officialProvider : parseProvider(objectiveProviderRaw);
+const objectiveProvider = parsedObjectiveProvider ?? 'mock';
+const objectiveModelDefault = objectiveProvider === officialProvider
+  ? officialModel
+  : objectiveProvider === 'deepseek'
+    ? 'deepseek-v4-flash-vision-exp'
+    : objectiveProvider === 'anthropic'
+      ? 'claude-opus-4-8'
+      : officialModel;
 
 export const config = {
   host: envStr('HOST', '0.0.0.0'),
@@ -85,12 +104,22 @@ export const config = {
   currency: envStr('CURRENCY', 'JPY'),
 
   provider: officialProvider,
+  providerConfigurationError: parseProvider(officialProviderRaw) === null
+    ? `OFFICIAL_PROVIDER has unsupported value: ${officialProviderRaw}`
+    : null,
   // Model the official service uses. The client never chooses; the server decides.
-  model: envStr(
-    'OFFICIAL_MODEL',
-    officialProvider === 'deepseek' ? 'deepseek-v4-flash-vision-exp' : 'claude-opus-4-8',
-  ),
+  model: officialModel,
   maxTokens: envInt('OFFICIAL_MAX_TOKENS', 4096),
+
+  // Requests carrying Objective Result V1 can be routed to an isolated treatment provider.
+  // Empty provider/model values inherit the official control path for full backwards
+  // compatibility. The server, not the client, owns this vendor choice.
+  objectiveProvider,
+  objectiveProviderConfigurationError: parsedObjectiveProvider === null
+    ? `OBJECTIVE_RESULT_V1_PROVIDER has unsupported value: ${objectiveProviderRaw}`
+    : null,
+  objectiveModel: envStr('OBJECTIVE_RESULT_V1_MODEL', objectiveModelDefault),
+  objectiveMaxTokens: envInt('OBJECTIVE_RESULT_V1_MAX_TOKENS', envInt('OFFICIAL_MAX_TOKENS', 4096)),
 
   anthropicKey: envStr('ANTHROPIC_API_KEY', ''),
   anthropicBaseURL: envStr('ANTHROPIC_BASE_URL', 'https://api.anthropic.com'),

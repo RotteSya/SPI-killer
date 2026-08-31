@@ -37,7 +37,7 @@
 
 单次问答：热键 → 捕获 JPEG → `Prompts.build` → 通道路由（官方 / 自定义 Key / 本机 CLI）→ provider SSE → 合成 → 刘海 UI。官方通道在请求前 `reserveQuestions`，成功结算、失败退回。
 
-Objective V1 打开时：`ClientConfigService` 冻结远端分组 → 三通道使用同一 `CapturePrompt` → `ObjectiveResultStreamFilter` 隐藏机器行 → `ObjectiveResultParser` 统一映射 `ready/review/retake`。官方服务只在 route 层解析完整输出并决定结算或释放，Provider 不拥有协议与计费语义。匿名事件经 `ProductTelemetry` 的 7 天/100 条本地队列上传到 `product_events`；事件永不包含截图、题目、答案、Prompt 或模型原文。
+Objective V1 打开时：`ClientConfigService` 冻结远端分组 → 三通道使用同一 `CapturePrompt` → `ObjectiveResultStreamFilter` 隐藏机器行 → `ObjectiveResultParser` 统一映射 `ready/review/retake`。官方服务以冻结请求的 `result_protocol` 选择 control 或 Objective treatment Provider，并只在 route 层解析完整输出、决定结算或释放；Provider 不拥有协议与计费语义。匿名事件经 `ProductTelemetry` 的 7 天/100 条本地队列上传到 `product_events`；事件永不包含截图、题目、答案、Prompt 或模型原文。
 
 存储选择（`server/src/storage.ts` 动态 `import()`）：Postgres（`POSTGRES_URL` / `DATABASE_URL`）→ Serverless 上的 memory → 本地 SQLite。
 
@@ -75,6 +75,7 @@ Objective V1 打开时：`ClientConfigService` 冻结远端分组 → 三通道�
 - `INV-RESULT-002`：`ready/review` 必须具有可用答案；`retake` 与无可用结果不得扣题。
 - `INV-TELEM-001`：产品事件只允许固定键与枚举，不得携带截图、题目、答案、Prompt 或模型原文。
 - `INV-TELEM-002`：关闭匿名可靠性数据后，客户端必须立即删除队列且不得生成或上传新事件。
+- `INV-PROVIDER-001`：未携带 `result_protocol` 的 control/旧客户端流量只走 `OFFICIAL_PROVIDER`；`objective_v1` 才可走独立 treatment Provider，任一 slot 失败不得向另一组泄漏或扣题。
 
 热键定义在 `Sources/NotchSPI/Settings/Settings.swift`：`⌘⇧1` 讲题、`⌘⇧2` 上下文追问、`⌘⇧9` 人格测试、`⌘⇧0` 自动模式、`⌘⇧Space` 显隐。`⌘⇧3–6` 是系统截图键，不要占用。
 
@@ -103,6 +104,7 @@ Objective V1 打开时：`ClientConfigService` 冻结远端分组 → 三通道�
 | `MIG-STOR-001` | `APIProvider.swift` | Anthropic/OpenAI 的 `storageKey` 仍为 `claude` / `codex`；DeepSeek 使用独立 `deepseek` | live |
 | `MIG-DB-001` | `db-postgres.ts` / `db-sqlite.ts` | lazy columns：`topups.note`、`devices.cli_enabled`、`onboarded`、`hotkey_presses` | live |
 | `MIG-OBJ-001` | `ObjectiveResult.swift` / `routes.ts` | 未携带 `result_protocol` 的客户端继续使用旧 Prompt、旧解析与 `MIN_BILLABLE_CHARS` 计费 | live |
+| `MIG-PROV-001` | `config.ts` / `providers/index.ts` / `routes.ts` | Objective treatment Provider 缺省继承 control；旧客户端不因实验模型配置而迁移 Provider | live |
 
 `db-postgres.ts` / `db-memory.ts` / `db-sqlite.ts` 由 `storage.ts` 动态加载。`recordCount` 是 `@testable` 测试观测面。`Resources/NotchSPI.png` 供未打包 `swift run` 的更新对话框图标。
 
@@ -111,7 +113,7 @@ Objective V1 打开时：`ClientConfigService` 冻结远端分组 → 三通道�
 - 本地：[`./scripts/verify.sh`](scripts/verify.sh)。Swift 测试必须串行（共享 UserDefaults / Keychain）。
 - 付费 personality 闸门：[`Tests/Fixtures/Personality/RUNBOOK.md`](Tests/Fixtures/Personality/RUNBOOK.md)。阈值只在 `manifest.json`。
 - 付费 Objective 闸门：[`Tests/Fixtures/objective-v1/RUNBOOK.md`](Tests/Fixtures/objective-v1/RUNBOOK.md)。普通 CI 只验证 240 张 manifest、SHA-256 与解析器；正式运行必须显式设置 `NSPI_RUN_OBJECTIVE_EVAL=1`。
-- DeepSeek Objective r5 的 240 题绝对闸门与同模型 legacy 相对闸门均已自动通过：准确率 96.57%、V1/状态/retake 100%、平均 Token +5.92%、p95 -43.58%。脱敏归档与比较见 Runbook；状态仍为 `pending_owner_review`，生产 Provider 与 `OBJECTIVE_RESULT_V1_BPS=0` 未改变。
+- DeepSeek Objective r5 的 240 题绝对闸门与同模型 legacy 相对闸门均已自动通过：准确率 96.57%、V1/状态/retake 100%、平均 Token +5.92%、p95 -43.58%。脱敏归档与比较见 Runbook；状态仍为 `pending_owner_review`。安全灰度保持 control `OFFICIAL_PROVIDER=anthropic`，以 `OBJECTIVE_RESULT_V1_PROVIDER=deepseek` 隔离 treatment，并从 `OBJECTIVE_RESULT_V1_BPS=0` 开始。
 - 打包：`./scripts/package.sh qa` → `dist-qa/NotchSPI.app`；`./scripts/package.sh release` → `dist/NotchSPI.dmg`（Developer ID + 公证 + staple）。无证书的 release 必须显式 `--unsigned`。
 - Owner-only：push、tag `v${APP_VERSION}`、GitHub Release 上传 DMG、Vercel 部署、Stripe webhook 配置。
 - 服务端契约新字段先于客户端发版（`INV-DEPLOY-001`）。

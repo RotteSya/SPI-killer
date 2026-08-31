@@ -23,6 +23,9 @@ export interface AppContext {
   provider: Provider;
   /** Non-null when a real vendor was configured without its key; captures refuse to run. */
   providerDegraded: string | null;
+  objectiveProvider: Provider;
+  /** Objective misconfiguration is isolated from control captures but visible in health. */
+  objectiveProviderDegraded: string | null;
   payment: PaymentProvider;
 }
 
@@ -101,7 +104,11 @@ function adminTokenMatches(provided: string, expected: string): boolean {
 }
 
 export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
-  const { config, store, storeKind, provider, providerDegraded, payment } = ctx;
+  const {
+    config, store, storeKind,
+    provider, providerDegraded, objectiveProvider, objectiveProviderDegraded,
+    payment,
+  } = ctx;
   const stripeLive = payment.name === 'stripe' && config.stripeSecretKey !== '';
   // The admin grant console exists only when a secret is configured — otherwise /admin 404s.
   const adminEnabled = config.adminToken !== '';
@@ -209,17 +216,22 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
   });
 
   app.get('/healthz', async (_req, reply) => {
+    const objectiveActive = config.objectiveResultV1Bps > 0;
+    const ok = providerDegraded === null && (!objectiveActive || objectiveProviderDegraded === null);
     const body = {
-      ok: providerDegraded === null,
+      ok,
       provider: provider.name,
-      // Present only when broken, so a healthy deployment's output is unchanged.
+      objective_provider: config.objectiveProvider,
+      objective_provider_active: objectiveActive,
+      // Error details name only environment-variable keys, never their secret values.
       ...(providerDegraded === null ? {} : { provider_error: providerDegraded }),
+      ...(objectiveProviderDegraded === null ? {} : { objective_provider_error: objectiveProviderDegraded }),
       db: storeKind,
       payments: stripeLive ? 'stripe' : config.allowStubTopUp ? 'stub' : 'disabled',
       webhook: stripeLive ? (config.stripeWebhookSecret !== '' ? 'configured' : 'MISSING_SECRET') : 'n/a',
     };
     // 503 so an uptime check pages on a misconfigured deploy instead of reporting it healthy.
-    return reply.code(providerDegraded === null ? 200 : 503).send(body);
+    return reply.code(ok ? 200 : 503).send(body);
   });
 
   // POST /v1/devices — anonymous registration, grants the free question quota. No auth, so a
@@ -320,11 +332,6 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
   // check, and a client that hung up mid-stream took the failure path and got its answer free.
   app.post('/v1/captures', async (req, reply) => {
     const { token } = await requireAccount(req, store);
-    // Refuse rather than bill a real question for the mock provider's canned placeholder.
-    if (providerDegraded !== null) {
-      req.log.error({ providerDegraded }, 'capture refused: model provider is not configured');
-      throw new ApiError(503, '答案生成服务暂时不可用，本次未消耗额度', 'upstream_error');
-    }
     const body = (req.body ?? {}) as CaptureBody;
     const resultProtocol = body.result_protocol === undefined ? null : str(body.result_protocol);
     const captureId = body.capture_id === undefined ? null : str(body.capture_id);
@@ -332,6 +339,20 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
       throw new ApiError(400, 'result_protocol 无效');
     }
     if (captureId !== null && !UUID.test(captureId)) throw new ApiError(400, 'capture_id 必须是 UUID');
+
+    // The frozen client protocol chooses the server-owned treatment slot. Legacy/control traffic
+    // stays on OFFICIAL_PROVIDER, so a 5% Objective rollout cannot move the other 95% to DeepSeek.
+    const captureProvider = resultProtocol === 'objective_v1' ? objectiveProvider : provider;
+    const captureProviderDegraded = resultProtocol === 'objective_v1'
+      ? objectiveProviderDegraded
+      : providerDegraded;
+    const captureModel = resultProtocol === 'objective_v1' ? config.objectiveModel : config.model;
+    // Refuse rather than bill a real question for the mock provider's canned placeholder.
+    if (captureProviderDegraded !== null) {
+      req.log.error({ captureProviderDegraded, resultProtocol },
+        'capture refused: selected model provider is not configured');
+      throw new ApiError(503, '答案生成服务暂时不可用，本次未消耗额度', 'upstream_error');
+    }
 
     // Image list: `images_base64` (ordered, context first) wins when present; the legacy
     // single `image_base64` remains the wire shape for plain captures and old clients.
@@ -400,7 +421,7 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     // with nothing fallible in between.
     reply.hijack();
 
-    const model = `${provider.name}:${config.model}`;
+    const model = `${captureProvider.name}:${captureModel}`;
     const abort = new AbortController();
     let settled = false;
     let deliveredChars = 0;
@@ -419,7 +440,7 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
         resultState, parserPath,
         estimatedCostMicros: estimateModelCostMicros(
           config.modelPricingJSON, model, inputTokens, outputTokens,
-        ) ?? estimateModelCostMicros(config.modelPricingJSON, config.model, inputTokens, outputTokens),
+        ) ?? estimateModelCostMicros(config.modelPricingJSON, captureModel, inputTokens, outputTokens),
         pricingVersion: config.modelPricingVersion,
       });
       settled = true;
@@ -454,7 +475,7 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
         if (!done) abort.abort();
       });
 
-      const usage = await provider.stream(
+      const usage = await captureProvider.stream(
         captureReq,
         (text) => {
           deliveredChars += text.length;

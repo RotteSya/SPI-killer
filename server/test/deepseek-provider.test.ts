@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { config } from '../src/config.ts';
-import { makeProvider } from '../src/providers/index.ts';
+import { makeObjectiveProvider, makeProvider } from '../src/providers/index.ts';
 import { OpenAIProvider } from '../src/providers/openai.ts';
 
 test('DeepSeek provider uses the vision endpoint, non-thinking mode, and OpenAI SSE usage', async (t) => {
@@ -62,5 +62,32 @@ test('DeepSeek configuration without its dedicated key fails closed', () => {
     (warning) => warnings.push(warning));
   assert.equal(built.provider.name, 'mock');
   assert.match(built.degraded ?? '', /DEEPSEEK_API_KEY/);
+  assert.equal(warnings.length, 1);
+});
+
+test('Objective treatment builds an isolated DeepSeek provider and model', () => {
+  const warnings: string[] = [];
+  const built = makeObjectiveProvider({
+    ...config,
+    provider: 'anthropic',
+    model: 'claude-control',
+    objectiveProvider: 'deepseek',
+    objectiveProviderConfigurationError: null,
+    objectiveModel: 'deepseek-treatment',
+    deepseekKey: 'treatment-secret',
+  }, (warning) => warnings.push(warning));
+  assert.equal(built.provider.name, 'deepseek');
+  assert.equal(built.degraded, null);
+  assert.deepEqual(warnings, []);
+});
+
+test('invalid Objective provider configuration fails closed instead of inheriting control', () => {
+  const warnings: string[] = [];
+  const built = makeObjectiveProvider({
+    ...config,
+    objectiveProviderConfigurationError: 'OBJECTIVE_RESULT_V1_PROVIDER has unsupported value: typo',
+  }, (warning) => warnings.push(warning));
+  assert.equal(built.provider.name, 'mock');
+  assert.match(built.degraded ?? '', /unsupported value/);
   assert.equal(warnings.length, 1);
 });

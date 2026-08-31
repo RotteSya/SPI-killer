@@ -90,6 +90,19 @@ node scripts/compare-objective-evals.mjs
 且 treatment 捕获至少 200。协议无效率需 `<3%`，相对成功率下降 `<2pp`，p95 增幅 `≤10%`，
 Token 增幅 `≤8%`，重复扣费、负余额、机器行泄露、白名单外事件必须均为 0。
 
+生产灰度期间 Provider 必须分 slot，避免 control 被实验模型污染：
+
+```text
+OFFICIAL_PROVIDER=anthropic
+OBJECTIVE_RESULT_V1_PROVIDER=deepseek
+OBJECTIVE_RESULT_V1_MODEL=deepseek-v4-flash-vision-exp
+OBJECTIVE_RESULT_V1_BPS=0
+```
+
+`DEEPSEEK_API_KEY` 只存于服务端秘密环境。BPS 调到 5% 后，仅携带 `objective_v1` 的 treatment
+请求走 DeepSeek；未携带协议的 control 与旧客户端始终走 Anthropic。到 100% 时旧客户端仍保留
+control 兼容路径，不能仅因新客户端已全量就删除。
+
 出现重复扣费、负余额、机器行泄露、白名单外事件，或协议无效率连续 30 分钟 `>5%`、相对成功率
 下降 `>5pp` 时，所有者立即设置：
 

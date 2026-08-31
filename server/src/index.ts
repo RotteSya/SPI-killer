@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import { pathToFileURL } from 'node:url';
 import { config } from './config.ts';
 import { makeStore } from './storage.ts';
-import { makeProvider } from './providers/index.ts';
+import { makeObjectiveProvider, makeProvider } from './providers/index.ts';
 import type { Provider } from './providers/types.ts';
 import { StubPaymentProvider, type PaymentProvider } from './payments.ts';
 import { StripePaymentProvider } from './stripe.ts';
@@ -10,7 +10,7 @@ import { registerRoutes } from './routes.ts';
 
 // Compose the app so it can also be built in-process by tests (no listen). `overrides.provider`
 // is a test-only seam for exercising vendor-failure paths (the real provider is chosen by config).
-export async function buildApp(overrides: { provider?: Provider } = {}) {
+export async function buildApp(overrides: { provider?: Provider; objectiveProvider?: Provider } = {}) {
   const app = Fastify({
     logger: { level: process.env.LOG_LEVEL ?? 'info' },
     // Screenshots arrive as base64 JPEG; allow generous bodies.
@@ -38,6 +38,13 @@ export async function buildApp(overrides: { provider?: Provider } = {}) {
   const built = overrides.provider
     ? { provider: overrides.provider, degraded: null }
     : makeProvider(config, (msg) => app.log.warn(msg));
+  // A provider override is a test seam and intentionally applies to both paths unless the test
+  // supplies a dedicated Objective provider. Production always builds both configured slots.
+  const objectiveBuilt = overrides.objectiveProvider
+    ? { provider: overrides.objectiveProvider, degraded: null }
+    : overrides.provider
+      ? { provider: overrides.provider, degraded: null }
+      : makeObjectiveProvider(config, (msg) => app.log.warn(msg));
   const payment: PaymentProvider =
     config.paymentProvider === 'stripe' && config.stripeSecretKey !== ''
       ? new StripePaymentProvider()
@@ -48,7 +55,10 @@ export async function buildApp(overrides: { provider?: Provider } = {}) {
     app.log.error('STRIPE_WEBHOOK_SECRET is empty — purchases will be charged but NEVER credited');
   }
   registerRoutes(app, {
-    config, store, storeKind, provider: built.provider, providerDegraded: built.degraded, payment,
+    config, store, storeKind,
+    provider: built.provider, providerDegraded: built.degraded,
+    objectiveProvider: objectiveBuilt.provider, objectiveProviderDegraded: objectiveBuilt.degraded,
+    payment,
   });
   app.addHook('onClose', async () => store.close());
   return app;
@@ -64,7 +74,7 @@ if (isMain) {
     .listen({ host: config.host, port: config.port })
     .then(() => {
       app.log.info(
-        `NotchSPI official server up — provider=${config.provider} model=${config.model} payments=${config.paymentProvider}`,
+        `NotchSPI official server up — control=${config.provider}:${config.model} objective=${config.objectiveProvider}:${config.objectiveModel} payments=${config.paymentProvider}`,
       );
     })
     .catch((err) => {
