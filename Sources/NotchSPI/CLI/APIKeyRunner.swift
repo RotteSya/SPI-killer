@@ -38,7 +38,8 @@ enum APIKeyRunner {
         model: String,
         prompt: CapturePrompt,
         imagesBase64: [String],
-        disableThinking: Bool = false
+        disableThinking: Bool = false,
+        temperature: Double? = nil
     ) -> URLRequest? {
         guard let url = URL(string: endpoint), url.scheme != nil, url.host != nil else { return nil }
         let userText = Prompts.analyzeTaskText(prompt.task, imageCount: imagesBase64.count)
@@ -78,6 +79,9 @@ enum APIKeyRunner {
             ]
             if disableThinking {
                 openAIBody["thinking"] = ["type": "disabled"]
+            }
+            if let temperature {
+                openAIBody["temperature"] = temperature
             }
             body = openAIBody
         }
@@ -164,6 +168,7 @@ enum APIKeyRunner {
         apiKey: String,
         model: String,
         disableThinking: Bool = false,
+        temperature: Double? = nil,
         imagePaths: [String],
         prompt: CapturePrompt,
         onDelta: @escaping (String) -> Void,
@@ -181,7 +186,7 @@ enum APIKeyRunner {
             guard let request = makeRequest(
                 proto: proto, endpoint: endpoint, apiKey: apiKey,
                 model: model, prompt: prompt, imagesBase64: imagesBase64,
-                disableThinking: disableThinking
+                disableThinking: disableThinking, temperature: temperature
             ) else {
                 await MainActor.run {
                     onDone(false, L10n.t(

@@ -139,13 +139,15 @@ final class APIKeyRunnerTests: XCTestCase {
             proto: provider.proto, endpoint: provider.endpoint,
             apiKey: "sk-test", model: provider.defaultModel,
             prompt: CapturePrompt(system: "SYS", task: "answer."),
-            imagesBase64: ["QUJD"], disableThinking: provider.disablesThinking
+            imagesBase64: ["QUJD"], disableThinking: provider.disablesThinking,
+            temperature: provider.temperature
         ))
         let body = try XCTUnwrap(
             JSONSerialization.jsonObject(with: try XCTUnwrap(req.httpBody)) as? [String: Any]
         )
         let thinking = try XCTUnwrap(body["thinking"] as? [String: String])
         XCTAssertEqual(thinking["type"], "disabled")
+        XCTAssertEqual(body["temperature"] as? Double, 0)
     }
 
     /// Any OpenAI-compatible provider works by pointing the same `.openai` path at its base URL —
@@ -213,6 +215,7 @@ final class APIProviderTests: XCTestCase {
         XCTAssertEqual(deepseek.endpoint, "https://api.deepseek.com/chat/completions")
         XCTAssertEqual(deepseek.defaultModel, "deepseek-v4-flash-vision-exp")
         XCTAssertTrue(deepseek.disablesThinking)
+        XCTAssertEqual(deepseek.temperature, 0)
         XCTAssertEqual(APIProvider.byID("openai").endpoint, APIKeyRunner.openAIEndpoint)
         for p in APIProvider.all where p.id != "anthropic" { XCTAssertEqual(p.proto, .openai) }
 

@@ -28,7 +28,7 @@ test('DeepSeek provider uses the vision endpoint, non-thinking mode, and OpenAI 
     'deepseek-v4-flash-vision-exp', 4096, {
       name: 'deepseek',
       endpointPath: 'chat/completions',
-      extraBody: { thinking: { type: 'disabled' } },
+      extraBody: { thinking: { type: 'disabled' }, temperature: 0 },
     });
   let text = '';
   const usage = await provider.stream({
@@ -44,6 +44,7 @@ test('DeepSeek provider uses the vision endpoint, non-thinking mode, and OpenAI 
   const body = JSON.parse(String(calledInit?.body)) as Record<string, unknown>;
   assert.equal(body.model, 'deepseek-v4-flash-vision-exp');
   assert.deepEqual(body.thinking, { type: 'disabled' });
+  assert.equal(body.temperature, 0);
   assert.deepEqual(body.stream_options, { include_usage: true });
   const messages = body.messages as Array<{ content: Array<Record<string, unknown>> }>;
   assert.ok(messages[1]);

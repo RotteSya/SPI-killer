@@ -51,7 +51,8 @@ export function makeProvider(
             endpointPath: 'chat/completions',
             // V4 defaults to thinking mode. The notch needs the final answer stream with bounded
             // latency; explicit non-thinking mode also avoids paying for hidden reasoning tokens.
-            extraBody: { thinking: { type: 'disabled' } },
+            // DeepSeek recommends temperature 0 for math; it also reduces protocol variation.
+            extraBody: { thinking: { type: 'disabled' }, temperature: 0 },
           },
         ),
         degraded: null,

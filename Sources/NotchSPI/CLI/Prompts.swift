@@ -49,18 +49,27 @@ enum Prompts {
     Keep `FINAL:` in Latin capitals exactly as shown — the app parses this line and renders it as a highlighted answer card (the marker itself is never displayed). Write <the answer> in the problem's language: the choice/letter/value itself plus at most one short clause. Nothing may follow that line, and `FINAL:` must appear nowhere else in the reply.
     """
 
+    /// Compact enough to keep Objective V1 within the same-model token gate. The decision order
+    /// is intentional: small vision models otherwise solve the legible arithmetic first and miss
+    /// an on-screen ambiguity or crop warning that must downgrade the result.
     static let objectiveResultClause = """
-    OBJECTIVE RESULT V1 (this section replaces only the instruction that FINAL must be the final physical line):
-    - Identify the question as single_choice, multiple_choice, ordering, short_fill, or other. Finish solving and checking before emitting the answer.
-    - For a usable objective answer, end with exactly these two lines and nothing after them:
-      FINAL: <the directly usable answer>
-      NSPI_RESULT_V1: {"v":1,"kind":"<kind>","state":"ready","answer":"<exactly the same answer as FINAL>","reason":"none"}
-    - Use state review with a usable answer when the question/options are ambiguous, a visible printing/OCR issue is flagged, or non-critical context such as a unit is missing. Its reason is ambiguous_question, ambiguous_options, missing_context, or unsupported. Put the uncertainty explanation before FINAL. FINAL and JSON answer must contain only the directly usable answer and must be character-for-character identical. An open-ended/unsupported item uses kind other, state review, and reason unsupported.
-    - State measures capture integrity, not answer confidence. `ready` is allowed only when the visible question, options, labels, units, and needed context are all unambiguous. Any visible ambiguity remains `review` even when it does not change the mathematical answer or you are fully confident in the result.
-    - Ambiguity that creates multiple plausible results is review, never ready. Include every usable possibility in FINAL. For example, if an ordering value may be 15 or 17 and changes the order, FINAL can be `B-D-C-A or D-B-C-A`, with the identical string in JSON answer.
-    - If cropping, unreadable content, or missing critical context prevents a usable answer, output only one line:
-      NSPI_RESULT_V1: {"v":1,"kind":"<best identified kind>","state":"retake","answer":null,"reason":"cropped|unreadable|missing_context"}
-    - The JSON must be one line, valid JSON with exactly v/kind/state/answer/reason, and be the final non-empty line. Never use a code fence or heading around either machine line. Never emit NSPI_RESULT_V1 more than once.
+    OBJECTIVE RESULT V1. Inspect the whole image, then classify before solving; priority is retake > review > ready. Return protocol lines only—no analysis, scratch work, or extra JSON.
+    - retake: crop, blur, or missing critical context prevents any usable answer. A readable title without readable question data/options is retake. Output ONLY `NSPI_RESULT_V1: {"v":1,"kind":"<kind>","state":"retake","answer":null,"reason":"<cropped|unreadable|missing_context>"}`; never output FINAL with retake.
+    - review: ANY explicit issue notice, warning, ambiguity, unclear value/unit, duplicated or misprinted option label, missing noncritical context, multiple plausible results, or unsupported/open item. A literal `[!]` always forces review (or retake if unusable), even when the answer is certain or it says number-only. Otherwise use ready.
+    For ready/review, solve and check every plausible reading. `X/Y` beside a notice saying unclear between X and Y means X OR Y, never division. For ordering, copy the original label→value table twice, substitute X in one and Y in the other, sort each independently, and verify every adjacent pair before returning both distinct label orders with ` or `. For multiple_choice, join all selected labels/values with commas, never `or`; apply divisibility tests to every prime candidate. Obey label/value instructions; unclear or duplicated labels require values. Output exactly:
+    FINAL: <direct answer>
+    NSPI_RESULT_V1: {"v":1,"kind":"<single_choice|multiple_choice|ordering|short_fill|other>","state":"<ready|review>","answer":"<identical to FINAL>","reason":"<reason>"}
+    ready requires reason none. review reason is ambiguous_question, ambiguous_options, missing_context, or unsupported; other requires review/unsupported. Emit one valid single-line JSON marker, with exactly v/kind/state/answer/reason, as the final line. No fence, heading, or text follows it.
+    """
+
+    static var objectiveBriefPrompt: String { """
+    You are a fast, precise screenshot solver. Read every visible character and instruction. Solve and verify silently, match the problem's language, and never invent missing content.
+
+    \(objectiveResultClause)
+    """ }
+
+    static let objectiveTask = """
+    Follow OBJECTIVE RESULT V1 exactly for the attached screenshot. Read every issue notice. For an ordering value shown as X/Y and described as unclear between X and Y, substitute X and Y into separate copies of the original table, sort and verify both, then return every distinct order. 中文题写“X 与 Y 之间模糊”时，X/Y 表示 X 或 Y，须分别代入、排序、核对。 If unusable, return only the retake marker and no FINAL line.
     """
 
     static let depthClause: [String: String] = [
@@ -124,9 +133,15 @@ enum Prompts {
             // These two strings are the pre-refactor Tutor contract and deliberately ignore the
             // personality session parameter byte-for-byte.
             return CapturePrompt(
-                system: tutorText(depth) + (objectiveProtocolEnabled && depth != "hint"
-                    ? "\n\n" + objectiveResultClause : ""),
-                task: "tutor me on the problem it shows."
+                system: objectiveProtocolEnabled && depth != "hint"
+                    ? (depth == "brief"
+                        ? objectiveBriefPrompt
+                        : base + "\n\n" + (depthClause[depth] ?? depthClause["guided"]!)
+                            + "\n\n" + objectiveResultClause)
+                    : tutorText(depth),
+                task: objectiveProtocolEnabled && depth != "hint"
+                    ? objectiveTask
+                    : "tutor me on the problem it shows."
             )
         }
         return CapturePrompt(

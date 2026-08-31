@@ -28,6 +28,7 @@ struct APIProvider {
     let keyPlaceholder: String
     let consoleURL: String?   // "获取 Key" deep link, nil for custom
     let disablesThinking: Bool
+    let temperature: Double?
 
     init(
         id: String,
@@ -38,7 +39,8 @@ struct APIProvider {
         storageKey: String,
         keyPlaceholder: String,
         consoleURL: String?,
-        disablesThinking: Bool = false
+        disablesThinking: Bool = false,
+        temperature: Double? = nil
     ) {
         self.id = id
         self.name = name
@@ -49,6 +51,7 @@ struct APIProvider {
         self.keyPlaceholder = keyPlaceholder
         self.consoleURL = consoleURL
         self.disablesThinking = disablesThinking
+        self.temperature = temperature
     }
 
     var isCustom: Bool { id == "custom" }
@@ -64,7 +67,7 @@ struct APIProvider {
                     endpoint: "https://api.deepseek.com/chat/completions",
                     defaultModel: "deepseek-v4-flash-vision-exp", storageKey: "deepseek",
                     keyPlaceholder: "sk-…", consoleURL: "https://platform.deepseek.com/api_keys",
-                    disablesThinking: true),
+                    disablesThinking: true, temperature: 0),
         APIProvider(id: "openai", name: "OpenAI", proto: .openai,
                     endpoint: APIKeyRunner.openAIEndpoint, defaultModel: "gpt-5",
                     storageKey: "codex", keyPlaceholder: "sk-…",

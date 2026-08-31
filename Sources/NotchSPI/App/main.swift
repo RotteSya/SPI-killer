@@ -8,6 +8,14 @@ if CommandLine.arguments.contains("--print-objective-eval-prompt") {
     exit(0)
 }
 
+if CommandLine.arguments.contains("--print-objective-eval-task") {
+    let prompt = Prompts.capturePrompt(
+        mode: "tutor", depth: "brief", personaName: "", personaText: "", sessionContext: "",
+        objectiveProtocolEnabled: true)
+    print(prompt.task)
+    exit(0)
+}
+
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate

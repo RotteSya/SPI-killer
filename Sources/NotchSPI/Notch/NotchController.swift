@@ -1343,6 +1343,7 @@ final class NotchController: NSObject {
                     proto: snapshot.provider.proto, endpoint: snapshot.apiEndpoint,
                     apiKey: apiKey, model: snapshot.apiModel,
                     disableThinking: snapshot.provider.disablesThinking,
+                    temperature: snapshot.provider.temperature,
                     imagePaths: imagePaths, prompt: prompt,
                     onDelta: onDelta, onDone: onDone
                 )

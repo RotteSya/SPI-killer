@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { composeObjectiveResult, normalizeObjectiveAnswer } from '../server/src/objective-result.ts';
+import { objectiveEvalAnswerHit } from '../server/src/objective-eval-scoring.ts';
 
 if (process.env.NSPI_RUN_OBJECTIVE_EVAL !== '1') {
   console.error('Set NSPI_RUN_OBJECTIVE_EVAL=1 to run the paid 240-call release evaluation.');
@@ -48,6 +49,9 @@ if (process.env.NSPI_EVAL_VERCEL_SHARE_TOKEN) {
 const SYSTEM = execFileSync('swift', ['run', 'NotchSPI', '--print-objective-eval-prompt'], {
   cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'],
 }).trim();
+const TASK = execFileSync('swift', ['run', 'NotchSPI', '--print-objective-eval-task'], {
+  cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'],
+}).trim();
 
 const records = [];
 for (const [index, fixture] of manifest.fixtures.entries()) {
@@ -57,7 +61,7 @@ for (const [index, fixture] of manifest.fixtures.entries()) {
     method: 'POST', headers: { ...evaluationHeaders,
       authorization: `Bearer ${process.env.NSPI_EVAL_DEVICE_TOKEN}`,
       'content-type': 'application/json', 'x-app-version': process.env.NSPI_EVAL_APP_VERSION },
-    body: JSON.stringify({ system: SYSTEM, task: 'Solve the attached objective question.',
+    body: JSON.stringify({ system: SYSTEM, task: TASK,
       image_base64: image, image_media_type: 'image/png', result_protocol: 'objective_v1',
       capture_id: crypto.randomUUID() }),
   });
@@ -74,8 +78,7 @@ for (const [index, fixture] of manifest.fixtures.entries()) {
   const parsed = composeObjectiveResult(raw, true);
   const answerHit = fixture.expected_state === 'retake'
     ? parsed.state === 'retake'
-    : fixture.accepted_answers.some((answer) => normalizeObjectiveAnswer(answer)
-      === normalizeObjectiveAnswer(parsed.finalAnswer ?? ''));
+    : objectiveEvalAnswerHit(parsed.finalAnswer, fixture.accepted_answers);
   const record = {
     id: fixture.id, language: fixture.language, kind: fixture.kind,
     expected_state: fixture.expected_state, schema_valid: parsed.parserPath === 'v1',
