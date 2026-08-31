@@ -34,7 +34,7 @@ LOG_LEVEL="${LOG_LEVEL:-info}"
 export NSPI_QA_EPHEMERAL=1
 
 SERVER_PID=""
-SERVER_LOG="$(mktemp -t notchspi-dev-server)"
+SERVER_LOG="$(mktemp "${TMPDIR:-/tmp}/notchspi-dev-server.XXXXXX")"
 cleanup() {
   local code=$?
   if [[ -n "$SERVER_PID" ]] && kill -0 "$SERVER_PID" 2>/dev/null; then

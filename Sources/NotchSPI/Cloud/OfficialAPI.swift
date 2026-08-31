@@ -352,7 +352,8 @@ enum OfficialAPI {
     /// still answers the current question (degraded to context-less, never wrong-image).
     static func makeCaptureRequest(
         baseURL: String, deviceToken: String,
-        prompt: CapturePrompt, imagesBase64: [String]
+        prompt: CapturePrompt, imagesBase64: [String],
+        resultProtocol: String? = nil, captureID: UUID? = nil
     ) -> URLRequest {
         var req = URLRequest(url: endpointURL(base: baseURL, path: "v1/captures"))
         req.httpMethod = "POST"
@@ -368,6 +369,8 @@ enum OfficialAPI {
             "stream": true,
         ]
         if imagesBase64.count > 1 { payload["images_base64"] = imagesBase64 }
+        if let resultProtocol { payload["result_protocol"] = resultProtocol }
+        if let captureID { payload["capture_id"] = captureID.uuidString.lowercased() }
         req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
         return req
     }
@@ -385,6 +388,7 @@ enum OfficialAPI {
     /// the serverless function and its database, so the capture POST rides a hot path. The
     /// response is deliberately ignored — warming must never mutate account state.
     static func warmUp() {
+        Task { @MainActor in ClientConfigService.shared.refresh() }
         let base = baseURL
         let token = deviceToken
         Task.detached(priority: .userInitiated) {
@@ -482,6 +486,8 @@ enum OfficialAPI {
     static func run(
         imagePaths: [String],
         prompt: CapturePrompt,
+        resultProtocol: String? = nil,
+        captureID: UUID? = nil,
         onDelta: @escaping (String) -> Void,
         onDone: @escaping (_ ok: Bool, _ stderr: String) -> Void
     ) {
@@ -507,7 +513,9 @@ enum OfficialAPI {
             let request = makeCaptureRequest(
                 baseURL: baseURL, deviceToken: token,
                 prompt: prompt,
-                imagesBase64: imagesBase64
+                imagesBase64: imagesBase64,
+                resultProtocol: resultProtocol,
+                captureID: captureID
             )
             #if DEBUG
             print("[NotchSPI] official API run → \(request.url?.host ?? "?")")

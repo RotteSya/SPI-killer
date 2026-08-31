@@ -2,9 +2,12 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type {
-  Account, DeviceSummary, RegisteredDevice, ReserveResult, Store, TopUpSummary,
+  Account, DeviceSummary, ProductEventInput, ProductEventWriteResult, ProductMetrics,
+  ProductMetricsQuery, RegisteredDevice, ReserveResult, Store, StoredProductEvent,
+  StoredUsageMetric, TopUpSummary,
 } from './db.ts';
 import { hashToken, newToken } from './db.ts';
+import { aggregateProductMetrics } from './telemetry.ts';
 
 // Local/self-hosted store: SQLite via the Node built-in driver. Kept in its own module so
 // platforms without node:sqlite (or with a read-only filesystem) never load it — the storage
@@ -35,6 +38,19 @@ CREATE TABLE IF NOT EXISTS usage_events (
   model         TEXT,
   created_at    TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS product_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id TEXT NOT NULL UNIQUE,
+  device_id INTEGER NOT NULL REFERENCES devices(id),
+  capture_id TEXT,
+  occurred_at TEXT NOT NULL,
+  received_at TEXT NOT NULL,
+  event_name TEXT NOT NULL,
+  trigger TEXT, channel TEXT, mode TEXT, depth TEXT, context_count INTEGER,
+  question_kind TEXT, result_state TEXT, parser_path TEXT, error_code TEXT, action TEXT,
+  capture_ms INTEGER, first_token_ms INTEGER, total_ms INTEGER,
+  app_version TEXT, config_revision TEXT, variant TEXT
+);
 CREATE TABLE IF NOT EXISTS topups (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   device_id    INTEGER NOT NULL REFERENCES devices(id),
@@ -53,6 +69,11 @@ CREATE TABLE IF NOT EXISTS counters (
 CREATE INDEX IF NOT EXISTS idx_usage_device ON usage_events(device_id);
 CREATE INDEX IF NOT EXISTS idx_topups_device ON topups(device_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_topups_reference ON topups(reference);
+CREATE INDEX IF NOT EXISTS idx_product_received ON product_events(received_at);
+CREATE INDEX IF NOT EXISTS idx_product_name_received ON product_events(event_name, received_at);
+CREATE INDEX IF NOT EXISTS idx_product_variant_received ON product_events(variant, received_at);
+CREATE INDEX IF NOT EXISTS idx_product_device_received ON product_events(device_id, received_at);
+CREATE INDEX IF NOT EXISTS idx_product_capture ON product_events(capture_id);
 `;
 
 interface DeviceRow {
@@ -82,6 +103,12 @@ export class SqliteStore implements Store {
     this.ensureColumn('devices', 'cli_enabled', 'INTEGER NOT NULL DEFAULT 0');
     this.ensureColumn('devices', 'onboarded', 'INTEGER NOT NULL DEFAULT 0');
     this.ensureColumn('devices', 'hotkey_presses', 'INTEGER NOT NULL DEFAULT 0');
+    this.ensureColumn('usage_events', 'capture_id', 'TEXT');
+    this.ensureColumn('usage_events', 'result_protocol', 'TEXT');
+    this.ensureColumn('usage_events', 'result_state', 'TEXT');
+    this.ensureColumn('usage_events', 'parser_path', 'TEXT');
+    this.ensureColumn('usage_events', 'estimated_cost_micros', 'INTEGER');
+    this.ensureColumn('usage_events', 'pricing_version', 'TEXT');
   }
 
   private ensureColumn(table: string, column: string, definition: string): void {
@@ -168,6 +195,12 @@ export class SqliteStore implements Store {
     inputTokens: number;
     outputTokens: number;
     model: string;
+    captureId?: string;
+    resultProtocol?: string;
+    resultState?: string;
+    parserPath?: string;
+    estimatedCostMicros?: number;
+    pricingVersion?: string;
   }): Promise<void> {
     this.tx(() => {
       const dev = this.deviceByToken(input.token);
@@ -183,11 +216,80 @@ export class SqliteStore implements Store {
         .run(input.questions, input.inputTokens, input.outputTokens, now, dev.id);
       this.db
         .prepare(
-          `INSERT INTO usage_events (device_id, questions, input_tokens, output_tokens, model, created_at)
-           VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO usage_events
+           (device_id, questions, input_tokens, output_tokens, model, created_at, capture_id,
+            result_protocol, result_state, parser_path, estimated_cost_micros, pricing_version)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(dev.id, input.questions, input.inputTokens, input.outputTokens, input.model, now);
+        .run(dev.id, input.questions, input.inputTokens, input.outputTokens, input.model, now,
+          input.captureId ?? null, input.resultProtocol ?? null, input.resultState ?? null,
+          input.parserPath ?? null, input.estimatedCostMicros ?? null, input.pricingVersion ?? null);
     });
+  }
+
+  async recordProductEvents(token: string, events: ProductEventInput[]): Promise<ProductEventWriteResult> {
+    const dev = this.deviceByToken(token);
+    if (!dev) return { accepted: 0, duplicate: 0 };
+    return this.tx(() => {
+      const statement = this.db.prepare(
+        `INSERT OR IGNORE INTO product_events
+         (event_id, device_id, capture_id, occurred_at, received_at, event_name, trigger, channel,
+          mode, depth, context_count, question_kind, result_state, parser_path, error_code, action,
+          capture_ms, first_token_ms, total_ms, app_version, config_revision, variant)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      const receivedAt = new Date().toISOString();
+      let accepted = 0;
+      for (const event of events) {
+        const result = statement.run(
+          event.eventId, dev.id, event.captureId, event.occurredAt, receivedAt, event.eventName,
+          event.trigger, event.channel, event.mode, event.depth, event.contextCount,
+          event.questionKind, event.resultState, event.parserPath, event.errorCode, event.action,
+          event.captureMs, event.firstTokenMs, event.totalMs, event.appVersion,
+          event.configRevision, event.variant,
+        );
+        accepted += Number(result.changes);
+      }
+      return { accepted, duplicate: events.length - accepted };
+    });
+  }
+
+  async getProductMetrics(input: ProductMetricsQuery): Promise<ProductMetrics> {
+    const rows = this.db.prepare(
+      `SELECT device_id, event_id, capture_id, occurred_at, received_at, event_name, trigger,
+              channel, mode, depth, context_count, question_kind, result_state, parser_path,
+              error_code, action, capture_ms, first_token_ms, total_ms, app_version,
+              config_revision, variant
+       FROM product_events WHERE received_at >= ? AND received_at < ?`,
+    ).all(input.from, input.to) as Array<Record<string, unknown>>;
+    const mapped: StoredProductEvent[] = rows.map((r) => ({
+      deviceId: Number(r.device_id), eventId: String(r.event_id), captureId: r.capture_id as string | null,
+      occurredAt: String(r.occurred_at), receivedAt: String(r.received_at), eventName: String(r.event_name),
+      trigger: r.trigger as string | null, channel: r.channel as string | null, mode: r.mode as string | null,
+      depth: r.depth as string | null, contextCount: r.context_count as number | null,
+      questionKind: r.question_kind as string | null, resultState: r.result_state as string | null,
+      parserPath: r.parser_path as string | null, errorCode: r.error_code as string | null,
+      action: r.action as string | null, captureMs: r.capture_ms as number | null,
+      firstTokenMs: r.first_token_ms as number | null, totalMs: r.total_ms as number | null,
+      appVersion: r.app_version as string | null, configRevision: r.config_revision as string | null,
+      variant: r.variant as string | null,
+    }));
+    const usage = this.db.prepare(
+      `SELECT capture_id, input_tokens, output_tokens, questions, estimated_cost_micros
+       FROM usage_events WHERE created_at >= ? AND created_at < ?`,
+    ).all(input.from, input.to) as Array<{
+      capture_id: string | null; input_tokens: number; output_tokens: number;
+      questions: number; estimated_cost_micros: number | null;
+    }>;
+    const usageMetrics: StoredUsageMetric[] = usage.map((row) => ({
+      captureId: row.capture_id, inputTokens: row.input_tokens, outputTokens: row.output_tokens,
+      questions: row.questions, estimatedCostMicros: row.estimated_cost_micros,
+    }));
+    return aggregateProductMetrics(mapped, input, usageMetrics);
+  }
+
+  async pruneProductEvents(before: string): Promise<number> {
+    return Number(this.db.prepare(`DELETE FROM product_events WHERE received_at < ?`).run(before).changes);
   }
 
   async releaseReservation(input: { token: string; questions: number }): Promise<number | null> {

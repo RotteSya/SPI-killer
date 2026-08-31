@@ -79,6 +79,70 @@ export type ReserveResult =
   | { ok: true; balanceQuestions: number }
   | { ok: false; reason: 'unknown_token' | 'insufficient_quota' };
 
+export interface ProductEventInput {
+  eventId: string;
+  captureId: string | null;
+  occurredAt: string;
+  eventName: string;
+  trigger: string | null;
+  channel: string | null;
+  mode: string | null;
+  depth: string | null;
+  contextCount: number | null;
+  questionKind: string | null;
+  resultState: string | null;
+  parserPath: string | null;
+  errorCode: string | null;
+  action: string | null;
+  captureMs: number | null;
+  firstTokenMs: number | null;
+  totalMs: number | null;
+  appVersion: string | null;
+  configRevision: string | null;
+  variant: string | null;
+}
+
+export interface StoredProductEvent extends ProductEventInput {
+  deviceId: number;
+  receivedAt: string;
+}
+
+export interface ProductEventWriteResult {
+  accepted: number;
+  duplicate: number;
+}
+
+export interface ProductMetricsQuery { from: string; to: string; variant?: string }
+
+export interface ProductMetricVariant {
+  variant: string;
+  captures_started: number;
+  captures_completed: number;
+  capture_success_rate: number;
+  protocol_valid_rate: number;
+  legacy_fallback_rate: number;
+  result_states: Record<string, number>;
+  depths: Record<string, number>;
+  actions: Record<string, number>;
+  latency_ms: { p50: number | null; p95: number | null };
+  tokens: { avg_input: number | null; avg_output: number | null };
+  estimated_cost_micros: { total: number; avg_per_charged_capture: number | null };
+}
+
+export interface ProductMetrics {
+  from: string;
+  to: string;
+  variants: ProductMetricVariant[];
+}
+
+export interface StoredUsageMetric {
+  captureId: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  questions: number;
+  estimatedCostMicros: number | null;
+}
+
 export interface Store {
   registerDevice(input: {
     platform: string;
@@ -110,7 +174,17 @@ export interface Store {
     inputTokens: number;
     outputTokens: number;
     model: string;
+    captureId?: string;
+    resultProtocol?: string;
+    resultState?: string;
+    parserPath?: string;
+    estimatedCostMicros?: number;
+    pricingVersion?: string;
   }): Promise<void>;
+
+  recordProductEvents(token: string, events: ProductEventInput[]): Promise<ProductEventWriteResult>;
+  getProductMetrics(input: ProductMetricsQuery): Promise<ProductMetrics>;
+  pruneProductEvents(before: string): Promise<number>;
 
   /**
    * Return an unused hold to the balance (the vendor failed, or produced no answer). Returns the

@@ -412,6 +412,7 @@ final class OnboardingViewController: NSViewController {
 
     fileprivate func finish() {
         Settings.shared.onboardingDone = true
+        UserDefaults.standard.set(OfficialAPI.appVersion, forKey: ProductTelemetry.noticeKey)
         onFinished?()
         view.window?.close()
     }
@@ -1073,9 +1074,9 @@ private final class TryItPage: OnboardingPage {
             ? L10n.t("在刘海右侧的 ⚙ 设置 →「快捷键」里换一个组合键，然后回来再试。",
                      "ノッチ右側の ⚙ 設定 →「ショートカット」で別の組み合わせに変更してから、もう一度お試しください。",
                      "Pick another combo in ⚙ Settings → Hotkeys, at the right edge of the notch, then come back and try again.")
-            : L10n.t("之后在任何题目界面都能这样用。\n快捷键、语言、外观，都在刘海右侧的 ⚙ 设置里。",
-                     "この先はどんな問題画面でも同じように使えます。\nショートカットや言語、外観はノッチ右側の ⚙ 設定から。",
-                     "From now on this works on any question, anywhere. Hotkeys, language,\nappearance — all in ⚙ Settings, at the right edge of the notch.")
+            : L10n.t("之后在任何题目界面都能这样用。⚙ 设置里可调整快捷键，并可关闭匿名可靠性数据共享。",
+                     "この先はどんな問題画面でも使えます。⚙ 設定でショートカット変更や匿名の信頼性データ共有を停止できます。",
+                     "Use it on any question. In ⚙ Settings you can change hotkeys or turn off anonymous reliability sharing.")
     }
 
     // The hotkey capture must SEE the sample question: SCScreenshotManager honors sharingType

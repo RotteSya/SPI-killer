@@ -1,0 +1,15 @@
+[
+  {"id":"ready","raw":"work\nFINAL: B\nNSPI_RESULT_V1: {\"v\":1,\"kind\":\"single_choice\",\"state\":\"ready\",\"answer\":\"B\",\"reason\":\"none\"}","path":"v1","state":"ready","violations":[]},
+  {"id":"review","raw":"work\nFINAL: A or C\nNSPI_RESULT_V1: {\"v\":1,\"kind\":\"multiple_choice\",\"state\":\"review\",\"answer\":\"A or C\",\"reason\":\"ambiguous_options\"}","path":"v1","state":"review","violations":[]},
+  {"id":"retake","raw":"NSPI_RESULT_V1: {\"v\":1,\"kind\":\"short_fill\",\"state\":\"retake\",\"answer\":null,\"reason\":\"cropped\"}","path":"v1","state":"retake","violations":[]},
+  {"id":"other","raw":"work\nFINAL: essay\nNSPI_RESULT_V1: {\"v\":1,\"kind\":\"other\",\"state\":\"review\",\"answer\":\"essay\",\"reason\":\"unsupported\"}","path":"v1","state":"review","violations":[]},
+  {"id":"duplicate","raw":"FINAL: A\nNSPI_RESULT_V1: {\"v\":1,\"kind\":\"single_choice\",\"state\":\"ready\",\"answer\":\"A\",\"reason\":\"none\"}\nNSPI_RESULT_V1: {\"v\":1,\"kind\":\"single_choice\",\"state\":\"ready\",\"answer\":\"A\",\"reason\":\"none\"}","path":"legacy_fallback","state":"review","violations":["duplicateMarker"]},
+  {"id":"invalid-json","raw":"FINAL: A\nNSPI_RESULT_V1: {nope}","path":"legacy_fallback","state":"review","violations":["invalidJSON"]},
+  {"id":"unknown-field","raw":"FINAL: A\nNSPI_RESULT_V1: {\"v\":1,\"kind\":\"single_choice\",\"state\":\"ready\",\"answer\":\"A\",\"reason\":\"none\",\"x\":1}","path":"legacy_fallback","state":"review","violations":["unknownField"]},
+  {"id":"final-mismatch","raw":"FINAL: A\nNSPI_RESULT_V1: {\"v\":1,\"kind\":\"single_choice\",\"state\":\"ready\",\"answer\":\"B\",\"reason\":\"none\"}","path":"legacy_fallback","state":"review","violations":["finalMismatch"]},
+  {"id":"missing-marker","raw":"work\nFINAL: A","path":"legacy_fallback","state":"review","violations":[]},
+  {"id":"none","raw":"work only","path":"none","state":null,"violations":["missingUsableResult"]},
+  {"id":"invalid-ready-other","raw":"FINAL: text\nNSPI_RESULT_V1: {\"v\":1,\"kind\":\"other\",\"state\":\"ready\",\"answer\":\"text\",\"reason\":\"none\"}","path":"legacy_fallback","state":"review","violations":["invalidStateCombination"]},
+  {"id":"marker-not-last","raw":"FINAL: A\nNSPI_RESULT_V1: {\"v\":1,\"kind\":\"single_choice\",\"state\":\"ready\",\"answer\":\"A\",\"reason\":\"none\"}\nafter","path":"legacy_fallback","state":"review","violations":["markerNotLast"]},
+  {"id":"machine-line-in-fence","raw":"FINAL: A\n```json\nNSPI_RESULT_V1: {\"v\":1,\"kind\":\"single_choice\",\"state\":\"ready\",\"answer\":\"A\",\"reason\":\"none\"}","path":"legacy_fallback","state":"review","violations":["invalidStateCombination"]}
+]

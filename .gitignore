@@ -5,6 +5,7 @@
 /dist/
 /dist-qa/
 /.eval-results/
+/objective-eval-output/
 /.venv-fixtures/
 /server/node_modules/
 /server/data/

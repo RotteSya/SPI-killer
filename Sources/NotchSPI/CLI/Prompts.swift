@@ -49,6 +49,20 @@ enum Prompts {
     Keep `FINAL:` in Latin capitals exactly as shown — the app parses this line and renders it as a highlighted answer card (the marker itself is never displayed). Write <the answer> in the problem's language: the choice/letter/value itself plus at most one short clause. Nothing may follow that line, and `FINAL:` must appear nowhere else in the reply.
     """
 
+    static let objectiveResultClause = """
+    OBJECTIVE RESULT V1 (this section replaces only the instruction that FINAL must be the final physical line):
+    - Identify the question as single_choice, multiple_choice, ordering, short_fill, or other. Finish solving and checking before emitting the answer.
+    - For a usable objective answer, end with exactly these two lines and nothing after them:
+      FINAL: <the directly usable answer>
+      NSPI_RESULT_V1: {"v":1,"kind":"<kind>","state":"ready","answer":"<exactly the same answer as FINAL>","reason":"none"}
+    - Use state review with a usable answer when the question/options are ambiguous, a visible printing/OCR issue is flagged, or non-critical context such as a unit is missing. Its reason is ambiguous_question, ambiguous_options, missing_context, or unsupported. Put the uncertainty explanation before FINAL. FINAL and JSON answer must contain only the directly usable answer and must be character-for-character identical. An open-ended/unsupported item uses kind other, state review, and reason unsupported.
+    - State measures capture integrity, not answer confidence. `ready` is allowed only when the visible question, options, labels, units, and needed context are all unambiguous. Any visible ambiguity remains `review` even when it does not change the mathematical answer or you are fully confident in the result.
+    - Ambiguity that creates multiple plausible results is review, never ready. Include every usable possibility in FINAL. For example, if an ordering value may be 15 or 17 and changes the order, FINAL can be `B-D-C-A or D-B-C-A`, with the identical string in JSON answer.
+    - If cropping, unreadable content, or missing critical context prevents a usable answer, output only one line:
+      NSPI_RESULT_V1: {"v":1,"kind":"<best identified kind>","state":"retake","answer":null,"reason":"cropped|unreadable|missing_context"}
+    - The JSON must be one line, valid JSON with exactly v/kind/state/answer/reason, and be the final non-empty line. Never use a code fence or heading around either machine line. Never emit NSPI_RESULT_V1 more than once.
+    """
+
     static let depthClause: [String: String] = [
         "hint": "Solution detail: HINTS ONLY. Do NOT reveal the final answer or a full worked solution. Give one or two targeted hints and the single next step to try, then stop and invite them to attempt it themselves.",
         "guided": "Solution detail: GUIDED WALKTHROUGH. Work through the problem step by step, showing the reasoning and intermediate results. Close with a one-line takeaway of the general technique so it transfers to similar problems, then end with the FINAL line.",
@@ -103,13 +117,15 @@ enum Prompts {
         depth: String,
         personaName: String,
         personaText: String,
-        sessionContext: String
+        sessionContext: String,
+        objectiveProtocolEnabled: Bool = false
     ) -> CapturePrompt {
         guard mode == "personality" else {
             // These two strings are the pre-refactor Tutor contract and deliberately ignore the
             // personality session parameter byte-for-byte.
             return CapturePrompt(
-                system: tutorText(depth),
+                system: tutorText(depth) + (objectiveProtocolEnabled && depth != "hint"
+                    ? "\n\n" + objectiveResultClause : ""),
                 task: "tutor me on the problem it shows."
             )
         }
