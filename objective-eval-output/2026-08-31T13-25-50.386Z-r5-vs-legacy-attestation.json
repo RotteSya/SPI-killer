@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "comparison_id": "2026-08-31T13-25-50.386Z-r5-vs-legacy",
+  "treatment_commit": "d02f45f997b1b050b4378d9582a51c275c8ad1f5",
+  "baseline_commit": "fbcb6eb9823571e028921c3c1b94f04c47d77734",
+  "prompt_version": "objective-v1-r5",
+  "model": "deepseek-v4-flash-vision-exp",
+  "reviewer": "RotteSya",
+  "reviewed_at": "2026-08-31T14:10:48Z",
+  "status": "signed",
+  "artifacts": {
+    "comparison": {
+      "path": "objective-eval-output/2026-08-31T13-25-50.386Z-r5-vs-legacy-comparison.json",
+      "sha256": "4b9e22521dfb848f322033c0c50206f976039a76e78a423f161063d159028444"
+    },
+    "treatment_summary": {
+      "path": "objective-eval-output/2026-08-31T13-20-54.674Z-summary.json",
+      "sha256": "101a5f84e5513c7c36e75a8122cb9dad7642476f6b673e91b0b879c7c263e53c"
+    },
+    "baseline_summary": {
+      "path": "objective-eval-output/2026-08-31T13-06-26.590Z-legacy-summary.json",
+      "sha256": "fa02ff7dc1038fed4fe92a84ada719a44a6543ca6abc99f29620a61a63be6ad8"
+    }
+  },
+  "assertions": {
+    "existing_240_call_treatment_record_reviewed": true,
+    "existing_240_call_baseline_record_reviewed": true,
+    "failed_items_not_rerun_for_selection": true,
+    "automatic_absolute_gate_accepted": true,
+    "fixed_baseline_comparison_included": true,
+    "automatic_relative_gate_accepted": true,
+    "production_rollout_authorized": false
+  },
+  "source": "Project owner confirmation in Codex side conversation"
+}
