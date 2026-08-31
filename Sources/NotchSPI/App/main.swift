@@ -1,9 +1,11 @@
 import AppKit
 
-if CommandLine.arguments.contains("--print-objective-eval-prompt") {
+if CommandLine.arguments.contains("--print-objective-eval-prompt")
+    || CommandLine.arguments.contains("--print-legacy-eval-prompt") {
+    let objectiveEnabled = CommandLine.arguments.contains("--print-objective-eval-prompt")
     let prompt = Prompts.capturePrompt(
         mode: "tutor", depth: "brief", personaName: "", personaText: "", sessionContext: "",
-        objectiveProtocolEnabled: true)
+        objectiveProtocolEnabled: objectiveEnabled)
     print(prompt.system)
     exit(0)
 }

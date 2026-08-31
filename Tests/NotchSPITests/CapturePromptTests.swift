@@ -68,6 +68,20 @@ final class CapturePromptTests: XCTestCase {
         XCTAssertFalse(personality.system.contains("OBJECTIVE RESULT V1"))
     }
 
+    func testLegacyBaselineUsesTheFrozenControlPrompt() {
+        let legacy = Prompts.capturePrompt(
+            mode: "tutor", depth: "brief", personaName: "", personaText: "", sessionContext: "",
+            objectiveProtocolEnabled: false)
+        let objective = Prompts.capturePrompt(
+            mode: "tutor", depth: "brief", personaName: "", personaText: "", sessionContext: "",
+            objectiveProtocolEnabled: true)
+
+        XCTAssertEqual(legacy.system, Prompts.briefPrompt)
+        XCTAssertEqual(legacy.task, objective.task)
+        XCTAssertFalse(legacy.system.contains("OBJECTIVE RESULT V1"))
+        XCTAssertTrue(objective.system.hasPrefix(legacy.system))
+    }
+
     func testAllThreeChannelsConsumeTheSameFrozenPrompt() throws {
         let prompt = CapturePrompt(
             system: "SYSTEM\n" + context,

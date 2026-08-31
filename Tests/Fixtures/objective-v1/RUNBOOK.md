@@ -20,8 +20,24 @@ export NSPI_EVAL_COMMIT=<40-char commit>
 export NSPI_EVAL_APP_VERSION=<version>
 export NSPI_EVAL_EXECUTOR=<name>
 export NSPI_EVAL_REVIEWER=<different name>
+export NSPI_EVAL_VARIANT=objective_v1
 node scripts/run-objective-eval.mjs
 ```
+
+固定 legacy 基线使用同一候选服务、模型和 240 张图片，只切换冻结 Prompt 与结果解析：
+
+```sh
+export NSPI_EVAL_VARIANT=legacy
+export NSPI_EVAL_REGISTER_DEVICES=3
+export NSPI_EVAL_TREATMENT_SUMMARY=objective-eval-output/<objective>-summary.json
+export NSPI_EVAL_TREATMENT_JSONL=objective-eval-output/<objective>.jsonl
+node scripts/run-objective-eval.mjs
+```
+
+`NSPI_EVAL_REGISTER_DEVICES` 仅允许 `1...4`，供隔离候选环境注册临时设备；生产环境不得使用。
+每个设备先核对余额，再按轮询固定分配题目。legacy 运行会额外输出 `-comparison.json` 和
+`-comparison.md`，自动执行正确率、平均 Token 和 p95 延迟三项相对闸门。Comparison 通过后仍需
+独立复核者签署，不能由 runner 自动授权生产灰度。
 
 若 candidate 是受 Vercel Deployment Protection 保护的 Preview，另设临时 share URL 中的
 `_vercel_share` 值；runner 会交换 HttpOnly Cookie，Protection 必须保持开启：
@@ -29,6 +45,9 @@ node scripts/run-objective-eval.mjs
 ```sh
 export NSPI_EVAL_VERCEL_SHARE_TOKEN=<temporary-share-token>
 ```
+
+自动化环境也可设置 `NSPI_EVAL_VERCEL_BYPASS_TOKEN`；两种访问凭证不得同时提供，且不得写入
+评测 JSONL、日志或 Git。
 
 Runner 对每张图片只调用一次，原始结果写入忽略跟踪的 `objective-eval-output/`。复核者只签署
 已有评分；不得重跑失败题来挑选较好结果。正式归档只保留脱敏 JSONL 和 Markdown 摘要。
@@ -38,6 +57,15 @@ Runner 对每张图片只调用一次，原始结果写入忽略跟踪的 `objec
 及其 `-summary.json` / `-summary.md`。自动绝对阈值已通过，RotteSya 已签署独立
 [`attestation`](../../../objective-eval-output/2026-08-30T17-03-15.896Z-attestation.json)；固定基线
 对比仍未包含在该签署中，在基线签署前不得据此开启生产灰度。
+
+固定 legacy 基线已于 2026-08-31 在同一 240 题 manifest、同一模型和隔离候选服务上完成一次性运行。
+原始记录经 `objective-semantic-v1` 统一重评分，以接受 `A and C (2, 5)` 这类选项与值同时出现的
+语义等价格式；没有重跑任何题。归档见
+[`legacy JSONL`](../../../objective-eval-output/2026-08-31T09-31-41.861Z-legacy.jsonl)、
+[`semantic baseline`](../../../objective-eval-output/2026-08-31T09-31-41.861Z-semantic-baseline-summary.json) 和
+[`comparison`](../../../objective-eval-output/2026-08-31T09-31-41.861Z-semantic-comparison.json)。
+Comparison 当前为 **FAIL**：准确率提升 3.43 个百分点，但平均 Token 增加 43.47%，p95 延迟增加
+57.16%。`OBJECTIVE_RESULT_V1_BPS` 必须保持 `0`，直到提示词/协议开销降至阈值内并完成新的固定评测。
 
 ## 3. 发版阈值
 
