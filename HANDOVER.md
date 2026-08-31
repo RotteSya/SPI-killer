@@ -100,7 +100,7 @@ Objective V1 打开时：`ClientConfigService` 冻结远端分组 → 三通道�
 | `MIG-PER-001` | `PersonaStore.swift` init | 单 persona 字段 → persona library | live |
 | `MIG-FONT-001` | `Theme.swift` `legacyAnswerFontSize()` | `answerSize` 三档 → 连续字号 | live |
 | `MIG-WIRE-001` | `OfficialAPI.swift` + `routes.ts` | `image_base64` 单图；`images_base64` 存在时仍带最后一张 | live |
-| `MIG-STOR-001` | `APIProvider.swift` | Anthropic/OpenAI 的 `storageKey` 仍为 `claude` / `codex` | live |
+| `MIG-STOR-001` | `APIProvider.swift` | Anthropic/OpenAI 的 `storageKey` 仍为 `claude` / `codex`；DeepSeek 使用独立 `deepseek` | live |
 | `MIG-DB-001` | `db-postgres.ts` / `db-sqlite.ts` | lazy columns：`topups.note`、`devices.cli_enabled`、`onboarded`、`hotkey_presses` | live |
 | `MIG-OBJ-001` | `ObjectiveResult.swift` / `routes.ts` | 未携带 `result_protocol` 的客户端继续使用旧 Prompt、旧解析与 `MIN_BILLABLE_CHARS` 计费 | live |
 

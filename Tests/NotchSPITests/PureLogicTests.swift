@@ -133,6 +133,21 @@ final class APIKeyRunnerTests: XCTestCase {
         XCTAssertEqual(body["model"] as? String, "gpt-5")
     }
 
+    func testDeepSeekRequestDisablesThinking() throws {
+        let provider = APIProvider.byID("deepseek")
+        let req = try XCTUnwrap(APIKeyRunner.makeRequest(
+            proto: provider.proto, endpoint: provider.endpoint,
+            apiKey: "sk-test", model: provider.defaultModel,
+            prompt: CapturePrompt(system: "SYS", task: "answer."),
+            imagesBase64: ["QUJD"], disableThinking: provider.disablesThinking
+        ))
+        let body = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(req.httpBody)) as? [String: Any]
+        )
+        let thinking = try XCTUnwrap(body["thinking"] as? [String: String])
+        XCTAssertEqual(thinking["type"], "disabled")
+    }
+
     /// Any OpenAI-compatible provider works by pointing the same `.openai` path at its base URL —
     /// this is what makes the whole preset list (Gemini, Grok, Qwen, GLM, Kimi, OpenRouter, custom)
     /// possible without a per-vendor client.
@@ -193,11 +208,17 @@ final class APIProviderTests: XCTestCase {
         let anthropic = APIProvider.byID("anthropic")
         XCTAssertEqual(anthropic.proto, .anthropic)
         XCTAssertEqual(anthropic.endpoint, APIKeyRunner.anthropicEndpoint)
+        let deepseek = APIProvider.byID("deepseek")
+        XCTAssertEqual(deepseek.proto, .openai)
+        XCTAssertEqual(deepseek.endpoint, "https://api.deepseek.com/chat/completions")
+        XCTAssertEqual(deepseek.defaultModel, "deepseek-v4-flash-vision-exp")
+        XCTAssertTrue(deepseek.disablesThinking)
         XCTAssertEqual(APIProvider.byID("openai").endpoint, APIKeyRunner.openAIEndpoint)
         for p in APIProvider.all where p.id != "anthropic" { XCTAssertEqual(p.proto, .openai) }
 
         // Legacy storage keys are preserved so pre-feature keys carry over.
         XCTAssertEqual(anthropic.storageKey, "claude")
+        XCTAssertEqual(deepseek.storageKey, "deepseek")
         XCTAssertEqual(APIProvider.byID("openai").storageKey, "codex")
 
         // Storage keys unique; every preset (non-custom) ships a default model + console link.

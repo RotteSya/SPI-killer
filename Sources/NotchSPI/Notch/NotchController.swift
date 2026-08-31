@@ -1342,6 +1342,7 @@ final class NotchController: NSObject {
                 APIKeyRunner.run(
                     proto: snapshot.provider.proto, endpoint: snapshot.apiEndpoint,
                     apiKey: apiKey, model: snapshot.apiModel,
+                    disableThinking: snapshot.provider.disablesThinking,
                     imagePaths: imagePaths, prompt: prompt,
                     onDelta: onDelta, onDone: onDone
                 )

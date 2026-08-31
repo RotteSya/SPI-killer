@@ -34,6 +34,28 @@ export function makeProvider(
         ),
         degraded: null,
       };
+    case 'deepseek':
+      if (!config.deepseekKey) {
+        const why = 'OFFICIAL_PROVIDER=deepseek but DEEPSEEK_API_KEY is empty';
+        warn(`${why} — captures are DISABLED until it is set.`);
+        return { provider: new MockProvider(), degraded: why };
+      }
+      return {
+        provider: new OpenAIProvider(
+          config.deepseekKey,
+          config.deepseekBaseURL,
+          config.model,
+          config.maxTokens,
+          {
+            name: 'deepseek',
+            endpointPath: 'chat/completions',
+            // V4 defaults to thinking mode. The notch needs the final answer stream with bounded
+            // latency; explicit non-thinking mode also avoids paying for hidden reasoning tokens.
+            extraBody: { thinking: { type: 'disabled' } },
+          },
+        ),
+        degraded: null,
+      };
     case 'openai':
       if (!config.openaiKey) {
         const why = 'OFFICIAL_PROVIDER=openai but OPENAI_API_KEY is empty';

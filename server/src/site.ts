@@ -18,6 +18,7 @@ export interface SiteInput {
   trialQuestions: number;
   currency: string;
   lang: PageLang;
+  aiProvider: string;
 }
 
 /** ?lang wins; otherwise sniff Accept-Language; default Japanese (the selling entity is JP). */
@@ -131,7 +132,7 @@ const S: Record<PageLang, SiteStrings> = {
     privacyTitle: 'プライバシーポリシー',
     privacyBody: [
       '収集する情報：匿名のデバイス識別子（ランダム生成トークン）、質問数の残高と利用量（トークン数）。氏名・メールアドレス等の個人情報は収集しません。',
-      'スクリーンショット：回答生成のためにのみ AI プロバイダー（Anthropic）へ送信され、当社サーバーには保存されません。処理後すぐに破棄されます。',
+      'スクリーンショット：回答生成のためにのみ AI プロバイダー（{{AI_PROVIDER}}）へ送信され、当社サーバーには保存されません。処理後すぐに破棄されます。',
       '決済情報：Stripe, Inc. が処理します。カード情報が当社に渡ることはありません。',
       '第三者提供：法令に基づく場合を除き、収集した情報を第三者に提供しません。',
       'お問い合わせ・削除請求：下記メールアドレスまでご連絡ください。デバイス残高の削除に対応します。',
@@ -191,7 +192,7 @@ const S: Record<PageLang, SiteStrings> = {
     privacyTitle: '隐私政策',
     privacyBody: [
       '收集的信息：匿名设备标识（随机生成的令牌）、题数余额与用量（token 数）。不收集姓名、邮箱等个人信息。',
-      '截图：仅为生成答案发送给 AI 服务方（Anthropic），不在我方服务器留存，处理后立即销毁。',
+      '截图：仅为生成答案发送给 AI 服务方（{{AI_PROVIDER}}），不在我方服务器留存，处理后立即销毁。',
       '支付信息：由 Stripe, Inc. 处理，我方不接触任何卡片信息。',
       '第三方提供：除法律要求外，不向第三方提供收集的信息。',
       '咨询与删除请求：请通过下方邮箱联系，我们支持删除设备余额数据。',
@@ -251,7 +252,7 @@ const S: Record<PageLang, SiteStrings> = {
     privacyTitle: 'Privacy Policy',
     privacyBody: [
       'What we collect: an anonymous device identifier (random token), question balance, and usage (token counts). No names, emails, or other personal data.',
-      'Screenshots: sent to the AI provider (Anthropic) solely to generate the answer; never stored on our servers; destroyed after processing.',
+      'Screenshots: sent to the AI provider ({{AI_PROVIDER}}) solely to generate the answer; never stored on our servers; destroyed after processing.',
       'Payments: processed by Stripe, Inc. Card details never reach us.',
       'Third parties: we do not share collected data except as required by law.',
       'Contact & deletion: email us below; we will delete device balance data on request.',
@@ -291,6 +292,9 @@ export function renderLandingPage(input: SiteInput): string {
   const s = S[input.lang];
   const langAttr = input.lang === 'zh' ? 'zh-CN' : input.lang;
   const rose = roseSVGPath();
+  const providerName = input.aiProvider === 'deepseek' ? 'DeepSeek'
+    : input.aiProvider === 'anthropic' ? 'Anthropic'
+      : input.aiProvider === 'openai' ? 'OpenAI' : 'AI';
 
   const popularIdx = input.packs.length >= 2 ? 1 : 0;
   const packCards = input.packs
@@ -318,7 +322,9 @@ export function renderLandingPage(input: SiteInput): string {
     .map((f) => `<details><summary>${escapeHtml(f.q)}</summary><p>${escapeHtml(f.a)}</p></details>`)
     .join('\n');
 
-  const privacy = s.privacyBody.map((p) => `<p>${escapeHtml(p)}</p>`).join('\n');
+  const privacy = s.privacyBody
+    .map((p) => `<p>${escapeHtml(p.replaceAll('{{AI_PROVIDER}}', providerName))}</p>`)
+    .join('\n');
   const refund = s.refundBody.map((p) => `<p>${escapeHtml(p)}</p>`).join('\n');
 
   const langLink = (l: PageLang, label: string) =>

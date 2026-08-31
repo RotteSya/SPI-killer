@@ -1340,7 +1340,7 @@ private final class AdvancedPageController: NSViewController, SettingsPage, NSTe
 
         let descs: [String: String] = [
             ServiceMode.official: L10n.t("默认。开箱即用，按题数额度计费。", "デフォルト。設定不要、質問数制。", "Default. Zero setup, question-quota billing."),
-            ServiceMode.customKey: L10n.t("用你自己的 Anthropic / OpenAI API Key 直连，费用走你的账户。", "自分の Anthropic / OpenAI API キーで直接接続。", "Use your own Anthropic / OpenAI API key; costs go to your account."),
+            ServiceMode.customKey: L10n.t("用你自己的第三方 API Key 直连，费用走你的账户。", "自分の外部 API キーで直接接続。", "Use your own third-party API key; costs go to your account."),
             ServiceMode.cli: L10n.t("驱动本机已登录的 codex / claude 命令行。", "ローカルの codex / claude CLI を利用。", "Drive the locally installed codex / claude CLIs."),
         ]
         let visibleModes = cliEnabled ? ServiceMode.all : ServiceMode.all.filter { $0 != ServiceMode.cli }

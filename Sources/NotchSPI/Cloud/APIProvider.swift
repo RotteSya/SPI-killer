@@ -2,8 +2,8 @@ import Foundation
 
 /// Which wire protocol a third-party endpoint speaks. Anthropic has its own Messages API; every
 /// other mainstream vendor we support exposes an OpenAI-compatible Chat Completions endpoint, so a
-/// single `.openai` path (with a per-provider base URL) covers OpenAI, Gemini, Grok, Qwen, GLM,
-/// Kimi, OpenRouter and any user-supplied compatible endpoint.
+/// single `.openai` path (with a per-provider base URL) covers DeepSeek, OpenAI, Gemini, Grok,
+/// Qwen, GLM, Kimi, OpenRouter and any user-supplied compatible endpoint.
 enum APIWireProtocol {
     case anthropic
     case openai
@@ -13,9 +13,7 @@ enum APIWireProtocol {
 /// a sensible default model; the `custom` entry lets the user paste any OpenAI-compatible base URL.
 ///
 /// Every preset defaults to a VISION-capable model on purpose — captures are screenshots, so a
-/// text-only endpoint (e.g. DeepSeek's default chat API) can't answer and isn't offered as a
-/// preset. Users who want such a vendor can still add it through the `custom` entry with a vision
-/// model name.
+/// vendor's text-only default model cannot answer here.
 struct APIProvider {
     let id: String            // stable id persisted in Settings.apiProvider
     let name: String          // display name (picker + notch header)
@@ -29,6 +27,29 @@ struct APIProvider {
     let storageKey: String
     let keyPlaceholder: String
     let consoleURL: String?   // "获取 Key" deep link, nil for custom
+    let disablesThinking: Bool
+
+    init(
+        id: String,
+        name: String,
+        proto: APIWireProtocol,
+        endpoint: String,
+        defaultModel: String,
+        storageKey: String,
+        keyPlaceholder: String,
+        consoleURL: String?,
+        disablesThinking: Bool = false
+    ) {
+        self.id = id
+        self.name = name
+        self.proto = proto
+        self.endpoint = endpoint
+        self.defaultModel = defaultModel
+        self.storageKey = storageKey
+        self.keyPlaceholder = keyPlaceholder
+        self.consoleURL = consoleURL
+        self.disablesThinking = disablesThinking
+    }
 
     var isCustom: Bool { id == "custom" }
 
@@ -39,6 +60,11 @@ struct APIProvider {
                     endpoint: APIKeyRunner.anthropicEndpoint, defaultModel: "claude-opus-4-8",
                     storageKey: "claude", keyPlaceholder: "sk-ant-…",
                     consoleURL: "https://console.anthropic.com/settings/keys"),
+        APIProvider(id: "deepseek", name: "DeepSeek", proto: .openai,
+                    endpoint: "https://api.deepseek.com/chat/completions",
+                    defaultModel: "deepseek-v4-flash-vision-exp", storageKey: "deepseek",
+                    keyPlaceholder: "sk-…", consoleURL: "https://platform.deepseek.com/api_keys",
+                    disablesThinking: true),
         APIProvider(id: "openai", name: "OpenAI", proto: .openai,
                     endpoint: APIKeyRunner.openAIEndpoint, defaultModel: "gpt-5",
                     storageKey: "codex", keyPlaceholder: "sk-…",

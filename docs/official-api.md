@@ -10,6 +10,11 @@
 
 服务端代持厂商 API Key。客户端只持有匿名设备令牌。
 
+官方截图服务推荐配置为 `OFFICIAL_PROVIDER=deepseek`、
+`OFFICIAL_MODEL=deepseek-v4-flash-vision-exp`、`DEEPSEEK_BASE_URL=https://api.deepseek.com`；
+密钥只通过 `DEEPSEEK_API_KEY` 注入运行环境。普通 DeepSeek 文本模型不接受截图，不能用于该通道。
+Anthropic 与 OpenAI Provider 继续保留为回滚兼容路径。
+
 通用约定：
 
 - 认证：`Authorization: Bearer <device_token>`（除注册端点外）。

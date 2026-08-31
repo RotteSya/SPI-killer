@@ -133,6 +133,7 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
       trialQuestions: config.trialQuestions,
       currency: config.currency,
       lang,
+      aiProvider: config.provider,
     });
     return reply
       .header('Cache-Control', 'public, max-age=300')

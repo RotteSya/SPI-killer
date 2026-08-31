@@ -5,17 +5,30 @@ import { vendorErrorMessage } from './anthropic.ts';
 // Proxies to the OpenAI Chat Completions API (streaming). `stream_options.include_usage`
 // makes the final chunk carry token usage. Vision image travels as a data-URI image_url.
 export class OpenAIProvider implements Provider {
-  readonly name = 'openai';
+  readonly name: string;
   private readonly apiKey: string;
-  private readonly baseURL: string;
+  private readonly endpoint: string;
   private readonly model: string;
   private readonly maxTokens: number;
+  private readonly extraBody: Record<string, unknown>;
 
-  constructor(apiKey: string, baseURL: string, model: string, maxTokens: number) {
+  constructor(
+    apiKey: string,
+    baseURL: string,
+    model: string,
+    maxTokens: number,
+    options: {
+      name?: string;
+      endpointPath?: string;
+      extraBody?: Record<string, unknown>;
+    } = {},
+  ) {
+    this.name = options.name ?? 'openai';
     this.apiKey = apiKey;
-    this.baseURL = baseURL;
+    this.endpoint = `${baseURL.replace(/\/+$/u, '')}/${(options.endpointPath ?? 'v1/chat/completions').replace(/^\/+/, '')}`;
     this.model = model;
     this.maxTokens = maxTokens;
+    this.extraBody = options.extraBody ?? {};
   }
 
   async stream(
@@ -28,6 +41,7 @@ export class OpenAIProvider implements Provider {
       max_tokens: this.maxTokens,
       stream: true,
       stream_options: { include_usage: true },
+      ...this.extraBody,
       messages: [
         { role: 'system', content: req.system },
         {
@@ -43,7 +57,7 @@ export class OpenAIProvider implements Provider {
       ],
     };
 
-    const res = await fetch(`${this.baseURL}/v1/chat/completions`, {
+    const res = await fetch(this.endpoint, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',

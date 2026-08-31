@@ -665,6 +665,7 @@ final class PersonalityEvaluationTests: XCTestCase {
             case .customKey(let provider, let endpoint, let model, let apiKey):
                 APIKeyRunner.run(
                     proto: provider.proto, endpoint: endpoint, apiKey: apiKey, model: model,
+                    disableThinking: provider.disablesThinking,
                     imagePaths: [imagePath], prompt: run.prompt,
                     onDelta: onDelta, onDone: onDone
                 )

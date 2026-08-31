@@ -23,12 +23,14 @@ function boundedInt(value: number, fallback: number, minimum: number, maximum: n
 
 // Which vendor the official service proxies to. "mock" streams a canned answer with synthetic
 // usage so the whole billing pipeline runs end-to-end without any real API key.
-export type ProviderName = 'anthropic' | 'openai' | 'mock';
+export type ProviderName = 'anthropic' | 'deepseek' | 'openai' | 'mock';
 
 function envProvider(): ProviderName {
   const v = envStr('OFFICIAL_PROVIDER', 'mock').toLowerCase();
-  return v === 'anthropic' || v === 'openai' ? v : 'mock';
+  return v === 'anthropic' || v === 'deepseek' || v === 'openai' ? v : 'mock';
 }
+
+const officialProvider = envProvider();
 
 export const config = {
   host: envStr('HOST', '0.0.0.0'),
@@ -82,13 +84,18 @@ export const config = {
   // the production Stripe account's settlement currency; override with CURRENCY for others.
   currency: envStr('CURRENCY', 'JPY'),
 
-  provider: envProvider(),
+  provider: officialProvider,
   // Model the official service uses. The client never chooses; the server decides.
-  model: envStr('OFFICIAL_MODEL', 'claude-opus-4-8'),
+  model: envStr(
+    'OFFICIAL_MODEL',
+    officialProvider === 'deepseek' ? 'deepseek-v4-flash-vision-exp' : 'claude-opus-4-8',
+  ),
   maxTokens: envInt('OFFICIAL_MAX_TOKENS', 4096),
 
   anthropicKey: envStr('ANTHROPIC_API_KEY', ''),
   anthropicBaseURL: envStr('ANTHROPIC_BASE_URL', 'https://api.anthropic.com'),
+  deepseekKey: envStr('DEEPSEEK_API_KEY', ''),
+  deepseekBaseURL: envStr('DEEPSEEK_BASE_URL', 'https://api.deepseek.com'),
   openaiKey: envStr('OPENAI_API_KEY', ''),
   openaiBaseURL: envStr('OPENAI_BASE_URL', 'https://api.openai.com'),
 

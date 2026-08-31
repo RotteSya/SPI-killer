@@ -16,7 +16,7 @@ process.env.PACKS_JSON = JSON.stringify([
 process.env.LOG_LEVEL = 'silent';
 
 const { buildApp } = await import('../src/index.ts');
-const { resolveSiteLang } = await import('../src/site.ts');
+const { renderLandingPage, resolveSiteLang } = await import('../src/site.ts');
 
 let app: FastifyInstance;
 let base: string;
@@ -88,4 +88,16 @@ test('the site is browser-cacheable and varies on Accept-Language', async () => 
   assert.match(res.headers.get('cache-control') ?? '', /max-age=300/);
   assert.ok(!(res.headers.get('cache-control') ?? '').includes('s-maxage'));
   assert.match(res.headers.get('vary') ?? '', /Accept-Language/i);
+});
+
+test('the privacy disclosure names the configured AI provider', () => {
+  const html = renderLandingPage({
+    packs: [{ id: 'pack100', questions: 100, amountCents: 300 }],
+    trialQuestions: 180,
+    currency: 'JPY',
+    lang: 'en',
+    aiProvider: 'deepseek',
+  });
+  assert.match(html, /AI provider \(DeepSeek\)/);
+  assert.doesNotMatch(html, /\{\{AI_PROVIDER\}\}/);
 });

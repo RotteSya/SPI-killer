@@ -37,7 +37,8 @@ enum APIKeyRunner {
         apiKey: String,
         model: String,
         prompt: CapturePrompt,
-        imagesBase64: [String]
+        imagesBase64: [String],
+        disableThinking: Bool = false
     ) -> URLRequest? {
         guard let url = URL(string: endpoint), url.scheme != nil, url.host != nil else { return nil }
         let userText = Prompts.analyzeTaskText(prompt.task, imageCount: imagesBase64.count)
@@ -67,7 +68,7 @@ enum APIKeyRunner {
             content.append(contentsOf: imagesBase64.map {
                 ["type": "image_url", "image_url": ["url": "data:image/jpeg;base64,\($0)"]]
             })
-            body = [
+            var openAIBody: [String: Any] = [
                 "model": model,
                 "stream": true,
                 "messages": [
@@ -75,6 +76,10 @@ enum APIKeyRunner {
                     ["role": "user", "content": content],
                 ],
             ]
+            if disableThinking {
+                openAIBody["thinking"] = ["type": "disabled"]
+            }
+            body = openAIBody
         }
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -158,6 +163,7 @@ enum APIKeyRunner {
         endpoint: String,
         apiKey: String,
         model: String,
+        disableThinking: Bool = false,
         imagePaths: [String],
         prompt: CapturePrompt,
         onDelta: @escaping (String) -> Void,
@@ -174,9 +180,8 @@ enum APIKeyRunner {
             }
             guard let request = makeRequest(
                 proto: proto, endpoint: endpoint, apiKey: apiKey,
-                model: model,
-                prompt: prompt,
-                imagesBase64: imagesBase64
+                model: model, prompt: prompt, imagesBase64: imagesBase64,
+                disableThinking: disableThinking
             ) else {
                 await MainActor.run {
                     onDone(false, L10n.t(
