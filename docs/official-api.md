@@ -16,8 +16,9 @@ DeepSeek 视觉候选通过独立 treatment slot 配置：
 `DEEPSEEK_BASE_URL=https://api.deepseek.com`。密钥只通过 `DEEPSEEK_API_KEY` 注入运行环境。
 未携带 `result_protocol` 的旧客户端和 control 流量继续走 `OFFICIAL_PROVIDER`；携带
 `objective_v1` 的请求才走 treatment slot。普通 DeepSeek 文本模型不接受截图，不能用于该通道。
-该候选的 Objective r5 自动绝对/相对闸门已通过，归档见评测 Runbook；仍须所有者复核签署后
-才可开启生产灰度。Anthropic 与 OpenAI 继续保留为兼容路径。
+该候选的 Objective r5 自动绝对/相对闸门已通过，并由所有者通过独立 attestation 签署；归档见
+评测 Runbook。生产灰度仍按内部、5%、25%、100% 闸门逐档授权。Anthropic 与 OpenAI 继续保留
+为兼容路径。
 
 通用约定：
 

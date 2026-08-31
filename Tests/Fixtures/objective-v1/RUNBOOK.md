@@ -46,8 +46,10 @@ V1 合法率 97.50%、`ready` 精确率 87.37%、排序题准确率 80.39%。低
 [`summary`](../../../objective-eval-output/2026-08-31T13-06-26.590Z-legacy-summary.md)。离线比较见
 [`comparison`](../../../objective-eval-output/2026-08-31T13-25-50.386Z-r5-vs-legacy-comparison.md)：
 绝对准确率 96.57%、V1/状态/retake 100%，相对基线准确率 +20.10pp、平均 Token +5.92%、
-p95 -43.58%，自动阈值全部 **PASS**。比较状态为 `pending_owner_review`；签署前生产 Provider 与
-`OBJECTIVE_RESULT_V1_BPS=0` 保持不变。
+p95 -43.58%，自动阈值全部 **PASS**。比较器生成文件中的状态保留为不可变的
+`pending_owner_review`；RotteSya 后续已签署独立
+[`attestation`](../../../objective-eval-output/2026-08-31T13-25-50.386Z-r5-vs-legacy-attestation.json)，
+其 SHA-256 固定比较及两份 summary。签署不等于自动授权生产变更，灰度仍由所有者按第 4 节执行。
 
 当前 r3 候选的脱敏归档是
 [`objective-eval-output/2026-08-30T17-03-15.896Z.jsonl`](../../../objective-eval-output/2026-08-30T17-03-15.896Z.jsonl)

@@ -113,7 +113,7 @@ Objective V1 打开时：`ClientConfigService` 冻结远端分组 → 三通道�
 - 本地：[`./scripts/verify.sh`](scripts/verify.sh)。Swift 测试必须串行（共享 UserDefaults / Keychain）。
 - 付费 personality 闸门：[`Tests/Fixtures/Personality/RUNBOOK.md`](Tests/Fixtures/Personality/RUNBOOK.md)。阈值只在 `manifest.json`。
 - 付费 Objective 闸门：[`Tests/Fixtures/objective-v1/RUNBOOK.md`](Tests/Fixtures/objective-v1/RUNBOOK.md)。普通 CI 只验证 240 张 manifest、SHA-256 与解析器；正式运行必须显式设置 `NSPI_RUN_OBJECTIVE_EVAL=1`。
-- DeepSeek Objective r5 的 240 题绝对闸门与同模型 legacy 相对闸门均已自动通过：准确率 96.57%、V1/状态/retake 100%、平均 Token +5.92%、p95 -43.58%。脱敏归档与比较见 Runbook；状态仍为 `pending_owner_review`。安全灰度保持 control `OFFICIAL_PROVIDER=anthropic`，以 `OBJECTIVE_RESULT_V1_PROVIDER=deepseek` 隔离 treatment，并从 `OBJECTIVE_RESULT_V1_BPS=0` 开始。
+- DeepSeek Objective r5 的 240 题绝对闸门与同模型 legacy 相对闸门均已自动通过并由 RotteSya 以独立 attestation 签署：准确率 96.57%、V1/状态/retake 100%、平均 Token +5.92%、p95 -43.58%。脱敏归档、比较与签署见 Runbook。安全灰度保持 control `OFFICIAL_PROVIDER=anthropic`，以 `OBJECTIVE_RESULT_V1_PROVIDER=deepseek` 隔离 treatment，并从 `OBJECTIVE_RESULT_V1_BPS=0` 开始。
 - 打包：`./scripts/package.sh qa` → `dist-qa/NotchSPI.app`；`./scripts/package.sh release` → `dist/NotchSPI.dmg`（Developer ID + 公证 + staple）。无证书的 release 必须显式 `--unsigned`。
 - Owner-only：push、tag `v${APP_VERSION}`、GitHub Release 上传 DMG、Vercel 部署、Stripe webhook 配置。
 - 服务端契约新字段先于客户端发版（`INV-DEPLOY-001`）。
