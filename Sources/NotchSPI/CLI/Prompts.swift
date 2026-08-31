@@ -53,23 +53,24 @@ enum Prompts {
     /// is intentional: small vision models otherwise solve the legible arithmetic first and miss
     /// an on-screen ambiguity or crop warning that must downgrade the result.
     static let objectiveResultClause = """
-    OBJECTIVE RESULT V1. Inspect the whole image, then classify before solving; priority is retake > review > ready. Return protocol lines only—no analysis, scratch work, or extra JSON.
-    - retake: crop, blur, or missing critical context prevents any usable answer. A readable title without readable question data/options is retake. Output ONLY `NSPI_RESULT_V1: {"v":1,"kind":"<kind>","state":"retake","answer":null,"reason":"<cropped|unreadable|missing_context>"}`; never output FINAL with retake.
-    - review: ANY explicit issue notice, warning, ambiguity, unclear value/unit, duplicated or misprinted option label, missing noncritical context, multiple plausible results, or unsupported/open item. A literal `[!]` always forces review (or retake if unusable), even when the answer is certain or it says number-only. Otherwise use ready.
-    For ready/review, solve and check every plausible reading. `X/Y` beside a notice saying unclear between X and Y means X OR Y, never division. For ordering, copy the original label→value table twice, substitute X in one and Y in the other, sort each independently, and verify every adjacent pair before returning both distinct label orders with ` or `. For multiple_choice, join all selected labels/values with commas, never `or`; apply divisibility tests to every prime candidate. Obey label/value instructions; unclear or duplicated labels require values. Output exactly:
-    FINAL: <direct answer>
-    NSPI_RESULT_V1: {"v":1,"kind":"<single_choice|multiple_choice|ordering|short_fill|other>","state":"<ready|review>","answer":"<identical to FINAL>","reason":"<reason>"}
-    ready requires reason none. review reason is ambiguous_question, ambiguous_options, missing_context, or unsupported; other requires review/unsupported. Emit one valid single-line JSON marker, with exactly v/kind/state/answer/reason, as the final line. No fence, heading, or text follows it.
+    OBJECTIVE RESULT V1. Inspect the entire image and decide state before solving: retake > review > ready. Return protocol lines only.
+    - retake if crop, blur, or missing critical content prevents a usable answer; a readable title alone is unusable. Output only `NSPI_RESULT_V1: {"v":1,"kind":"<kind>","state":"retake","answer":null,"reason":"<cropped|unreadable|missing_context>"}`—no FINAL.
+    - review for any stated warning, ambiguity, unclear value/unit/label, label misprint, missing noncritical context, multiple result, or unsupported item. A literal `[!]` always forces review (retake if unusable), even when the answer is certain or it says number-only. Otherwise ready.
+    For a usable answer, solve and verify every reading. Join distinct results with ` or ` and multiple selections with commas. Test every prime candidate for divisibility. Honor label/value instructions; bad labels require values.
+    Output exactly:
+    FINAL: <answer>
+    NSPI_RESULT_V1: {"v":1,"kind":"<single_choice|multiple_choice|ordering|short_fill|other>","state":"<ready|review>","answer":"<same answer>","reason":"<reason>"}
+    FINAL=answer. ready reason=none; review reason=ambiguous_question|ambiguous_options|missing_context|unsupported; other=review/unsupported. JSON keys exactly v/kind/state/answer/reason. Marker once, final, unfenced; nothing follows.
     """
 
     static var objectiveBriefPrompt: String { """
-    You are a fast, precise screenshot solver. Read every visible character and instruction. Solve and verify silently, match the problem's language, and never invent missing content.
+    Be a precise screenshot solver. Read all visible text; solve silently; match its language; never invent.
 
     \(objectiveResultClause)
     """ }
 
     static let objectiveTask = """
-    Follow OBJECTIVE RESULT V1 exactly for the attached screenshot. Read every issue notice. For an ordering value shown as X/Y and described as unclear between X and Y, substitute X and Y into separate copies of the original table, sort and verify both, then return every distinct order. 中文题写“X 与 Y 之间模糊”时，X/Y 表示 X 或 Y，须分别代入、排序、核对。 If unusable, return only the retake marker and no FINAL line.
+    Apply OBJECTIVE RESULT V1 exactly. Read every issue notice. If ordering shows X/Y as unclear between X and Y, X/Y means X or Y, not division: copy the original table, substitute each value separately, sort and verify both, then return every distinct label order. For retake, output only the marker—never FINAL.
     """
 
     static let depthClause: [String: String] = [

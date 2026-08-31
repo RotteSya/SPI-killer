@@ -59,8 +59,8 @@ final class CapturePromptTests: XCTestCase {
         XCTAssertTrue(objective.system.contains("OBJECTIVE RESULT V1"))
         XCTAssertTrue(objective.system.contains("NSPI_RESULT_V1:"))
         XCTAssertTrue(objective.system.contains("retake > review > ready"))
-        XCTAssertTrue(objective.system.contains("duplicated or misprinted option label"))
-        XCTAssertTrue(objective.system.contains("copy the original label→value table twice"))
+        XCTAssertTrue(objective.system.contains("label misprint"))
+        XCTAssertTrue(objective.task.contains("copy the original table"))
         XCTAssertFalse(objective.system.contains("Your reply streams to the user token by token"))
         XCTAssertEqual(objective.task, Prompts.objectiveTask)
         let hint = Prompts.capturePrompt(
