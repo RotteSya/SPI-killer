@@ -16,6 +16,20 @@ if CommandLine.arguments.contains("--print-objective-eval-task") {
     exit(0)
 }
 
+if CommandLine.arguments.contains("--print-legacy-eval-prompt") {
+    let prompt = Prompts.capturePrompt(
+        mode: "tutor", depth: "brief", personaName: "", personaText: "", sessionContext: "")
+    print(prompt.system)
+    exit(0)
+}
+
+if CommandLine.arguments.contains("--print-legacy-eval-task") {
+    let prompt = Prompts.capturePrompt(
+        mode: "tutor", depth: "brief", personaName: "", personaText: "", sessionContext: "")
+    print(prompt.task)
+    exit(0)
+}
+
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
