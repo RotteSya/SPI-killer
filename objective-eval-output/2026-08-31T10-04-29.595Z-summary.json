@@ -1,0 +1,28 @@
+{
+  "generated_at": "2026-08-31T10:09:24.160Z",
+  "calls": 240,
+  "v1_valid_rate": 0.975,
+  "answerable_accuracy": 0.9362745098039216,
+  "ready_precision": 0.8736842105263158,
+  "review_recall": 0.3333333333333333,
+  "state_accuracy": 0.8833333333333333,
+  "retake_recall": 0.9166666666666666,
+  "by_kind": {
+    "single_choice": 1,
+    "multiple_choice": 0.9411764705882353,
+    "ordering": 0.803921568627451,
+    "short_fill": 1
+  },
+  "by_language": {
+    "zh": 0.9411764705882353,
+    "ja": 0.9117647058823529,
+    "en": 0.9558823529411765
+  },
+  "avg_tokens": 1217.6625,
+  "p95_total_ms": 1819,
+  "failures": [
+    "V1 valid rate < 98%",
+    "ready precision < 97%",
+    "ordering accuracy < 85%"
+  ]
+}

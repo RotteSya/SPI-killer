@@ -60,7 +60,7 @@ struct APIProvider {
                     endpoint: APIKeyRunner.anthropicEndpoint, defaultModel: "claude-opus-4-8",
                     storageKey: "claude", keyPlaceholder: "sk-ant-…",
                     consoleURL: "https://console.anthropic.com/settings/keys"),
-        APIProvider(id: "deepseek", name: "DeepSeek", proto: .openai,
+        APIProvider(id: "deepseek", name: "DeepSeek · Vision Exp", proto: .openai,
                     endpoint: "https://api.deepseek.com/chat/completions",
                     defaultModel: "deepseek-v4-flash-vision-exp", storageKey: "deepseek",
                     keyPlaceholder: "sk-…", consoleURL: "https://platform.deepseek.com/api_keys",

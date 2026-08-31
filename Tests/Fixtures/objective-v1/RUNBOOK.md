@@ -33,6 +33,12 @@ export NSPI_EVAL_VERCEL_SHARE_TOKEN=<temporary-share-token>
 Runner 对每张图片只调用一次，原始结果写入忽略跟踪的 `objective-eval-output/`。复核者只签署
 已有评分；不得重跑失败题来挑选较好结果。正式归档只保留脱敏 JSONL 和 Markdown 摘要。
 
+DeepSeek `deepseek-v4-flash-vision-exp` 非思考候选已于 2026-08-31 完成 240 题运行，归档见
+[`JSONL`](../../../objective-eval-output/2026-08-31T10-04-29.595Z.jsonl) 与
+[`summary`](../../../objective-eval-output/2026-08-31T10-04-29.595Z-summary.md)。闸门为 **FAIL**：
+V1 合法率 97.50%、`ready` 精确率 87.37%、排序题准确率 80.39%。低强度思考只做失败集合诊断，
+平均耗时 12.6 秒，不能替代完整评测或据此放行。生产 Provider 不得切换到该候选。
+
 当前 r3 候选的脱敏归档是
 [`objective-eval-output/2026-08-30T17-03-15.896Z.jsonl`](../../../objective-eval-output/2026-08-30T17-03-15.896Z.jsonl)
 及其 `-summary.json` / `-summary.md`。自动绝对阈值已通过，RotteSya 已签署独立
