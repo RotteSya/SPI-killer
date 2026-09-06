@@ -1,0 +1,43 @@
+import {test,beforeEach,afterEach} from 'node:test';
+import assert from 'node:assert/strict';
+import type {FastifyInstance} from 'fastify';
+import {qualityFixture,signFixture} from './helpers/quality-fixture.ts';
+import {createHash} from 'node:crypto';
+import {Script} from 'node:vm';
+import {uploadQualityRecord} from '../../scripts/lib/quality-upload.mts';
+process.env.DB_PATH=':memory:';process.env.OFFICIAL_PROVIDER='mock';process.env.LOG_LEVEL='silent';process.env.ADMIN_TOKEN='quality-test-admin';
+const {buildApp}=await import('../src/index.ts');let app:FastifyInstance;
+beforeEach(async()=>{app=await buildApp();});afterEach(async()=>{await app.close();});
+const admin={'x-admin-token':'quality-test-admin'};
+test('quality page is a credential-free shell with exact CSP script integrity',async()=>{
+  const response=await app.inject({url:'/admin/quality/reports'});assert.equal(response.statusCode,200);
+  const script=/<script>([\s\S]*)<\/script>/.exec(response.payload)?.[1];assert.ok(script);new Script(script);
+  assert.ok(String(response.headers['content-security-policy']).includes("'sha256-"+createHash('sha256').update(script).digest('base64')+"'"));
+  assert.equal(response.headers['cache-control'],'no-store');assert.doesNotMatch(script,/localStorage|sessionStorage|innerHTML/);
+  assert.ok((await app.inject({url:'/admin/reports'})).payload.includes('/admin/quality/reports'));
+});
+test('uploader validates before transmission and confirms the exact immutable receipt over HTTP',async()=>{
+  const origin=await app.listen({host:'127.0.0.1',port:0}),input=qualityFixture('uploader-quality');
+  const first=await uploadQualityRecord(input,origin,'quality-test-admin'),again=await uploadQualityRecord(input,origin,'quality-test-admin');
+  assert.deepEqual(first,again);
+  await assert.rejects(()=>uploadQualityRecord(input,'http://example.invalid','quality-test-admin'));
+  await assert.rejects(()=>uploadQualityRecord({...input,question:'private'},origin,'quality-test-admin'));
+  await assert.rejects(()=>uploadQualityRecord(input,origin,'[SENSITIVE]'));
+});
+test('quality HTTP authenticates evidence writes, preserves revisions and records withdrawal',async()=>{
+  const payload=qualityFixture('route-quality'),post=()=>app.inject({method:'POST',url:'/admin/quality',headers:admin,payload});
+  assert.equal((await app.inject({url:'/admin/quality'})).statusCode,401);
+  assert.equal((await app.inject({method:'POST',url:'/admin/quality',payload})).statusCode,401);
+  const initial=await post();assert.equal(initial.statusCode,200);assert.equal(initial.headers['cache-control'],'no-store');
+  assert.deepEqual((await post()).json(),initial.json());
+  assert.doesNotMatch(initial.payload,/case_sha256|family_sha256|device_token|accepted_answers|normalized_answer/);
+  payload.cases[0]!.answer_correct=false;assert.equal((await post()).statusCode,400,'altering a case invalidates review subject binding');
+  signFixture(payload);const updated=await post();assert.equal(updated.statusCode,200);assert.notEqual(updated.json().id,initial.json().id);
+  const page=await app.inject({url:'/admin/quality?profile=reading_practice&kind=ordering&language=ja',headers:admin});assert.equal(page.json().items.length,1);
+  assert.equal((await app.inject({url:'/admin/quality?source=spi_entry',headers:admin})).statusCode,400);
+  const url='/admin/quality/'+updated.json().id+'/withdraw',withdrawal={reference:'review-withdrawal',reason:'review_withdrawn'};
+  assert.equal((await app.inject({method:'POST',url,payload:withdrawal})).statusCode,401);
+  assert.equal((await app.inject({method:'POST',url,headers:admin,payload:withdrawal})).statusCode,200);
+  const read=await app.inject({url:'/admin/quality/'+updated.json().id,headers:admin});assert.equal(read.json().withdrawal.reason,'review_withdrawn');
+  assert.equal(read.json().report.submission_sha256,updated.json().report.submission_sha256,'withdrawal does not change archived metrics');
+});

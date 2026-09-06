@@ -1,7 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
+  "git": { "deploymentEnabled": { "codex/product-update-2-12": false } },
   "fluid": true,
+  "crons": [{ "path": "/api/internal/reap", "schedule": "* * * * *" }],
   "functions": {
     "api/index.ts": {
       "maxDuration": 300,

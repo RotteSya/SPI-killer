@@ -12,6 +12,7 @@ import type { FastifyInstance } from 'fastify';
 process.env.DB_PATH = ':memory:';
 process.env.OFFICIAL_PROVIDER = 'anthropic';
 process.env.ANTHROPIC_API_KEY = ''; // the misconfiguration under test
+process.env.QUOTA_POLICY_VERSION = 'legacy-test';
 process.env.TRIAL_QUESTIONS = '5';
 process.env.TRIAL_MIN_QUESTIONS = '5';
 process.env.TRIAL_MAX_QUESTIONS = '5';

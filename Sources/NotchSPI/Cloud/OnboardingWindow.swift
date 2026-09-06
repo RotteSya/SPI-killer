@@ -2,13 +2,14 @@ import AppKit
 import CoreGraphics
 
 // First-launch onboarding v2 — the product's opening scene. A borderless obsidian window over a
-// live aurora shader, five pages, zero technical vocabulary (no API / CLI / Key / Token):
+// live aurora shader, six pages, zero technical vocabulary (no API / CLI / Key / Token):
 //
 //   1. Welcome        — brand moment + language choice (applies live)
 //   2. How it works   — hotkey → screen → answer, in three illustrated beats
 //   3. Screen access  — why we need it, one-click grant, live green check
-//   4. The gift       — tap the sealed medallion to claim a randomly-granted free balance (reveal)
-//   5. Try it         — a printed sample question + the hotkey as physical keycaps; finish
+//   4. The gift       — tap the sealed medallion to reveal the one-time registered free balance
+//   5. Source         — optional self-reported introduction source; skip sends nothing
+//   6. Try it         — a printed sample question + the hotkey as physical keycaps; finish
 //
 // Every step is skippable and failure never blocks: registration re-runs on first capture, and
 // the capture path already explains a missing screen-recording permission. Power users find the
@@ -139,6 +140,8 @@ private class OnboardingPage: NSView {
     /// user performs a required action (the gift page requires the claim tap). Never a hard trap:
     /// Back and Esc always work, and the gate flips on the *gesture*, not on network success.
     var allowsAdvance: Bool { true }
+    var advanceTitle: String? { nil }
+    func commitAdvance() -> Bool { true }
     /// Set by the controller; a page calls it when `allowsAdvance` changes so the chrome refreshes.
     var onStateChange: (() -> Void)?
 }
@@ -224,7 +227,7 @@ final class OnboardingViewController: NSViewController {
         pageHost.frame = NSRect(x: 0, y: 0, width: Self.pageSize.width, height: Self.pageSize.height)
         root.addSubview(pageHost)
 
-        pages = [WelcomePage(), HowItWorksPage(), PermissionPage(), GiftPage(), TryItPage()]
+        pages = [WelcomePage(), HowItWorksPage(), PermissionPage(), GiftPage(), SourcePage(), TryItPage()]
         dots.count = pages.count
 
         // Bottom bar: [back ghost] [dots] [continue primary]
@@ -299,7 +302,7 @@ final class OnboardingViewController: NSViewController {
     // MARK: Navigation
 
     private func advance() {
-        guard pages[index].allowsAdvance else { return } // page is withholding "continue" (e.g. claim)
+        guard pages[index].allowsAdvance, pages[index].commitAdvance() else { return }
         if index == pages.count - 1 { finish() } else { go(+1) }
     }
 
@@ -398,7 +401,7 @@ final class OnboardingViewController: NSViewController {
         let last = index == pages.count - 1
         nextButton.title = last
             ? L10n.t("开始使用", "使いはじめる", "Start Using")
-            : (index == 0 ? L10n.t("开始", "はじめる", "Get Started") : L10n.next)
+            : (pages[index].advanceTitle ?? (index == 0 ? L10n.t("开始", "はじめる", "Get Started") : L10n.next))
         // A page can withhold "continue" until a required action is done (the gift claim). Hide it
         // rather than show a dead, dimmed control — the page's own primary CTA carries the flow.
         nextButton.isHidden = !pages[index].allowsAdvance
@@ -420,6 +423,61 @@ final class OnboardingViewController: NSViewController {
 
 private final class OnboardingFlippedView: NSView {
     override var isFlipped: Bool { true }
+}
+
+private final class SourcePage: OnboardingPage {
+    private let title = onboardingLabel(size: 26, weight: .bold, color: .white)
+    private let detail = onboardingLabel(size: 13, weight: .regular, color: NSColor(white: 1, alpha: 0.72))
+    private let status = onboardingLabel(size: 12, weight: .regular, color: NSColor(white: 1, alpha: 0.72))
+    private let choices = NSPopUpButton(frame: .zero, pullsDown: false)
+    private let source = DeviceSourceSelection.shared
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        title.frame = NSRect(x: 40, y: 55, width: 500, height: 45)
+        detail.frame = NSRect(x: 55, y: 112, width: 470, height: 88)
+        choices.frame = NSRect(x: 70, y: 221, width: 440, height: 32)
+        status.frame = NSRect(x: 55, y: 275, width: 470, height: 75)
+        choices.target = self; choices.action = #selector(selectionChanged)
+        for view in [title, detail, choices, status] { addSubview(view) }
+        rebuildStrings()
+    }
+    required init?(coder: NSCoder) { nil }
+    override var advanceTitle: String? {
+        source.record == nil && choices.indexOfSelectedItem == 0
+            ? L10n.t("跳过", "スキップ", "Skip") : L10n.next
+    }
+    override func rebuildStrings() {
+        title.stringValue = L10n.t("从哪里认识 NotchSPI？", "NotchSPI を知ったきっかけは？", "How did you find NotchSPI?")
+        detail.stringValue = L10n.t(
+            "可跳过。选择会与本机注册记录关联，用于比较不同入口的使用情况。它不决定答题场景，也不影响功能或额度。",
+            "回答は任意です。選択内容を本機の登録に紐づけ、入口別の利用状況を比較します。問題の種類・機能・無料枠は変わりません。",
+            "Optional. Your choice is linked to this device's registration to compare usage by source. It does not select a question mode or affect features or credits.")
+        let previous = choices.indexOfSelectedItem
+        choices.removeAllItems()
+        choices.addItems(withTitles: [L10n.t("暂不回答", "回答しない", "Prefer not to answer")] + DeviceSourceGroup.allCases.map(\.title))
+        if let saved = source.record {
+            let index = saved.group.flatMap { DeviceSourceGroup.allCases.firstIndex(of: $0) }.map { $0 + 1 } ?? 0
+            choices.selectItem(at: index); choices.isEnabled = false
+            status.stringValue = L10n.t("已保存此前选择。来源不会重复提交给其他设备。", "以前の選択を保存済みです。別のデバイスには引き継ぎません。", "Your earlier choice is saved. It will not be submitted for another device.")
+        } else {
+            choices.selectItem(at: max(0, previous)); choices.isEnabled = true
+            status.stringValue = L10n.t("跳过时不会上传来源信息。", "スキップすると、入口の情報は送信されません。", "Skipping sends no source information.")
+        }
+        choices.setAccessibilityLabel(title.stringValue)
+    }
+    @objc private func selectionChanged() { onStateChange?() }
+    override func commitAdvance() -> Bool {
+        guard source.record == nil else { return true }
+        let index = choices.indexOfSelectedItem
+        guard source.choose(index > 0 ? DeviceSourceGroup.allCases[index - 1] : nil) else {
+            status.stringValue = L10n.t("未能保存，请重试或按 Esc 退出引导。", "保存できません。再試行するか Esc で終了してください。", "Could not save. Retry or press Esc to leave onboarding.")
+            return false
+        }
+        rebuildStrings()
+        return true
+    }
 }
 
 // MARK: - Page 1 · Welcome
@@ -784,7 +842,7 @@ private final class PermissionPage: OnboardingPage {
 // MARK: - Page 4 · The gift  (claim-to-reveal)
 
 /// The welcome gift is *earned by a tap*: a sealed brand medallion the player opens to reveal a
-/// randomly-granted free balance (server-side at registration; the odometer uses the register
+/// one-time fixed free balance (server-side at registration; the odometer uses the register
 /// response). Opening plays a charge→break→count-up→burst sequence. "Continue" stays hidden until
 /// the claim gesture — Back and Esc always work, and the gate flips on the tap, never on the network.
 /// The medallion itself is the hero and the button; the capsule below is a quiet secondary path.
@@ -852,9 +910,9 @@ private final class GiftPage: OnboardingPage {
             ? L10n.t("你的见面礼", "はじめましての贈りもの", "A little welcome gift")
             : L10n.t("见面礼已到账", "贈りもの、届きました", "Your gift has arrived")
         odometer.suffix = L10n.t("题", "問", "questions")
-        caption.stringValue = L10n.t("轻点领取 · 随机欢迎额度",
-                                     "タップして受け取る · ランダムなウェルカム枠",
-                                     "Tap to claim · a random welcome quota")
+        caption.stringValue = L10n.t("轻点查看 · 一次性免费额度",
+                                     "タップして確認 · 一度だけの無料枠",
+                                     "Tap to reveal · your one-time free grant")
         claimButton.title = L10n.t("领取见面礼", "受け取る", "Claim gift")
         layoutClaimButton()
         if phase == .revealed { note.stringValue = noteText() }
@@ -948,9 +1006,9 @@ private final class GiftPage: OnboardingPage {
         }
     }
 
-    /// Bigger gift, bigger celebration — a small, honest delight (100 ⇒ ~0.7, 180 ⇒ ~1.2).
+    /// Keep the celebration proportional to the fixed grant while still honoring legacy balances.
     private func burstIntensity(for n: Int) -> CGFloat {
-        let t = max(0, min(1, CGFloat(n - 100) / 80))
+        let t = max(0, min(1, CGFloat(n - 20) / 20))
         return 0.72 + t * 0.5
     }
 

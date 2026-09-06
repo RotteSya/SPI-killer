@@ -7,6 +7,7 @@ import { createFixedWindowLimiter, createConcurrencyLimiter } from '../src/rateL
 // trip it deterministically. Env is read once at config import, so this must precede it.
 process.env.DB_PATH = ':memory:';
 process.env.OFFICIAL_PROVIDER = 'mock';
+process.env.QUOTA_POLICY_VERSION = 'legacy-test';
 process.env.TRIAL_QUESTIONS = '5';
 process.env.LOG_LEVEL = 'silent';
 process.env.DEVICE_REG_PER_HOUR = '2';

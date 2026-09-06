@@ -4,6 +4,8 @@ import type { FastifyInstance } from 'fastify';
 
 process.env.DB_PATH = ':memory:';
 process.env.OFFICIAL_PROVIDER = 'mock';
+process.env.QUOTA_POLICY_VERSION = 'legacy-test';
+process.env.TRIAL_QUESTIONS = '2';
 process.env.TRIAL_MIN_QUESTIONS = '2';
 process.env.TRIAL_MAX_QUESTIONS = '2';
 process.env.OBJECTIVE_RESULT_V1_BPS = '10000';

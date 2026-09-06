@@ -23,7 +23,8 @@ final class DigitOdometerView: NSView {
     var color: NSColor = .white { didSet { needsDisplay = true } }
     var fontSize: CGFloat = 68 { didSet { invalidateIntrinsicContentSize(); needsDisplay = true } }
     var suffix: String = "" { didSet { invalidateIntrinsicContentSize(); needsDisplay = true } }
-    /// Minimum number of digit columns (leading zeros roll too, odometer-style). 100–180 ⇒ 3.
+    /// Minimum number of digit columns (leading zeros roll too, odometer-style). Fixed grants and
+    /// the default packs still fit the same compact three-column presentation.
     var minColumns: Int = 3
 
     private(set) var value: Int = 0

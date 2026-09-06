@@ -8,6 +8,7 @@ import type { FastifyInstance } from 'fastify';
 process.env.DB_PATH = ':memory:';
 process.env.OFFICIAL_PROVIDER = 'mock';
 process.env.CURRENCY = 'JPY';
+process.env.QUOTA_POLICY_VERSION = 'legacy-test';
 process.env.TRIAL_QUESTIONS = '10';
 process.env.TRIAL_MIN_QUESTIONS = '10'; // pin min===max so the trial grant is deterministic (10)
 process.env.TRIAL_MAX_QUESTIONS = '10';

@@ -130,12 +130,12 @@ enum L10n {
 
     // MARK: - Quota (题数额度)
 
-    /// "180 题" / "180問" / "180 questions" — the unit for balances and grants.
+    /// Localized unit for balances and grants.
     static func questions(_ n: Int) -> String {
         t("\(n) 题", "\(n)問", n == 1 ? "1 question" : "\(n) questions")
     }
 
-    /// "剩余 179 题" / "残り179問" / "179 questions left"
+    /// Localized remaining-balance label.
     static func questionsLeft(_ n: Int) -> String {
         t("剩余 \(n) 题", "残り\(n)問", n == 1 ? "1 question left" : "\(n) questions left")
     }

@@ -20,6 +20,17 @@ enum ServiceMode {
 }
 
 enum ServiceRouting {
+    /// New captures never silently switch a selected third-party channel to official billing.
+    static func configurationError(mode: String, customKey: String, cliAllowed: Bool) -> String? {
+        if mode == ServiceMode.customKey && customKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return L10n.t("请在高级设置中填写 API Key，或自行选择官方服务。", "詳細設定で API Key を入力するか、公式サービスを選んでください。", "Enter an API key in Advanced settings or select the official service.")
+        }
+        if mode == ServiceMode.cli && !cliAllowed {
+            return L10n.t("此设备尚未启用 CLI。请在设置中选择可用通道。", "このデバイスでは CLI が有効ではありません。設定で利用可能な接続を選んでください。", "CLI is not enabled for this device. Choose an available channel in Settings.")
+        }
+        return nil
+    }
+
     /// Resolve the channel for one capture. Pure so the mode matrix is unit-testable.
     /// customKey mode with an empty key falls back to the CLI — exactly the behavior that
     /// existed before the official service, so nothing regresses for key-less users.

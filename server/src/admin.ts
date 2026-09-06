@@ -62,6 +62,7 @@ export function renderAdminPage(): string {
 <body>
 <main>
   <h1>NotchSPI 管理后台</h1>
+  <p><a href="/admin/reports" style="color:var(--accent)">批次与经济报告 →</a></p>
   <p class="sub">给指定设备手动补充题数额度。仅限运营/客服使用。</p>
   <form id="f" autocomplete="off">
     <label>管理员密钥

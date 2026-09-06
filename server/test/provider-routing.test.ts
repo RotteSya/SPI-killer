@@ -6,6 +6,8 @@ import type { CaptureRequest, Provider, Usage } from '../src/providers/types.ts'
 process.env.DB_PATH = ':memory:';
 process.env.OFFICIAL_PROVIDER = 'mock';
 process.env.OBJECTIVE_RESULT_V1_PROVIDER = 'mock';
+process.env.QUOTA_POLICY_VERSION = 'legacy-test';
+process.env.TRIAL_QUESTIONS = '3';
 process.env.TRIAL_MIN_QUESTIONS = '3';
 process.env.TRIAL_MAX_QUESTIONS = '3';
 process.env.LOG_LEVEL = 'silent';

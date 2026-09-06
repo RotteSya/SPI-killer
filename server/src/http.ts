@@ -12,6 +12,11 @@ export type ErrorCode =
   | 'rate_limited'       // 429 — too many requests (registration / capture concurrency)
   | 'upstream_error'     // 502 — the model vendor call failed
   | 'not_found'          // 404
+  | 'idempotency_conflict' | 'capture_in_progress' | 'capture_already_finalized' | 'device_busy' | 'service_maintenance'
+  | 'invalid_scope' | 'invalid_image' | 'unsupported_scope' | 'multiple_targets' | 'no_usable_result'
+  | 'feature_disabled' | 'budget_exceeded' | 'expired' | 'binding_mismatch'
+  | 'report_details_expired' | 'report_changed'
+  | 'payload_too_large'  // 413 — rejected before capture admission
   | 'internal';          // 500
 
 export class ApiError extends Error {
@@ -54,6 +59,18 @@ export type StreamEvent =
       output_tokens: number;
       questions_charged: number;
       balance_questions: number;
+      capture_id?: string;
+      operation?: 'solve' | 'explain' | 'recover';
+      terminal_state?: 'usable' | 'retake' | 'no_result' | 'failed' | 'canceled';
+      balance_version?: string;
+      account_totals?: { questions: number; input_tokens: number; output_tokens: number };
+      held_questions?: number;
+      can_retry?: boolean;
+      can_recover?: boolean;
+      settlement_status?: 'held' | 'settled' | 'released' | 'not_required';
+      usable_result?: boolean;
+      explanation_available?: boolean;
+      explanation_expires_at?: string;
     }
   | { type: 'error'; error: { message: string; code: ErrorCode } };
 

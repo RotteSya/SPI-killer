@@ -13,11 +13,13 @@ export interface CaptureRequest {
   system: string;
   task: string;
   images: CaptureImage[];
+  maxTokens?: number;
 }
 
 export interface Usage {
-  inputTokens: number;
-  outputTokens: number;
+  /** null means the vendor completed without a usage record; never reinterpret it as zero. */
+  inputTokens: number | null;
+  outputTokens: number | null;
 }
 
 export interface Provider {

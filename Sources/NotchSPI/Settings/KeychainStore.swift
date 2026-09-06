@@ -8,18 +8,49 @@ import Security
 enum KeychainStore {
     private static let service = "com.rottesya.notchspi"
 
+    enum ReadResult: Equatable {
+        case value(String), missing, unavailable(OSStatus)
+        var value: String? { if case .value(let value) = self { return value }; return nil }
+    }
+
+    /// The same Security implementation can use an isolated service for integration tests.
+    struct Access {
+        let read: (String) -> ReadResult
+        let write: (String?, String) -> Bool
+        static var live: Self { .init(read: KeychainStore.readResult, write: { KeychainStore.write($0, account: $1) }) }
+        static func system(service: String) -> Self {
+            .init(read: { KeychainStore.systemRead($0, service: service) },
+                  write: { KeychainStore.systemWrite($0, account: $1, service: service) })
+        }
+    }
+
     #if DEBUG
     /// Visual-QA escape hatch: with NSPI_QA_EPHEMERAL=1 all secrets live in this in-process
     /// dictionary only. The real Keychain service is SHARED with the packaged app, so QA runs
     /// must never read or write the user's actual device token / API keys.
     private static var ephemeral: [String: String]? =
         ProcessInfo.processInfo.environment["NSPI_QA_EPHEMERAL"] == "1" ? [:] : nil
+    private static let ephemeralLock = NSLock()
     #endif
 
     static func read(_ account: String) -> String? {
+        readResult(account).value
+    }
+
+    static func readResult(_ account: String) -> ReadResult {
         #if DEBUG
-        if ephemeral != nil { return ephemeral?[account] }
+        ephemeralLock.lock()
+        if let items = ephemeral {
+            let result = items[account].map(ReadResult.value) ?? .missing
+            ephemeralLock.unlock()
+            return result
+        }
+        ephemeralLock.unlock()
         #endif
+        return systemRead(account, service: service)
+    }
+
+    private static func systemRead(_ account: String, service: String) -> ReadResult {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -28,11 +59,13 @@ enum KeychainStore {
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
         var item: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
-              let data = item as? Data,
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        if status == errSecItemNotFound { return .missing }
+        guard status == errSecSuccess else { return .unavailable(status) }
+        guard let data = item as? Data,
               let value = String(data: data, encoding: .utf8), !value.isEmpty
-        else { return nil }
-        return value
+        else { return .unavailable(errSecDecode) }
+        return .value(value)
     }
 
     /// Upsert; nil or empty deletes the item. Returns whether the Keychain now holds exactly what
@@ -46,11 +79,18 @@ enum KeychainStore {
     @discardableResult
     static func write(_ value: String?, account: String) -> Bool {
         #if DEBUG
+        ephemeralLock.lock()
         if ephemeral != nil {
             ephemeral?[account] = (value?.isEmpty ?? true) ? nil : value
+            ephemeralLock.unlock()
             return true
         }
+        ephemeralLock.unlock()
         #endif
+        return systemWrite(value, account: account, service: service)
+    }
+
+    private static func systemWrite(_ value: String?, account: String, service: String) -> Bool {
         let base: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

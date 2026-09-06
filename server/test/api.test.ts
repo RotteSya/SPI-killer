@@ -6,6 +6,7 @@ import type { FastifyInstance } from 'fastify';
 // config module) is imported. Env is read once at config import, so this must precede it.
 process.env.DB_PATH = ':memory:';
 process.env.OFFICIAL_PROVIDER = 'mock';
+process.env.QUOTA_POLICY_VERSION = 'legacy-test';
 process.env.TRIAL_QUESTIONS = '2';
 process.env.TRIAL_MIN_QUESTIONS = '2'; // pin min===max so the trial grant is deterministic (2)
 process.env.TRIAL_MAX_QUESTIONS = '2';

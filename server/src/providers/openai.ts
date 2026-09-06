@@ -38,7 +38,7 @@ export class OpenAIProvider implements Provider {
   ): Promise<Usage> {
     const body = {
       model: this.model,
-      max_tokens: this.maxTokens,
+      max_tokens: Math.min(req.maxTokens ?? this.maxTokens, this.maxTokens),
       stream: true,
       stream_options: { include_usage: true },
       ...this.extraBody,
@@ -71,7 +71,7 @@ export class OpenAIProvider implements Provider {
       throw new Error(await vendorErrorMessage(res));
     }
 
-    const usage: Usage = { inputTokens: 0, outputTokens: 0 };
+    const usage: Usage = { inputTokens: null, outputTokens: null };
     await readVendorSSE(res.body, (payload) => {
       const ev = payload as OpenAIChunk;
       // An OpenAI-compatible endpoint can emit `{"error":{...}}` on an HTTP-200 stream. Throw so
@@ -81,8 +81,8 @@ export class OpenAIProvider implements Provider {
       const text = ev.choices?.[0]?.delta?.content;
       if (typeof text === 'string' && text.length > 0) onDelta(text);
       if (ev.usage) {
-        usage.inputTokens = ev.usage.prompt_tokens ?? usage.inputTokens;
-        usage.outputTokens = ev.usage.completion_tokens ?? usage.outputTokens;
+        usage.inputTokens = typeof ev.usage.prompt_tokens === 'number' ? ev.usage.prompt_tokens : usage.inputTokens;
+        usage.outputTokens = typeof ev.usage.completion_tokens === 'number' ? ev.usage.completion_tokens : usage.outputTokens;
       }
     });
     return usage;

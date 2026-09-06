@@ -8,6 +8,7 @@ import type { Provider, Usage, CaptureRequest } from '../src/providers/types.ts'
 // outcomes — vendor throw, empty HTTP-200 stream, and a normal answer — and assert the balance.
 process.env.DB_PATH = ':memory:';
 process.env.OFFICIAL_PROVIDER = 'mock'; // ignored: we inject a provider below
+process.env.QUOTA_POLICY_VERSION = 'legacy-test';
 process.env.TRIAL_QUESTIONS = '3';
 process.env.TRIAL_MIN_QUESTIONS = '3'; // pin min===max so the trial grant is deterministic (3)
 process.env.TRIAL_MAX_QUESTIONS = '3';
@@ -99,7 +100,7 @@ async function objectiveCapture(token: string): Promise<string> {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
     body: JSON.stringify({ system: 's', task: 't', image_base64: 'QUJD', image_media_type: 'image/jpeg',
-      result_protocol: 'objective_v1', capture_id: '3e7979c6-20cb-4c12-a23e-ece6eb3aa52d' }),
+      result_protocol: 'objective_v1', capture_id: crypto.randomUUID() }),
   });
   return res.text();
 }
@@ -114,8 +115,8 @@ test('a vendor error mid-stream is reported and does NOT charge a question', asy
   mode = 'throw';
   const text = await capture(token);
   assert.match(text, /"type":"error"/);
-  assert.doesNotMatch(text, /"questions_charged"/);
-  assert.doesNotMatch(text, /\[DONE\]/);
+  assert.match(text, /"questions_charged":0/);
+  assert.match(text, /\[DONE\]/);
   const acct = await balance(token);
   assert.equal(acct.balance_questions, 3, 'balance unchanged after a failed answer');
   assert.equal(acct.total_questions, 0);
@@ -126,7 +127,7 @@ test('an empty (no-delta) stream is treated as a failure and does NOT charge', a
   mode = 'empty';
   const text = await capture(token);
   assert.match(text, /"type":"error"/);
-  assert.doesNotMatch(text, /"questions_charged"/);
+  assert.match(text, /"questions_charged":0/);
   const acct = await balance(token);
   assert.equal(acct.balance_questions, 3, 'an empty answer must be free');
   assert.equal(acct.total_questions, 0);

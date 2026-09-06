@@ -1,10 +1,20 @@
+import {SQLPurchaseSessions} from './purchase-session-sql.ts';
+import {SQLQuotaMigration} from './quota-migration.ts';
+import { randomUUID } from 'node:crypto';
+import { SQLBilling, BILLING_SCHEMA, type Transaction } from './billing-sql.ts';
+import { SQLPaymentLedger, PAYMENT_SCHEMA } from './payment-ledger-sql.ts';
+import { SQLObservationStore, OBSERVATION_SCHEMA } from './observation-sql.ts';
+import { SQLReportingStore, REPORTING_SCHEMA } from './reporting-sql.ts';
+import {SQLPaymentFinance} from './payment-finance-sql.ts';
+import type { RegistrationInput } from './billing.ts';
 import pg from 'pg';
 import type {
   Account, DeviceSummary, ProductEventInput, ProductEventWriteResult, ProductMetrics,
   ProductMetricsQuery, RegisteredDevice, ReserveResult, Store, StoredProductEvent,
-  StoredUsageMetric, TopUpSummary,
+  StoredUsageMetric, TopUpSummary, PurchaseSession, PurchaseSessionInput, StoredPurchaseSession,
+  WebhookEventInput, PaymentAdjustmentInput,
 } from './db.ts';
-import { hashToken, newToken } from './db.ts';
+import { hashToken } from './db.ts';
 import { aggregateProductMetrics } from './telemetry.ts';
 
 // Production store: Postgres via the standard `pg` driver. Works with any provider (Neon,
@@ -80,6 +90,31 @@ CREATE TABLE IF NOT EXISTS counters (
   name  TEXT PRIMARY KEY,
   value BIGINT NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS purchase_sessions (
+  session_id UUID PRIMARY KEY, device_id BIGINT NOT NULL REFERENCES devices(id), purchase_id TEXT NOT NULL,
+  secret_hash TEXT NOT NULL UNIQUE, pack_id TEXT NOT NULL, catalog_version TEXT NOT NULL, questions BIGINT NOT NULL,
+  amount_cents BIGINT NOT NULL, currency TEXT NOT NULL, lang TEXT NOT NULL, expires_at TIMESTAMPTZ NOT NULL,
+  checkout_session_id TEXT UNIQUE, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE(device_id,purchase_id)
+);
+CREATE TABLE IF NOT EXISTS webhook_inbox (
+  provider_event_id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  resource_id TEXT NOT NULL,
+  event_created_at TIMESTAMPTZ,
+  received_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  processing_state TEXT NOT NULL DEFAULT 'received'
+);
+CREATE TABLE IF NOT EXISTS payment_adjustments (
+  adjustment_id BIGSERIAL PRIMARY KEY,
+  provider_ref TEXT NOT NULL UNIQUE,
+  order_reference TEXT NOT NULL,
+  adjustment_type TEXT NOT NULL CHECK(adjustment_type IN ('refund','dispute','fee')),
+  amount_cents BIGINT NOT NULL CHECK(amount_cents >= 0),
+  currency TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('observed','applied','ignored')),
+  effective_at TIMESTAMPTZ NOT NULL,
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 CREATE INDEX IF NOT EXISTS idx_usage_device ON usage_events(device_id);
 CREATE INDEX IF NOT EXISTS idx_topups_device ON topups(device_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_topups_reference ON topups(reference);
@@ -88,6 +123,35 @@ CREATE INDEX IF NOT EXISTS idx_product_name_received ON product_events(event_nam
 CREATE INDEX IF NOT EXISTS idx_product_variant_received ON product_events(variant, received_at);
 CREATE INDEX IF NOT EXISTS idx_product_device_received ON product_events(device_id, received_at);
 CREATE INDEX IF NOT EXISTS idx_product_capture ON product_events(capture_id);
+ALTER TABLE purchase_sessions ADD COLUMN IF NOT EXISTS checkout_url TEXT;
+ALTER TABLE purchase_sessions ADD COLUMN IF NOT EXISTS consumed_at TEXT;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS quota_policy_version TEXT NOT NULL DEFAULT 'legacy';
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS initial_grant_questions BIGINT;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS is_internal INTEGER NOT NULL DEFAULT 0 CHECK(is_internal IN (0,1));
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS balance_version BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS registration_key_hash TEXT;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS registration_key_version TEXT;
+ALTER TABLE product_events ADD COLUMN IF NOT EXISTS extensions TEXT;
+${BILLING_SCHEMA}
+ALTER TABLE quota_lots ADD COLUMN IF NOT EXISTS refund_frozen INTEGER NOT NULL DEFAULT 0 CHECK(refund_frozen IN (0,1));
+ALTER TABLE quota_lots ADD COLUMN IF NOT EXISTS refund_revoked BIGINT NOT NULL DEFAULT 0 CHECK(refund_revoked>=0);
+ALTER TABLE quota_lots ADD COLUMN IF NOT EXISTS refund_target BIGINT NOT NULL DEFAULT 0 CHECK(refund_target>=0);
+ALTER TABLE webhook_inbox ADD COLUMN IF NOT EXISTS payload_hash TEXT;
+ALTER TABLE webhook_inbox ADD COLUMN IF NOT EXISTS resource_generation BIGINT;
+ALTER TABLE webhook_inbox ADD COLUMN IF NOT EXISTS retry_after TEXT;
+${PAYMENT_SCHEMA}
+ALTER TABLE checkout_deliveries ADD COLUMN IF NOT EXISTS recorded_at TEXT;
+${OBSERVATION_SCHEMA}
+${REPORTING_SCHEMA}
+ALTER TABLE report_expense_allocations ADD COLUMN IF NOT EXISTS source_group TEXT;
+ALTER TABLE report_expense_allocations ADD COLUMN IF NOT EXISTS policy_version TEXT;
+ALTER TABLE report_expense_allocations ADD COLUMN IF NOT EXISTS revision BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS payment_intent_id TEXT;
+ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS charge_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_refunds_payment_intent ON payment_refunds(payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_refunds_charge ON payment_refunds(charge_id);
+ALTER TABLE attempt_budget_holds ADD COLUMN IF NOT EXISTS device_id BIGINT REFERENCES devices(id);
+UPDATE attempt_budget_holds SET device_id=(SELECT device_id FROM model_attempts WHERE model_attempts.attempt_id=attempt_budget_holds.attempt_id) WHERE device_id IS NULL;
 `;
 
 interface DeviceRow {
@@ -157,6 +221,13 @@ export function resolvePostgresSSL(input: {
 
 export class PostgresStore implements Store {
   private pool: pg.Pool;
+  readonly billing = new SQLBilling(transaction => this.runBilling(transaction));
+  readonly quotaMigration = new SQLQuotaMigration(transaction => this.runBilling(transaction, true));
+  readonly payments = new SQLPaymentLedger(transaction => this.runBilling(transaction));
+  readonly finance = new SQLPaymentFinance(transaction => this.runBilling(transaction));
+  private readonly purchases = new SQLPurchaseSessions(transaction => this.runBilling(transaction));
+  readonly observations = new SQLObservationStore(transaction => this.runBilling(transaction));
+  readonly reporting = new SQLReportingStore((transaction, options) => this.runBilling(transaction, false, options?.readOnlySnapshot),true);
   private ready: Promise<void> | null = null;
 
   constructor(connectionString: string, ssl: PgSSLConfig = { rejectUnauthorized: true }) {
@@ -175,7 +246,11 @@ export class PostgresStore implements Store {
    */
   private ensureSchema(): Promise<void> {
     if (!this.ready) {
-      this.ready = this.pool.query(SCHEMA).then(
+      this.ready = this.tx(async client => {
+        // Serialize expand DDL across cold instances in this schema; retry the whole transaction.
+        await client.query("SELECT pg_advisory_xact_lock(7342291, hashtext(current_schema()))");
+        await client.query(SCHEMA);
+      }).then(
         () => undefined,
         (err: unknown) => {
           this.ready = null; // let the next caller retry
@@ -186,19 +261,27 @@ export class PostgresStore implements Store {
     return this.ready;
   }
 
-  async registerDevice(input: {
-    platform: string;
-    appVersion: string;
-    trialQuestions: number;
-  }): Promise<RegisteredDevice> {
+  private async runBilling<T>(transaction: Transaction<T>, migration = false, readOnlySnapshot = false): Promise<T> {
     await this.ensureSchema();
-    const token = newToken();
-    const { rows } = await this.pool.query<{ id: string }>(
-      `INSERT INTO devices (token_hash, platform, app_version, balance_questions)
-       VALUES ($1, $2, $3, $4) RETURNING id`,
-      [hashToken(token), input.platform, input.appVersion, input.trialQuestions],
-    );
-    return { token, balanceQuestions: input.trialQuestions, id: Number(rows[0]?.id ?? 0) };
+    return this.tx(async client => {
+      // Isolation must be set before any query. The database prevents snapshot readers from
+      // writing; they need no admission lock and retain the report's coherent MVCC snapshot.
+      if (readOnlySnapshot) await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
+      // Readers coexist. Pause/resume takes the exclusive lock before touching any device.
+      if (!migration && !readOnlySnapshot && !(await client.query('SELECT id FROM quota_migration_control WHERE id=1 FOR SHARE')).rows.length) throw new Error('Quota migration control unavailable');
+      let step = transaction.next();
+      while (!step.done) {
+        let position = 0;
+        const sql = step.value.sql.replace(/\?/g, () => '$' + (++position));
+        const result = await client.query(sql, step.value.args);
+        step = transaction.next(result.rows);
+      }
+      return step.value;
+    });
+  }
+
+  async registerDevice(input: RegistrationInput): Promise<RegisteredDevice> {
+    return this.billing.register(input);
   }
 
   async getAccount(token: string): Promise<Account | null> {
@@ -233,88 +316,40 @@ export class PostgresStore implements Store {
   }
 
   async reserveQuestions(input: { token: string; questions: number }): Promise<ReserveResult> {
-    await this.ensureSchema();
-    // One statement does the test and the deduction, so concurrent captures serialize on the
-    // row lock and only those with enough balance succeed. No read-modify-write window.
-    const { rows } = await this.pool.query<{ balance_questions: string }>(
-      `UPDATE devices SET balance_questions = balance_questions - $1, updated_at = now()
-       WHERE token_hash = $2 AND balance_questions >= $1
-       RETURNING balance_questions`,
-      [input.questions, hashToken(input.token)],
-    );
-    const row = rows[0];
-    if (row) return { ok: true, balanceQuestions: Number(row.balance_questions) };
-    // Zero rows means either an unknown token or an empty balance; only the cold path pays for
-    // telling them apart, and the client needs the distinction (401 re-register vs 402 top-up).
-    const probe = await this.pool.query(`SELECT 1 FROM devices WHERE token_hash = $1`, [
-      hashToken(input.token),
-    ]);
-    return { ok: false, reason: (probe.rowCount ?? 0) > 0 ? 'insufficient_quota' : 'unknown_token' };
+    if (input.questions !== 1) throw new Error('A capture reserves exactly one question');
+    const id = randomUUID();
+    const result = await this.billing.begin({ token: input.token, captureId: id, requestHmac: id, legacy: true });
+    if (result.ok) return { ok: true, balanceQuestions: result.quota.balanceQuestions };
+    if (result.reason === 'unknown_token' || result.reason === 'insufficient_quota') return { ok: false, reason: result.reason };
+    throw new Error('Legacy reservation conflict');
   }
 
-  async settleReservation(input: {
-    token: string;
-    questions: number;
-    inputTokens: number;
-    outputTokens: number;
-    model: string;
-    captureId?: string;
-    resultProtocol?: string;
-    resultState?: string;
-    parserPath?: string;
-    estimatedCostMicros?: number;
-    pricingVersion?: string;
-  }): Promise<void> {
-    await this.ensureSchema();
-    await this.tx(async (client) => {
-      const { rows } = await client.query<{ id: string }>(
-        `UPDATE devices SET total_questions = total_questions + $1,
-           total_input_tokens = total_input_tokens + $2,
-           total_output_tokens = total_output_tokens + $3,
-           updated_at = now()
-         WHERE token_hash = $4 RETURNING id`,
-        [input.questions, input.inputTokens, input.outputTokens, hashToken(input.token)],
-      );
-      const dev = rows[0];
-      if (!dev) return;
-      await client.query(
-        `INSERT INTO usage_events
-         (device_id, questions, input_tokens, output_tokens, model, capture_id, result_protocol,
-          result_state, parser_path, estimated_cost_micros, pricing_version)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [dev.id, input.questions, input.inputTokens, input.outputTokens, input.model,
-          input.captureId ?? null, input.resultProtocol ?? null, input.resultState ?? null,
-          input.parserPath ?? null, input.estimatedCostMicros ?? null, input.pricingVersion ?? null],
-      );
-    });
+  async settleReservation(input: Parameters<Store['settleReservation']>[0]): Promise<void> {
+    if (input.questions !== 1) throw new Error('A capture settles exactly one question');
+    await this.billing.finish({ ...input, captureId: undefined, usageCaptureId: input.captureId, charge: true, terminalState: 'usable' });
   }
 
   async recordProductEvents(token: string, events: ProductEventInput[]): Promise<ProductEventWriteResult> {
+    return this.observations.events(token,events);
+  }
+
+  async recordWebhookEvent(input: WebhookEventInput): Promise<boolean> {
     await this.ensureSchema();
-    return this.tx(async (client) => {
-      const device = await client.query<{ id: string }>(
-        `SELECT id FROM devices WHERE token_hash = $1`, [hashToken(token)],
-      );
-      const id = device.rows[0]?.id;
-      if (!id) return { accepted: 0, duplicate: 0 };
-      let accepted = 0;
-      for (const event of events) {
-        const result = await client.query(
-          `INSERT INTO product_events
-           (event_id, device_id, capture_id, occurred_at, event_name, trigger, channel, mode, depth,
-            context_count, question_kind, result_state, parser_path, error_code, action, capture_ms,
-            first_token_ms, total_ms, app_version, config_revision, variant)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
-           ON CONFLICT (event_id) DO NOTHING`,
-          [event.eventId, id, event.captureId, event.occurredAt, event.eventName, event.trigger,
-            event.channel, event.mode, event.depth, event.contextCount, event.questionKind,
-            event.resultState, event.parserPath, event.errorCode, event.action, event.captureMs,
-            event.firstTokenMs, event.totalMs, event.appVersion, event.configRevision, event.variant],
-        );
-        accepted += result.rowCount ?? 0;
-      }
-      return { accepted, duplicate: events.length - accepted };
-    });
+    const result = await this.pool.query(`INSERT INTO webhook_inbox
+      (provider_event_id,event_type,resource_id,event_created_at,processing_state)
+      VALUES ($1,$2,$3,$4,'received') ON CONFLICT(provider_event_id) DO NOTHING`,
+      [input.providerEventId, input.eventType, input.resourceId, input.eventCreatedAt]);
+    return (result.rowCount ?? 0) === 1;
+  }
+
+  async recordPaymentAdjustment(input: PaymentAdjustmentInput): Promise<boolean> {
+    await this.ensureSchema();
+    if (!Number.isSafeInteger(input.amountCents) || input.amountCents < 0) throw new Error('Invalid adjustment amount');
+    const result = await this.pool.query(`INSERT INTO payment_adjustments
+      (provider_ref,order_reference,adjustment_type,amount_cents,currency,status,effective_at,recorded_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(provider_ref) DO NOTHING`,
+      [input.providerRef, input.orderReference, input.type, input.amountCents, input.currency, input.status, input.effectiveAt,new Date().toISOString()]);
+    return (result.rowCount ?? 0) === 1;
   }
 
   async getProductMetrics(input: ProductMetricsQuery): Promise<ProductMetrics> {
@@ -323,7 +358,7 @@ export class PostgresStore implements Store {
       `SELECT device_id, event_id, capture_id, occurred_at, received_at, event_name, trigger,
               channel, mode, depth, context_count, question_kind, result_state, parser_path,
               error_code, action, capture_ms, first_token_ms, total_ms, app_version,
-              config_revision, variant
+              config_revision, variant, extensions
        FROM product_events WHERE received_at >= $1 AND received_at < $2`, [input.from, input.to],
     );
     const mapped: StoredProductEvent[] = rows.map((r) => ({
@@ -338,17 +373,17 @@ export class PostgresStore implements Store {
       action: r.action as string | null, captureMs: r.capture_ms === null ? null : Number(r.capture_ms),
       firstTokenMs: r.first_token_ms === null ? null : Number(r.first_token_ms),
       totalMs: r.total_ms === null ? null : Number(r.total_ms), appVersion: r.app_version as string | null,
-      configRevision: r.config_revision as string | null, variant: r.variant as string | null,
+      configRevision: r.config_revision as string | null, variant: r.variant as string | null, extensions: r.extensions ? JSON.parse(String(r.extensions)) : undefined,
     }));
     const usageResult = await this.pool.query<{
-      capture_id: string | null; input_tokens: string; output_tokens: string;
+      device_id:string; capture_id: string | null; input_tokens: string; output_tokens: string;
       questions: string; estimated_cost_micros: string | null;
     }>(
-      `SELECT capture_id, input_tokens, output_tokens, questions, estimated_cost_micros
+      `SELECT device_id, capture_id, input_tokens, output_tokens, questions, estimated_cost_micros
        FROM usage_events WHERE created_at >= $1 AND created_at < $2`, [input.from, input.to],
     );
     const usage: StoredUsageMetric[] = usageResult.rows.map((row) => ({
-      captureId: row.capture_id, inputTokens: Number(row.input_tokens),
+      deviceId:Number(row.device_id),captureId: row.capture_id, inputTokens: Number(row.input_tokens),
       outputTokens: Number(row.output_tokens), questions: Number(row.questions),
       estimatedCostMicros: row.estimated_cost_micros === null ? null : Number(row.estimated_cost_micros),
     }));
@@ -356,55 +391,24 @@ export class PostgresStore implements Store {
   }
 
   async pruneProductEvents(before: string): Promise<number> {
-    await this.ensureSchema();
-    const result = await this.pool.query(`DELETE FROM product_events WHERE received_at < $1`, [before]);
-    return result.rowCount ?? 0;
+    return this.observations.prune(before);
   }
 
   async releaseReservation(input: { token: string; questions: number }): Promise<number | null> {
-    await this.ensureSchema();
-    const { rows } = await this.pool.query<{ balance_questions: string }>(
-      `UPDATE devices SET balance_questions = balance_questions + $1, updated_at = now()
-       WHERE token_hash = $2 RETURNING balance_questions`,
-      [input.questions, hashToken(input.token)],
-    );
-    return rows[0] ? Number(rows[0].balance_questions) : null;
+    if (input.questions !== 1) throw new Error('A capture releases exactly one question');
+    return (await this.billing.finish({ token: input.token, charge: false, terminalState: 'failed' }))?.balanceQuestions ?? null;
   }
 
-  async credit(input: {
-    token: string;
-    questions: number;
-    amountCents: number;
-    currency: string;
-    provider: string;
-    reference: string;
-    note?: string;
-  }): Promise<number | null> {
-    await this.ensureSchema();
-    return this.tx(async (client) => {
-      const { rows } = await client.query<DeviceRow>(
-        `SELECT id, balance_questions FROM devices WHERE token_hash = $1 FOR UPDATE`,
-        [hashToken(input.token)],
-      );
-      const dev = rows[0];
-      if (!dev) return null;
-      // Idempotency: the unique index on reference is the hard guarantee; this check makes
-      // a retried webhook delivery a clean no-op instead of a unique-violation rollback.
-      const dup = await client.query(`SELECT 1 FROM topups WHERE reference = $1`, [input.reference]);
-      if ((dup.rowCount ?? 0) > 0) return Number(dev.balance_questions);
+  async credit(input: Parameters<Store['credit']>[0]): Promise<number | null> {
+    return this.billing.credit(input);
+  }
 
-      const newBalance = Number(dev.balance_questions) + input.questions;
-      await client.query(
-        `UPDATE devices SET balance_questions = $1, updated_at = now() WHERE id = $2`,
-        [newBalance, dev.id],
-      );
-      await client.query(
-        `INSERT INTO topups (device_id, questions, amount_cents, currency, provider, reference, note)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [dev.id, input.questions, input.amountCents, input.currency, input.provider, input.reference, input.note ?? null],
-      );
-      return newBalance;
-    });
+  createPurchaseSession(input:PurchaseSessionInput):Promise<PurchaseSession|null> { return this.purchases.create(input); }
+  getPurchaseSession(sessionId:string,secret:string):Promise<StoredPurchaseSession|null> { return this.purchases.get(sessionId,secret); }
+  getPurchaseSessionByCheckout(id:string):Promise<StoredPurchaseSession|null> { return this.purchases.byCheckout(id); }
+  attachPurchaseCheckout(sessionId:string,id:string,url?:string):Promise<boolean> { return this.purchases.attach(sessionId,id,url); }
+  async creditDevice(input:{deviceId:number;questions:number;amountCents:number;currency:string;provider:string;reference:string;note?:string}):Promise<number|null> {
+    return this.billing.creditDevice(input.deviceId,input);
   }
 
   async updateAppVersion(token: string, appVersion: string): Promise<void> {

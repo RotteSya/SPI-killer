@@ -21,6 +21,7 @@ enum ScreenCapture {
     struct Shot {
         let path: String
         let blank: Bool
+        var targetFingerprint: String = ""
     }
 
     /// A running app that currently owns at least one capturable window.
@@ -140,7 +141,12 @@ enum ScreenCapture {
         config.ignoreShadowsSingleWindow = true
         // Blank-frame heuristic only makes sense for full screen; a small window's
         // JPEG can legitimately be tiny.
-        return await shoot(filter: filter, config: config, maxLongEdge: maxLongEdge, blankThreshold: 0)
+        let result = await shoot(filter: filter, config: config, maxLongEdge: maxLongEdge, blankThreshold: 0)
+        return result.map { shot in
+            var copy = shot
+            copy.targetFingerprint = "window:\(window.windowID):\(window.frame)"
+            return copy
+        }
     }
 
     private static func captureFullScreen(
@@ -187,7 +193,26 @@ enum ScreenCapture {
         let scale = NSScreen.main?.backingScaleFactor ?? 2
         setDimensions(config, width: CGFloat(display.width) * scale,
                       height: CGFloat(display.height) * scale, maxLongEdge: maxLongEdge)
-        return await shoot(filter: filter, config: config, maxLongEdge: maxLongEdge, blankThreshold: 9000)
+        let foreground = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "unknown"
+        let result = await shoot(filter: filter, config: config, maxLongEdge: maxLongEdge, blankThreshold: 9000)
+        return result.map { shot in
+            var copy = shot
+            copy.targetFingerprint = "display:\(display.displayID):\(display.width)x\(display.height):\(foreground)"
+            return copy
+        }
+    }
+
+    static func cropped(_ shot: Shot, region: QuestionRegion) async -> Result<Shot, CaptureError> {
+        guard region.isValid else { return .failure(.captureFailed) }
+        return await Task.detached(priority: .userInitiated) {
+            guard let image = NSImage(contentsOfFile: shot.path),
+                  let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
+                  let cropped = cg.cropping(to: CGRect(x: region.x * Double(cg.width), y: region.y * Double(cg.height),
+                                                      width: region.width * Double(cg.width), height: region.height * Double(cg.height)).integral),
+                  var result = encode(cropped, maxLongEdge: 1568, blankThreshold: 0) else { return .failure(.captureFailed) }
+            result.targetFingerprint = shot.targetFingerprint
+            return .success(result)
+        }.value
     }
 
     // MARK: - Auto-mode hash sampling

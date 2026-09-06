@@ -17,7 +17,7 @@ final class Settings {
     }
 
     var depth: String {
-        get { d.string(forKey: "depth") ?? "guided" }
+        get { d.string(forKey: "depth") ?? "brief" }
         set { d.set(newValue, forKey: "depth") }
     }
 

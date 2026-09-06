@@ -1,20 +1,33 @@
+import { CaptureService } from './capture-service.ts';
+import { aggregateCohorts, aggregateEconomics, parseReportQuery, reportTime, decimal, ReportLimitError, type ReportExpense } from './reporting.ts';
+import { archivePayload, assembleReport, assertReportRetained, parseArchiveCursor, ReportExpiredError } from './report-archive.ts';
+import {parseQualitySubmission,parseQualityList,qualityWithdrawal,QualityValidationError,QualityConflictError} from './quality.ts';
+import { supportCatalog, SCREEN_QUERY_VERSION } from './screen-query.ts';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import type { Config } from './config.ts';
 import type { Store } from './db.ts';
-import type { Provider, CaptureRequest } from './providers/types.ts';
+import type { Provider } from './providers/types.ts';
 import type { PaymentProvider, PageBanner, PageMode } from './payments.ts';
 import type { StoreKind } from './storage.ts';
-import { ApiError, errorBody, beginSSE, SSE_DONE, type StreamEvent } from './http.ts';
+import { ApiError, errorBody } from './http.ts';
 import { requireAccount } from './auth.ts';
 import { findPack } from './pricing.ts';
 import { isValidTokenShape, normalizeLang } from './payments.ts';
-import { verifyStripeSignature, createCheckoutSession, type StripeEvent } from './stripe.ts';
+import { verifyStripeSignature, createCheckoutSession, stripeReference, retrieveStripeRefund, reconcileStripeRefund, retrieveStripeCheckout, type StripeEvent } from './stripe.ts';
+import {checkoutSnapshot,checkoutCaseWire,validateCheckoutQuery,validateCheckoutDecision,type CheckoutSnapshot,type CheckoutQuery,type CheckoutDecision} from './checkout-reconciliation.ts';
+import {reconcileCheckout} from './checkout-service.ts';
+import {retrieveStripeFinance} from './stripe-finance.ts';
+import {reconcilePaymentFinance,financeResource,type FinanceOrder,type FinanceSnapshot} from './payment-finance.ts';
 import { renderLandingPage, resolveSiteLang } from './site.ts';
 import { renderAdminPage } from './admin.ts';
-import { createFixedWindowLimiter, createConcurrencyLimiter, clientIp } from './rateLimit.ts';
-import { composeObjectiveResult, objectiveResultIsBillable } from './objective-result.ts';
-import { estimateModelCostMicros, validateProductEvent } from './telemetry.ts';
+import {renderPurchase,renderPurchaseComplete,PURCHASE_CSP} from './purchase-page.ts';
+import { renderReportsPage, REPORT_PAGE_CSP } from './admin-reports.ts';
+import {renderQualityPage,QUALITY_PAGE_CSP} from './admin-quality.ts';
+import { createFixedWindowLimiter, clientIp } from './rateLimit.ts';
+import { validateProductEvent } from './telemetry.ts';
+import { validateEvent, paymentReportWire, type PaymentEvent, type RefundSnapshot } from './payment-ledger.ts';
+import { parseObservationPreference, parseObservationCoverage, type ObservationState, type ObservationCoverage } from './observation.ts';
 
 export interface AppContext {
   config: Config;
@@ -27,24 +40,28 @@ export interface AppContext {
   /** Objective misconfiguration is isolated from control captures but visible in health. */
   objectiveProviderDegraded: string | null;
   payment: PaymentProvider;
+  readStripeRefund?: (id: string) => Promise<RefundSnapshot>;
+  createStripeCheckout?: typeof createCheckoutSession;
+  readStripeCheckout?: (id:string)=>Promise<CheckoutSnapshot>;
+  readStripeFinance?: (order:FinanceOrder)=>Promise<FinanceSnapshot>;
 }
 
 // Body shapes coming off the wire (all fields untrusted; validated in the handlers).
 interface DeviceBody {
   platform?: unknown;
   app_version?: unknown;
-}
-interface CaptureBody {
-  system?: unknown;
-  task?: unknown;
-  image_base64?: unknown;
-  image_media_type?: unknown;
-  /** 上下文追问: ordered image list (context first, fresh capture last). Wins over image_base64. */
-  images_base64?: unknown;
-  result_protocol?: unknown;
-  capture_id?: unknown;
+  registration_attempt_id?: unknown;
 }
 interface EventBatchBody { schema_version?: unknown; events?: unknown }
+function observationStateWire(state:ObservationState) {
+  return {server_time:state.serverTime,preference:state.preference?{consent_epoch:state.preference.consentEpoch,
+    sharing_enabled:state.preference.sharingEnabled,valid_from:state.preference.validFrom}:null};
+}
+function observationCoverageWire(coverage:ObservationCoverage) {
+  return {observation_id:coverage.observationId,consent_epoch:coverage.consentEpoch,valid_from:coverage.validFrom,valid_to:coverage.validTo,
+    sequence_from:coverage.sequenceFrom,sequence_to:coverage.sequenceTo,queue_drop_count:coverage.queueDropCount,
+    coverage_status:coverage.coverageStatus,gap_reason:coverage.gapReason};
+}
 interface StubTopUpBody {
   device_token?: unknown;
   pack_id?: unknown;
@@ -54,6 +71,7 @@ interface CheckoutBody {
   pack_id?: unknown;
   lang?: unknown;
 }
+interface PurchaseSessionBody { pack_id?: unknown; catalog_version?: unknown; lang?: unknown; purchase_id?: unknown; session?: unknown }
 interface AdminGrantBody {
   device_token?: unknown;
   questions?: unknown;
@@ -68,27 +86,6 @@ interface AdminCliBody {
 function str(v: unknown, fallback = ''): string {
   return typeof v === 'string' ? v : fallback;
 }
-
-// Capture input bounds. The prompt cap is generous next to the client's own prompts (a few KB)
-// but small enough that a crafted request cannot turn a one-question price into a six-figure
-// token bill. The image cap is ~8 MB of base64, comfortably above the client's ~1568px JPEG.
-const MAX_PROMPT_CHARS = 32_000;
-const MAX_IMAGE_B64_CHARS = 8 * 1024 * 1024;
-// One capture still costs one question regardless of image count, so the array length is what
-// bounds the vendor bill per question. The client sends at most 2 (context + fresh shot);
-// 4 leaves headroom without changing the price model materially.
-const MAX_IMAGES_PER_CAPTURE = 4;
-const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-
-/**
- * How much delivered text makes a disconnected stream count as an answer the user received.
- * Below it, a hang-up is treated as a failed attempt and refunded; above it, the answer was on
- * screen and the question is charged. Chosen to sit above a false start (a greeting, the first
- * reasoning tokens) and well below any complete answer this product produces.
- */
-const MIN_BILLABLE_CHARS = 200;
-const MAX_OBJECTIVE_BUFFER_BYTES = 64 * 1024;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function objectiveExperimentBucket(token: string, salt: string): number {
   const digest = createHmac('sha256', salt).update(token).digest();
@@ -106,10 +103,15 @@ function adminTokenMatches(provided: string, expected: string): boolean {
 export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
   const {
     config, store, storeKind,
-    provider, providerDegraded, objectiveProvider, objectiveProviderDegraded,
+    provider, providerDegraded, objectiveProviderDegraded,
     payment,
   } = ctx;
+  const captureService = new CaptureService(ctx);
   const stripeLive = payment.name === 'stripe' && config.stripeSecretKey !== '';
+  const readRefund=ctx.readStripeRefund??((id:string)=>retrieveStripeRefund(config.stripeSecretKey,id));
+  const readCheckout=ctx.readStripeCheckout??((id:string)=>retrieveStripeCheckout(config.stripeSecretKey,id));
+  const readFinance=ctx.readStripeFinance??((order:FinanceOrder)=>retrieveStripeFinance(config.stripeSecretKey,order));
+  const checkoutCatalog={currency:config.currency,version:config.catalogVersion,packs:config.packs};
   // The admin grant console exists only when a secret is configured — otherwise /admin 404s.
   const adminEnabled = config.adminToken !== '';
 
@@ -123,16 +125,50 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
   // Best-effort abuse limits (see rateLimit.ts): a per-IP cap on anonymous registration and a
   // per-token cap on concurrent captures. Instantiated once so state lives for the process.
   const registerLimiter = createFixedWindowLimiter(config.deviceRegPerHour, 60 * 60 * 1000);
-  const captureLimiter = createConcurrencyLimiter(config.captureConcurrencyPerToken);
   const eventLimiter = createFixedWindowLimiter(config.eventBatchPerMinute, 60 * 1000);
   let lastEventPruneDay = '';
+
+  // Independently scheduled recovery is required on platforms that suspend idle HTTP instances.
+  // A bounded, idempotent sweep may overlap with another worker or a capture's final transaction.
+  app.get('/api/internal/reap', async (req, reply) => {
+    reply.header('Cache-Control','no-store');
+    if(!config.cronSecret) throw new ApiError(404,'未启用','not_found');
+    const auth=typeof req.headers.authorization==='string'?req.headers.authorization:'';
+    if(!adminTokenMatches(auth,'Bearer '+config.cronSecret)) throw new ApiError(401,'凭证无效','invalid_token');
+    const started=Date.now(), now=new Date().toISOString();
+    let processed=0, batch=0;
+    do {
+      batch=await store.billing.reap(now); processed+=batch;
+    } while(batch===100&&processed<1000&&Date.now()-started<20_000);
+    let refundsReconciled=0,refundsFailed=0;
+    if(stripeLive&&Date.now()-started<20_000) {
+      const pending=await store.payments.pendingRefunds(now,5);
+      await Promise.all(pending.map(async event=>{
+        try {if(await reconcileStripeRefund(store.payments,event,readRefund)) refundsReconciled++;}
+        catch {refundsFailed++;}
+      }));
+    }
+    let checkoutsCredited=0,checkoutsReview=0,checkoutsFailed=0;
+    if(stripeLive&&Date.now()-started<20_000){
+      const pending=await store.payments.checkouts.pending(now,3);
+      await Promise.all(pending.map(async reference=>{try{const result=await reconcileCheckout(store.payments.checkouts,reference,checkoutCatalog,readCheckout);
+        if(result==='credited')checkoutsCredited++;else if(result==='review'||result==='conflict')checkoutsReview++;}catch{checkoutsFailed++;}}));
+    }
+    let financeReconciled=0,financeFailed=0;
+    if(stripeLive&&Date.now()-started<20_000)await Promise.all((await store.finance.pending(undefined,3)).map(async reference=>{
+      try{if(await reconcilePaymentFinance(store.finance,reference,readFinance,false,store.payments))financeReconciled++;}catch{financeFailed++;}
+    }));
+    const eventsPruned=await store.pruneProductEvents(new Date(Date.parse(now)-90*86_400_000).toISOString());
+    return {processed,checked_at:now,more_possible:batch===100,refunds_reconciled:refundsReconciled,refunds_failed:refundsFailed,
+      checkouts_credited:checkoutsCredited,checkouts_review:checkoutsReview,checkouts_failed:checkoutsFailed,finance_reconciled:financeReconciled,finance_failed:financeFailed,events_pruned:eventsPruned};
+  });
 
   // Config-at-a-glance for operators: which provider answers, where data lives, how payments
   // are wired. `db: "memory"` on a production deployment means POSTGRES_URL is missing.
   // GET / — the public product site (also the "company website" for payment-provider review).
   // Language: ?lang wins, then Accept-Language, defaulting to Japanese. Cacheable at the CDN;
   // Vary keeps the language negotiation honest.
-  app.get('/', async (req, reply) => {
+  for(const [path,entry] of [['/',undefined],['/spi','spi'],['/reading-practice','reading_practice']] as const)app.get(path, async (req, reply) => {
     const q = (req.query ?? {}) as { lang?: unknown };
     const lang = resolveSiteLang(str(q.lang), str(req.headers['accept-language']));
     const html = renderLandingPage({
@@ -141,10 +177,15 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
       currency: config.currency,
       lang,
       aiProvider: config.provider,
+      entry,
+      entryStatus: entry&&supportCatalog(config).profiles.find(p=>p.id===entry)?.status==='beta'?'beta':'disabled',
     });
     return reply
       .header('Cache-Control', 'public, max-age=300')
       .header('Vary', 'Accept-Language')
+      .header('Referrer-Policy','no-referrer')
+      .header('X-Content-Type-Options','nosniff')
+      .header('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
       .type('text/html; charset=utf-8')
       .send(html);
   });
@@ -241,16 +282,24 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
       throw new ApiError(429, '注册过于频繁，请稍后再试', 'rate_limited');
     }
     const body = (req.body ?? {}) as DeviceBody;
-    // The welcome gift is randomized per device across the configured range, so the onboarding
-    // reveal lands on a different number for each player. Clamp defensively (min ≥ 0, max ≥ min)
-    // so a misconfigured range can never grant a negative balance — while still allowing an
-    // explicit 0 (a deployment that disables the free trial, as some tests configure).
-    const lo = Math.max(0, Math.min(config.trialMinQuestions, config.trialMaxQuestions));
-    const hi = Math.max(lo, config.trialMaxQuestions);
-    const trialQuestions = lo + Math.floor(Math.random() * (hi - lo + 1));
+    const trialQuestions = config.trialQuestions;
+    let registration = {};
+    if (body.registration_attempt_id !== undefined) {
+      const attempt = str(body.registration_attempt_id);
+      try {
+        registration = captureService.keys.registration(attempt);
+        for (const version of captureService.keys.versions()) {
+          const candidate = captureService.keys.registration(attempt, version);
+          if (await store.getAccount(candidate.token)) { registration = candidate; break; }
+        }
+      } catch { throw new ApiError(400, '注册重试凭证无效'); }
+    }
+    if (!await store.billing.rateLimit(captureService.keys.digest('registration-ip', clientIp(req)), config.deviceRegPerHour, 3_600_000)) {
+      throw new ApiError(429, '注册过于频繁，请稍后再试', 'rate_limited');
+    }
     const platform = str(body.platform, 'unknown').slice(0, 32);
     const appVersion = str(body.app_version, 'unknown').slice(0, 32);
-    const device = await store.registerDevice({ platform, appVersion, trialQuestions });
+    const device = await store.registerDevice({ platform, appVersion, trialQuestions, policyVersion: config.quotaPolicyVersion, ...registration });
     // Every registration hands out a free grant that costs real model spend, so leave a trail:
     // the device row id plus the caller's IP is what tells a client-side credential bug (one IP,
     // one app version, repeated) apart from deliberate free-quota farming. No token is logged —
@@ -259,16 +308,24 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
       { deviceId: device.id, ip: clientIp(req), platform, appVersion, trialQuestions },
       'device registered',
     );
-    return reply.send({
+    const quota = await store.billing.quota(device.token);
+    if (!quota) throw new ApiError(503, '暂时无法核验注册额度，请使用原凭证重试');
+    return reply.header('Cache-Control', 'no-store').send({
+      policy_version: quota.policyVersion, initial_grant: quota.initialGrantQuestions, balance_version: quota.balanceVersion,
       device_token: device.token,
-      balance_questions: device.balanceQuestions,
+      balance_questions: quota.balanceQuestions,
     });
   });
 
   // GET /v1/account — question balance + lifetime usage + per-device feature switches. Auth.
   app.get('/v1/account', async (req, reply) => {
-    const { account } = await requireAccount(req, store);
-    return reply.send({
+    const { token } = await requireAccount(req, store);
+    await store.billing.reap();
+    const account = await store.billing.accountSnapshot(token);
+    if (!account) throw new ApiError(401, '设备令牌无效');
+    return reply.header('Cache-Control', 'no-store').send({
+      balance_version: account.balanceVersion, held_questions: account.heldQuestions,
+      policy_version: account.policyVersion, quota_breakdown: account.quotaBreakdown,
       balance_questions: account.balanceQuestions,
       total_questions: account.totalQuestions,
       total_input_tokens: account.totalInputTokens,
@@ -288,6 +345,11 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
       objective_result_v1: treatment
         ? { variant: 'objective_v1', protocol: 'objective_v1', prompt_variant: 'objective_v1' }
         : { variant: 'control', protocol: null, prompt_variant: 'legacy' },
+      screen_query: { capabilities: config.screenQueryEnabled ? ['screen_query_v1', 'capture_status'] : ['capture_status'],
+        support_revision: SCREEN_QUERY_VERSION, enabled_profiles: config.enabledSupportProfiles.split(',').filter(Boolean), limits: { max_images: 4, max_targets: 1, material_ttl_seconds: 900 },
+        trial_policy: { version: config.quotaPolicyVersion, initial_grant: config.trialQuestions } },
+      payments: { purchase_sessions: stripeLive, catalog_version: config.catalogVersion, currency: config.currency,
+        packs: stripeLive ? config.packs.map(pack => ({ id: pack.id, questions: pack.questions, amount_minor: pack.amountCents })) : [] },
       telemetry: { enabled: config.telemetryEnabled, max_batch_size: 50, max_queue_age_days: 7 },
     });
   });
@@ -298,7 +360,7 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     const body = (req.body ?? {}) as EventBatchBody;
     const encodedSize = Buffer.byteLength(JSON.stringify(req.body ?? {}), 'utf8');
     if (encodedSize > 64 * 1024) throw new ApiError(413, '事件批次过大');
-    if (body.schema_version !== 1 || !Array.isArray(body.events)
+    if (typeof body.schema_version !== 'number' || !Number.isInteger(body.schema_version) || ![1, 2].includes(body.schema_version) || !Array.isArray(body.events)
         || body.events.length < 1 || body.events.length > 50) {
       throw new ApiError(400, '事件批次格式无效');
     }
@@ -308,7 +370,7 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     const appVersion = typeof req.headers['x-app-version'] === 'string'
       ? req.headers['x-app-version'].slice(0, 32) : null;
     const valid = body.events.flatMap((event) => {
-      const parsed = validateProductEvent(event, appVersion);
+      const parsed = validateProductEvent(event, appVersion,new Date(),body.schema_version as number);
       return parsed ? [parsed] : [];
     });
     const result = await store.recordProductEvents(token, valid);
@@ -318,9 +380,32 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
       const before = new Date(Date.now() - 90 * 86_400_000).toISOString();
       void store.pruneProductEvents(before).catch((err: unknown) => req.log.error({ err }, 'event prune failed'));
     }
-    const rejected = body.events.length - valid.length;
+    const rejected = body.events.length - valid.length+(result.rejected??0);
     req.log.info({ count: body.events.length, accepted: result.accepted, rejected }, 'product events');
     return reply.code(202).send({ accepted: result.accepted, duplicate: result.duplicate, rejected });
+  });
+  app.get('/v1/device-observation',async(req,reply)=>{
+    const {token}=await requireAccount(req,store);const state=await store.observations.state(token);
+    if(!state)throw new ApiError(401,'设备令牌无效','invalid_token');
+    return reply.header('Cache-Control','no-store').send({...observationStateWire(state),telemetry_enabled:config.telemetryEnabled});
+  });
+  app.post('/v1/device-observation',async(req,reply)=>{
+    const {token}=await requireAccount(req,store);
+    if(!await store.billing.rateLimit(captureService.keys.digest('observation-device',token),30,60_000))throw new ApiError(429,'观察状态同步过于频繁','rate_limited');
+    const body=(req.body??{}) as Record<string,unknown>;
+    if(body.schema_version!==1||Object.keys(body).some(k=>!['schema_version','preference','coverage'].includes(k))||
+      ('preference' in body)===('coverage' in body)||Buffer.byteLength(JSON.stringify(body))>4096)throw new ApiError(400,'观察状态格式无效');
+    reply.header('Cache-Control','no-store');
+    if('preference' in body) {
+      const input=parseObservationPreference(body.preference);if(!input)throw new ApiError(400,'观察偏好格式无效');
+      const accepted=await store.observations.preference(token,input);
+      const state=await store.observations.state(token);if(!state)throw new ApiError(401,'设备令牌无效','invalid_token');
+      return reply.code(accepted?200:409).send({accepted,...observationStateWire(state)});
+    }
+    const input=parseObservationCoverage(body.coverage);if(!input)throw new ApiError(400,'观察覆盖格式无效');
+    const coverage=await store.observations.coverage(token,input,config.telemetryEnabled);
+    if(!coverage)throw new ApiError(409,'观察覆盖标识冲突','idempotency_conflict');
+    return reply.send({accepted:true,coverage:observationCoverageWire(coverage)});
   });
 
   // POST /v1/captures — streamed answer; one successful capture costs one question. Auth.
@@ -330,245 +415,145 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
   // actually been delivered; anything else refunds the hold. The previous order (stream first,
   // charge at the very end) had two holes: concurrent captures all passed the same stale balance
   // check, and a client that hung up mid-stream took the failure path and got its answer free.
-  app.post('/v1/captures', async (req, reply) => {
+  app.post('/v1/captures', (req, reply) => captureService.solve(req, reply));
+  app.get('/v1/captures/:id/status', (req, reply) => captureService.status(req, reply));
+  app.post('/v1/captures/:id/explanation', (req, reply) => captureService.auxiliary(req, reply, 'explain'));
+  app.post('/v1/captures/:id/recovery', (req, reply) => captureService.auxiliary(req, reply, 'recover'));
+  app.get('/v1/support', async (req, reply) => {
+    const catalog = supportCatalog(config);
+    const etag = '"' + createHmac('sha256', 'support-catalog').update(JSON.stringify(catalog)).digest('hex') + '"';
+    if (req.headers['if-none-match'] === etag) return reply.code(304).send();
+    return reply.header('ETag', etag).header('Cache-Control', 'public, max-age=300').send(catalog);
+  });
+
+  // New clients create a short-lived purchase handoff with their authenticated bearer. The
+  // browser URL contains only the session id and one-time secret; the long device token never
+  // leaves this request and is not placed in HTML, query parameters, or Stripe metadata.
+  app.post('/v1/purchase-sessions', {bodyLimit:4096}, async (req, reply) => {
+    if (!stripeLive) throw new ApiError(404, '未启用');
     const { token } = await requireAccount(req, store);
-    const body = (req.body ?? {}) as CaptureBody;
-    const resultProtocol = body.result_protocol === undefined ? null : str(body.result_protocol);
-    const captureId = body.capture_id === undefined ? null : str(body.capture_id);
-    if (resultProtocol !== null && resultProtocol !== 'objective_v1') {
-      throw new ApiError(400, 'result_protocol 无效');
-    }
-    if (captureId !== null && !UUID.test(captureId)) throw new ApiError(400, 'capture_id 必须是 UUID');
+    reply.header('Cache-Control','no-store');
+    const body=(req.body??{}) as PurchaseSessionBody;
+    const pack=findPack(config.packs,str(body.pack_id));
+    if(!pack) throw new ApiError(400,'题包无效');
+    if(str(body.catalog_version)!==config.catalogVersion) throw new ApiError(409,'价格目录已更新，请刷新后重试','idempotency_conflict');
+    const purchaseId=str(body.purchase_id);
+    if(!/^[0-9a-f-]{16,80}$/i.test(purchaseId)) throw new ApiError(400,'purchase_id 无效');
+    const session=await store.createPurchaseSession({token,purchaseId,packId:pack.id,catalogVersion:config.catalogVersion,
+      questions:pack.questions,amountCents:pack.amountCents,currency:config.currency,lang:normalizeLang(str(body.lang))});
+    if(!session) throw new ApiError(409,'购买请求已存在或无法创建','idempotency_conflict');
+    return reply.code(201).send({purchase_url:`${config.publicBaseURL}/purchase?session=${session.sessionId}.${session.secret}`,
+      expires_at:session.expiresAt,catalog_version:session.catalogVersion,pack_id:session.packId,questions:session.questions,
+      amount_minor:session.amountCents,currency:session.currency});
+  });
 
-    // The frozen client protocol chooses the server-owned treatment slot. Legacy/control traffic
-    // stays on OFFICIAL_PROVIDER, so a 5% Objective rollout cannot move the other 95% to DeepSeek.
-    const captureProvider = resultProtocol === 'objective_v1' ? objectiveProvider : provider;
-    const captureProviderDegraded = resultProtocol === 'objective_v1'
-      ? objectiveProviderDegraded
-      : providerDegraded;
-    const captureModel = resultProtocol === 'objective_v1' ? config.objectiveModel : config.model;
-    // Refuse rather than bill a real question for the mock provider's canned placeholder.
-    if (captureProviderDegraded !== null) {
-      req.log.error({ captureProviderDegraded, resultProtocol },
-        'capture refused: selected model provider is not configured');
-      throw new ApiError(503, '答案生成服务暂时不可用，本次未消耗额度', 'upstream_error');
-    }
+  app.get('/purchase', async (req, reply) => {
+    const raw=str((req.query as {session?:unknown}|undefined)?.session);
+    const dot=raw.indexOf('.');
+    if(dot<1) throw new ApiError(404,'购买链接无效','not_found');
+    const session=await store.getPurchaseSession(raw.slice(0,dot),raw.slice(dot+1));
+    if(!session) throw new ApiError(410,'购买链接已失效','expired');
+    return reply.header('Cache-Control','no-store').header('Referrer-Policy','no-referrer').header('Content-Security-Policy',PURCHASE_CSP)
+      .header('X-Content-Type-Options','nosniff').type('text/html; charset=utf-8').send(renderPurchase(session,raw));
+  });
 
-    // Image list: `images_base64` (ordered, context first) wins when present; the legacy
-    // single `image_base64` remains the wire shape for plain captures and old clients.
-    const mediaType = str(body.image_media_type, 'image/jpeg');
-    let imagesBase64: string[];
-    if (body.images_base64 !== undefined) {
-      if (!Array.isArray(body.images_base64) || body.images_base64.some((v) => typeof v !== 'string')) {
-        throw new ApiError(400, 'images_base64 必须是字符串数组');
-      }
-      imagesBase64 = body.images_base64 as string[];
-    } else {
-      const single = str(body.image_base64);
-      imagesBase64 = single === '' ? [] : [single];
-    }
+  app.get('/purchase/complete',async(req,reply)=>{
+    if(!stripeLive)throw new ApiError(404,'未启用');
+    const query=(req.query??{}) as {lang?:unknown;canceled?:unknown};
+    return reply.header('Cache-Control','no-store').header('Referrer-Policy','no-referrer').header('Content-Security-Policy',PURCHASE_CSP)
+      .header('X-Content-Type-Options','nosniff').type('text/html; charset=utf-8').send(renderPurchaseComplete(str(query.lang),query.canceled==='1'));
+  });
 
-    const captureReq: CaptureRequest = {
-      system: str(body.system),
-      task: str(body.task),
-      images: imagesBase64.map((base64) => ({ base64, mediaType })),
-    };
-    // Contract requires system, task, and at least one image. Validate up front (JSON 400)
-    // rather than streaming with empty prompts and failing mid-stream inside the vendor call.
-    if (!captureReq.system) throw new ApiError(400, '缺少 system 提示词');
-    if (!captureReq.task) throw new ApiError(400, '缺少 task 文本');
-    if (captureReq.images.length === 0 || captureReq.images.some((img) => img.base64 === '')) {
-      throw new ApiError(400, '缺少截图数据');
-    }
-    // Size caps. One capture costs the user exactly one question no matter how large the prompt,
-    // so an unbounded text leg — or an unbounded image list — is an unbounded vendor bill for a
-    // fixed price. The image leg is additionally pinned to a media type the vendors accept.
-    if (captureReq.system.length > MAX_PROMPT_CHARS) throw new ApiError(400, 'system 提示词过长');
-    if (captureReq.task.length > MAX_PROMPT_CHARS) throw new ApiError(400, 'task 文本过长');
-    if (captureReq.images.length > MAX_IMAGES_PER_CAPTURE) throw new ApiError(400, '截图数量过多');
-    if (captureReq.images.some((img) => img.base64.length > MAX_IMAGE_B64_CHARS)) {
-      throw new ApiError(400, '截图数据过大');
-    }
-    if (!ALLOWED_IMAGE_TYPES.has(mediaType)) {
-      throw new ApiError(400, '不支持的图片格式');
-    }
-
-    // Concurrency cap: stop one token from opening several streams at once. Refused as JSON 429
-    // BEFORE hijacking the socket, and before the hold, so a burst can't churn the database.
-    if (!captureLimiter.tryAcquire(token)) {
-      throw new ApiError(429, '同一设备的并发请求过多，请等上一题完成后再试', 'rate_limited');
-    }
-
-    // From here every exit path must release the concurrency slot.
-    let balanceAfterHold: number;
-    try {
-      const hold = await store.reserveQuestions({ token, questions: 1 });
-      if (!hold.ok) {
-        throw hold.reason === 'insufficient_quota'
-          ? new ApiError(402, '额度已用完，请充值后继续', 'insufficient_quota')
-          : new ApiError(401, '设备令牌无效', 'invalid_token');
-      }
-      balanceAfterHold = hold.balanceQuestions;
-    } catch (err) {
-      captureLimiter.release(token);
-      throw err;
-    }
-
-    // Take over the socket for manual SSE writing. hijack() only tells Fastify not to reply, so
-    // it cannot fail; everything after it CAN — writeHead throws on a socket whose peer went away
-    // during the reservation round trip above — and a throw there would strand the hold, silently
-    // costing the user a question. So the hold and the try/finally that settles it are adjacent,
-    // with nothing fallible in between.
-    reply.hijack();
-
-    const model = `${captureProvider.name}:${captureModel}`;
-    const abort = new AbortController();
-    let settled = false;
-    let deliveredChars = 0;
-    let objectiveRaw = '';
-    let objectiveBufferOverflow = false;
-    let done = false;
-    let send: (event: StreamEvent) => void = () => {};
-    const settle = async (
-      inputTokens: number, outputTokens: number,
-      resultState?: string, parserPath?: string,
-    ): Promise<void> => {
-      await store.settleReservation({
-        token, questions: 1, inputTokens, outputTokens, model,
-        captureId: captureId ?? undefined,
-        resultProtocol: resultProtocol ?? undefined,
-        resultState, parserPath,
-        estimatedCostMicros: estimateModelCostMicros(
-          config.modelPricingJSON, model, inputTokens, outputTokens,
-        ) ?? estimateModelCostMicros(config.modelPricingJSON, captureModel, inputTokens, outputTokens),
-        pricingVersion: config.modelPricingVersion,
-      });
-      settled = true;
-    };
-    const release = async (): Promise<number> => {
-      const balance = await store.releaseReservation({ token, questions: 1 });
-      settled = true; // reservation is resolved; the historical name means "do not release again"
-      return balance ?? balanceAfterHold + 1;
-    };
-    const objectiveComposition = () => objectiveBufferOverflow
-      ? composeObjectiveResult('', true)
-      : composeObjectiveResult(objectiveRaw, true);
-
-    try {
-      const rawSend = beginSSE(reply);
-      // Once the peer is gone the socket is destroyed, and a raw write to it surfaces as an
-      // asynchronous 'error' with no listener — which would take down the whole warm instance and
-      // every request sharing it. Terminal writes are therefore always best-effort.
-      send = (event: StreamEvent): void => {
-        if (reply.raw.writableEnded || reply.raw.destroyed) return;
-        try {
-          rawSend(event);
-        } catch {
-          /* peer vanished mid-write */
-        }
-      };
-
-      // Abort the upstream call only on a real client disconnect. We listen on the RESPONSE
-      // socket (not req.raw, whose 'close' fires as soon as the request body is fully read) and
-      // guard with `done` so our own end() doesn't trigger an abort.
-      reply.raw.on('close', () => {
-        if (!done) abort.abort();
-      });
-
-      const usage = await captureProvider.stream(
-        captureReq,
-        (text) => {
-          deliveredChars += text.length;
-          if (resultProtocol === 'objective_v1' && !objectiveBufferOverflow) {
-            const candidate = objectiveRaw + text;
-            if (Buffer.byteLength(candidate, 'utf8') <= MAX_OBJECTIVE_BUFFER_BYTES) objectiveRaw = candidate;
-            else objectiveBufferOverflow = true;
-          }
-          send({ type: 'delta', text });
-        },
-        abort.signal,
-      );
-      // A vendor can resolve an HTTP-200 stream with no deltas (empty completion, content-filter
-      // block). That is not an answer, so it is not a charge.
-      if (resultProtocol === 'objective_v1') {
-        const composition = objectiveComposition();
-        if (objectiveResultIsBillable(composition)) {
-          await settle(usage.inputTokens, usage.outputTokens, composition.state ?? undefined, composition.parserPath);
-          send({
-            type: 'usage', input_tokens: usage.inputTokens, output_tokens: usage.outputTokens,
-            questions_charged: 1, balance_questions: balanceAfterHold,
-          });
-        } else {
-          const restored = await release();
-          send({
-            type: 'usage', input_tokens: usage.inputTokens, output_tokens: usage.outputTokens,
-            questions_charged: 0, balance_questions: restored,
-          });
-        }
-        if (!reply.raw.writableEnded && !reply.raw.destroyed) reply.raw.write(SSE_DONE);
-      } else if (deliveredChars === 0) {
-        send({
-          type: 'error',
-          error: { message: '答案生成服务未返回内容，本次未消耗额度，请重试', code: 'upstream_error' },
-        });
-      } else {
-        await settle(usage.inputTokens, usage.outputTokens);
-        send({
-          type: 'usage',
-          input_tokens: usage.inputTokens,
-          output_tokens: usage.outputTokens,
-          questions_charged: 1,
-          balance_questions: balanceAfterHold,
-        });
-        if (!reply.raw.writableEnded && !reply.raw.destroyed) reply.raw.write(SSE_DONE);
-      }
-    } catch (err) {
-      // A client that walked away AFTER receiving a usable answer keeps the charge: it was
-      // delivered, and refunding it would make `curl --max-time 2` in a loop a free-answer tap.
-      // A vendor failure always refunds, so "失败不扣题" still holds for every real failure.
-      const objective = resultProtocol === 'objective_v1' ? objectiveComposition() : null;
-      if (objective && objectiveResultIsBillable(objective)) {
-        await settle(0, 0, objective.state ?? undefined, objective.parserPath).catch((e: unknown) => {
-          req.log.error({ err: e }, 'settle failed after a delivered objective result; hold will be refunded');
-        });
-        if (settled) {
-          send({ type: 'usage', input_tokens: 0, output_tokens: 0,
-            questions_charged: 1, balance_questions: balanceAfterHold });
-          if (!reply.raw.writableEnded && !reply.raw.destroyed) reply.raw.write(SSE_DONE);
-        }
-      } else if (objective?.parserPath === 'v1' && objective.state === 'retake') {
-        const restored = await release().catch((e: unknown) => {
-          req.log.error({ err: e }, 'release failed after delivered retake result');
-          return balanceAfterHold;
-        });
-        if (settled) {
-          send({ type: 'usage', input_tokens: 0, output_tokens: 0,
-            questions_charged: 0, balance_questions: restored });
-          if (!reply.raw.writableEnded && !reply.raw.destroyed) reply.raw.write(SSE_DONE);
-        }
-      } else if (abort.signal.aborted && resultProtocol === null && deliveredChars >= MIN_BILLABLE_CHARS) {
-        // Token counts are unknown on this path (the vendor never reported usage); the question
-        // count is what bills, so it stays exact and only the lifetime token stats under-count.
-        await settle(0, 0).catch((e: unknown) => {
-          req.log.error({ err: e }, 'settle failed after a delivered answer; hold will be refunded');
-        });
-        req.log.info({ deliveredChars }, 'client disconnected after a delivered answer; charge kept');
-      } else {
-        const message = err instanceof Error ? err.message : '模型服务错误';
-        send({ type: 'error', error: { message, code: 'upstream_error' } });
-      }
-    } finally {
-      done = true;
-      if (!settled) {
-        // Refund the hold. If this throws, the user is short exactly one question and the log
-        // line is the record an operator needs to make it right via /admin/grant.
-        await store
-          .releaseReservation({ token, questions: 1 })
-          .catch((e: unknown) => req.log.error({ err: e }, 'quota hold refund FAILED'));
-      }
-      captureLimiter.release(token);
-      if (!reply.raw.writableEnded && !reply.raw.destroyed) reply.raw.end();
-    }
+  app.post('/purchase/checkout', {bodyLimit:4096}, async (req, reply) => {
+    reply.header('Cache-Control','no-store');
+    if(!stripeLive) throw new ApiError(404,'未启用');
+    const raw=str((req.body as PurchaseSessionBody|undefined)?.session),dot=raw.indexOf('.');
+    if(dot<1) throw new ApiError(400,'购买链接无效');
+    const session=await store.getPurchaseSession(raw.slice(0,dot),raw.slice(dot+1));
+    if(!session) throw new ApiError(410,'购买链接已失效','expired');
+    const pack=findPack(config.packs,session.packId);
+    if(!pack||pack.questions!==session.questions||pack.amountCents!==session.amountCents||config.currency!==session.currency||config.catalogVersion!==session.catalogVersion)
+      throw new ApiError(409,'价格目录已更新，请重新发起购买','idempotency_conflict');
+    if(session.checkoutSessionId&&session.checkoutURL)return reply.send({url:session.checkoutURL});
+    const result=await (ctx.createStripeCheckout??createCheckoutSession)(config.stripeSecretKey,{pack,purchaseSessionId:session.sessionId,currency:session.currency,publicBaseURL:config.publicBaseURL,lang:normalizeLang(session.lang)});
+    if('error' in result||!result.id) { req.log.error({stripeError:'error' in result?result.error:'missing checkout id'},'checkout session creation failed'); throw new ApiError(502,'支付服务暂时不可用，请稍后再试','upstream_error'); }
+    if(!await store.attachPurchaseCheckout(session.sessionId,result.id,result.url)) throw new ApiError(409,'购买请求已处理','capture_already_finalized');
+    return reply.send({url:result.url});
+  });
+  app.post('/admin/reservations/recover', async (req, reply) => {
+    requireAdmin(req);
+    return reply.send({ released: await store.billing.reap() });
+  });
+  const financeReference=(raw:unknown):string=>{
+    if(typeof raw!=='string'||!/^cs_[A-Za-z0-9_]{1,160}$/.test(raw))throw new ApiError(400,'订单引用无效');return raw;
+  };
+  app.get('/admin/payments/finance',async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');const raw=(req.query??{}) as Record<string,unknown>;
+    if(Object.keys(raw).some(k=>k!=='reference'))throw new ApiError(400,'查询字段无效');
+    return reply.send(await store.finance.inspect(financeReference(raw.reference)));
+  });
+  app.post('/admin/payments/finance/reconcile',{bodyLimit:4096},async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');if(!stripeLive)throw new ApiError(409,'未启用真实支付');
+    const raw=(req.body??{}) as Record<string,unknown>;if(Object.keys(raw).some(k=>k!=='reference'))throw new ApiError(400,'核对字段无效');
+    const reference=financeReference(raw.reference);
+    if(!await store.billing.rateLimit('admin_payment_finance',12,60_000))throw new ApiError(429,'核对过于频繁','rate_limited');
+    try{const applied=await reconcilePaymentFinance(store.finance,reference,readFinance,true,store.payments);return reply.send({applied,...await store.finance.inspect(reference)});}
+    catch{throw new ApiError(503,'费用与拒付状态暂时无法核对','upstream_error');}
+  });
+  app.get('/admin/payments', async(req,reply)=>{
+    requireAdmin(req);
+    const reference=str((req.query as {order_reference?:unknown}|undefined)?.order_reference);
+    if(reference&&!/^cs_[A-Za-z0-9_]{1,160}$/.test(reference)) throw new ApiError(400,'订单标识无效');
+    return reply.header('Cache-Control','no-store').send(paymentReportWire(await store.payments.report(100,reference||undefined)));
+  });
+  app.get('/admin/payments/checkouts',async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');
+    const raw=(req.query??{}) as Record<string,unknown>;let query:CheckoutQuery;
+    try{if(Object.keys(raw).some(k=>!['state','before','limit'].includes(k))||
+      (raw.limit!==undefined&&(typeof raw.limit!=='string'||! /^(?:[1-9][0-9]?|100)$/.test(raw.limit))))throw new Error();
+      query={limit:raw.limit===undefined?50:Number(raw.limit),...(raw.state!==undefined?{state:raw.state as CheckoutQuery['state']}:{}),...(raw.before!==undefined?{before:raw.before as string}:{})};validateCheckoutQuery(query);
+    }catch{throw new ApiError(400,'付款核对筛选无效');}
+    const page=await store.payments.checkouts.list(query);return {...page,items:page.items.map(checkoutCaseWire)};
+  });
+  app.get('/admin/payments/checkouts/:reference',async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');const {reference}=req.params as {reference:string};
+    if(!/^cs_[A-Za-z0-9_]{1,160}$/.test(reference))throw new ApiError(400,'付款标识无效');
+    const entry=await store.payments.checkouts.get(reference);if(!entry)throw new ApiError(404,'未找到付款核对记录');return checkoutCaseWire(entry);
+  });
+  app.post('/admin/payments/checkouts/:reference/recheck',{bodyLimit:4096},async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');const {reference}=req.params as {reference:string};
+    if(!/^cs_[A-Za-z0-9_]{1,160}$/.test(reference)||(req.body!==undefined&&req.body!==null&&
+      (typeof req.body!=='object'||Array.isArray(req.body)||Object.keys(req.body).length)))throw new ApiError(400,'付款重核请求无效');
+    if(!await store.payments.checkouts.get(reference))throw new ApiError(404,'未找到付款核对记录');
+    if(!stripeLive)throw new ApiError(503,'支付核对服务未启用','upstream_error');
+    try{await reconcileCheckout(store.payments.checkouts,reference,checkoutCatalog,readCheckout,undefined,true);}catch{throw new ApiError(503,'当前付款状态暂时无法读取','upstream_error');}
+    return checkoutCaseWire((await store.payments.checkouts.get(reference))!);
+  });
+  app.post('/admin/payments/checkouts/:reference/decision',{bodyLimit:4096},async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');const {reference}=req.params as {reference:string};
+    const raw=(req.body??{}) as Record<string,unknown>;let decision:CheckoutDecision;
+    try{if(!/^cs_[A-Za-z0-9_]{1,160}$/.test(reference)||Object.keys(raw).sort().join(',')!==
+      ['review_reference','fingerprint','evidence_sha256','device_id','questions','pack_id','catalog_version'].sort().join(','))throw new Error();
+      decision={reference:raw.review_reference as string,fingerprint:raw.fingerprint as string,evidenceSha256:raw.evidence_sha256 as string,
+        deviceId:raw.device_id as number,questions:raw.questions as number,packId:raw.pack_id as string,catalogVersion:raw.catalog_version as string};validateCheckoutDecision(decision);
+    }catch{throw new ApiError(400,'付款审查须包含当前指纹、证据摘要、明确设备及题包题数');}
+    if(!await store.payments.checkouts.get(reference))throw new ApiError(404,'未找到付款核对记录');
+    if(!stripeLive)throw new ApiError(503,'支付核对服务未启用','upstream_error');
+    let result;try{result=await reconcileCheckout(store.payments.checkouts,reference,checkoutCatalog,readCheckout,decision);}
+    catch{throw new ApiError(503,'当前付款状态暂时无法读取','upstream_error');}
+    if(result!=='credited')throw new ApiError(409,'付款事实或审查已变化，请重新核对记录','idempotency_conflict');
+    return {applied:true,record:checkoutCaseWire((await store.payments.checkouts.get(reference))!)};
+  });
+  app.post('/admin/payments/refund-decision',async(req,reply)=>{
+    requireAdmin(req);
+    const body=(req.body??{}) as Record<string,unknown>;
+    if(typeof body.questions!=='number'||!Number.isSafeInteger(body.questions)||body.questions<0||
+      !/^[a-f0-9]{64}$/.test(str(body.fingerprint))||!/^[A-Za-z0-9_-]{1,100}$/.test(str(body.decision_reference))) throw new ApiError(400,'退款额度审核记录无效');
+    const applied=await store.payments.decidePartial(str(body.order_reference),{
+      reference:str(body.decision_reference),fingerprint:str(body.fingerprint),questions:body.questions,
+    });
+    if(!applied) throw new ApiError(409,'退款状态已更新或需要重新审核','idempotency_conflict');
+    return reply.header('Cache-Control','no-store').send({applied:true});
   });
 
   // GET /topup?device=<token>&lang=<zh|ja|en>[&paid=1|&canceled=1] — payment web page.
@@ -635,51 +620,44 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     }
 
     const event = (req.body ?? {}) as StripeEvent;
-    // Card payments settle inside `checkout.session.completed`. Delayed-notification methods
-    // (konbini, bank transfer, boleto — any of which the Dashboard may enable, since the session
-    // deliberately does not pin payment_method_types) deliver that event as `unpaid` and settle
-    // later via `async_payment_succeeded`. Listening only for the first meant the customer paid
-    // and was never credited. Both events carry the same session id, so the reference-based
-    // idempotency below still makes a double delivery a no-op.
-    if (event.type !== 'checkout.session.completed' &&
-        event.type !== 'checkout.session.async_payment_succeeded') {
-      return reply.send({ received: true }); // acknowledge everything else
+    const object=event.data?.object;
+    const createdAt=typeof event.created==='number'&&Number.isSafeInteger(event.created)&&event.created>=0&&event.created<8_640_000_000_000
+      ? new Date(event.created*1000).toISOString():null;
+    const receipt:PaymentEvent={id:str(event.id),type:str(event.type),resourceId:str(object?.id),createdAt,
+      payloadHash:createHash('sha256').update(rawBody).digest('hex')};
+    try { validateEvent(receipt); } catch { throw new ApiError(400,'支付事件格式无效'); }
+    if(/^(?:checkout\.session\.(?:completed|async_payment_succeeded)|refund\.(?:created|updated|failed)|charge\.(?:succeeded|updated|refunded|refund\.updated|dispute\.(?:created|updated|closed|funds_withdrawn|funds_reinstated)))$/.test(event.type)){
+      const financialObject=object as unknown as Record<string,unknown>;
+      const resources=[receipt.resourceId,stripeReference(financialObject?.payment_intent),stripeReference(financialObject?.charge)].filter((id):id is string=>id!==null);
+      if(resources.some(id=>!financeResource(id)))throw new ApiError(400,'支付资源关联格式无效');
+      await store.finance.observe({event:receipt,resources});
     }
-    const session = event.data?.object;
-    if (!session?.id || session.payment_status !== 'paid') {
-      // The `completed`-but-unpaid half of a delayed method: nothing owed yet, and
-      // `async_payment_succeeded` will arrive when it settles.
-      return reply.send({ received: true });
+    if(['refund.created','refund.updated','refund.failed','charge.refund.updated'].includes(event.type)) {
+      try { await reconcileStripeRefund(store.payments,receipt,readRefund); }
+      catch { throw new ApiError(503,'退款状态暂时无法核对，请重试','upstream_error'); }
+      return reply.send({received:true});
     }
-    const token = session.metadata?.device_token ?? '';
-    const pack = findPack(config.packs, session.metadata?.pack_id ?? '');
-    if (!isValidTokenShape(token) || !pack) {
-      req.log.error({ sessionId: session.id }, 'paid session with unusable metadata');
-      return reply.send({ received: true }); // don't make Stripe retry something unfixable
+    // charge.refunded is an aggregate notification, not a second cash-refund fact.
+    // Each re_ resource is reconciled separately through refund.* notifications.
+    if(/^charge\.dispute\.(?:created|updated|closed|funds_withdrawn|funds_reinstated)$/.test(event.type)) {
+      const amount=object?.amount;
+      if(!Number.isSafeInteger(amount)||typeof amount!=='number'||amount<0||! /^[a-z]{3}$/i.test(str(object?.currency))) throw new ApiError(400,'争议事件格式无效');
+      await store.recordWebhookEvent({providerEventId:receipt.id,eventType:receipt.type,resourceId:receipt.resourceId,eventCreatedAt:receipt.createdAt});
+      await store.recordPaymentAdjustment({providerRef:receipt.id,orderReference:stripeReference(object?.payment_intent)??receipt.resourceId,
+        type:'dispute',amountCents:amount,currency:object!.currency!.toUpperCase(),status:'observed',effectiveAt:createdAt??new Date().toISOString()});
+      await store.payments.acknowledge(receipt); return reply.send({received:true});
     }
-    // Defense in depth: the paid amount must match the catalog — a mismatch means the catalog
-    // changed mid-flight or the session was tampered with; log loudly, don't credit.
-    if (session.amount_total !== pack.amountCents ||
-        (session.currency ?? '').toLowerCase() !== config.currency.toLowerCase()) {
-      req.log.error({ sessionId: session.id, amount: session.amount_total, currency: session.currency },
-        'paid amount does not match the pack catalog; NOT crediting');
-      return reply.send({ received: true });
+    if((event.type!=='checkout.session.completed'&&event.type!=='checkout.session.async_payment_succeeded')||object?.payment_status!=='paid') {
+      await store.payments.acknowledge(receipt); return reply.send({received:true});
     }
-
-    const newBalance = await store.credit({
-      token,
-      questions: pack.questions,
-      amountCents: pack.amountCents,
-      currency: config.currency,
-      provider: 'stripe',
-      reference: session.id, // idempotency key: redelivered webhooks are no-ops
-    });
-    if (newBalance === null) {
-      req.log.error({ sessionId: session.id }, 'paid session for an unknown device token');
-    } else {
-      req.log.info({ sessionId: session.id, questions: pack.questions, newBalance }, 'pack credited');
-    }
-    return reply.send({ received: true });
+    let snapshot:CheckoutSnapshot;
+    try{snapshot=checkoutSnapshot(object);}catch{throw new ApiError(400,'付款资源格式无效');}
+    // Commit the signed, content-free receipt before resolving any quota or catalog facts.
+    await store.payments.checkouts.receive(receipt,snapshot);
+    const claim=await store.payments.checkouts.claim(snapshot.id);
+    if(claim){try{await store.payments.checkouts.finish(claim,claim.signed,'signed_event',checkoutCatalog);}
+      catch{await store.payments.checkouts.defer(claim);throw new ApiError(503,'付款核对暂时不可用，记录已保留','upstream_error');}}
+    return reply.send({received:true});
   });
 
   // POST /topup/stub-complete — DEV-ONLY credit endpoint used by the stub top-up page. The
@@ -736,6 +714,121 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     return reply.send(await store.getProductMetrics({
       from: from.toISOString(), to: to.toISOString(), ...(variant ? { variant } : {}),
     }));
+  });
+
+  app.get('/admin/reports',async(_req,reply)=>{
+    if(!adminEnabled)throw new ApiError(404,'未启用');
+    return reply.header('Cache-Control','no-store').header('X-Robots-Tag','noindex, nofollow')
+      .header('Content-Security-Policy',REPORT_PAGE_CSP).header('Referrer-Policy','no-referrer')
+      .header('X-Content-Type-Options','nosniff').type('text/html; charset=utf-8').send(renderReportsPage());
+  });
+
+  for(const economics of [false,true])app.get(economics?'/admin/economics':'/admin/cohorts',async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');
+    let input;try{input=parseReportQuery((req.query??{}) as Record<string,unknown>,Date.now(),economics);}
+    catch{throw new ApiError(400,'报表筛选无效，请使用 UTC 时间及支持的筛选项');}
+    try{
+      assertReportRetained(input);
+      const facts=await store.reporting.snapshot(input);
+      return reply.send(economics?aggregateEconomics(facts,input):aggregateCohorts(facts,input));
+    }catch(error){if(error instanceof ReportExpiredError)throw new ApiError(410,'批次已超出明细保留期，请读取已保存的归档','report_details_expired');
+      if(error instanceof ReportLimitError)throw new ApiError(413,'报表范围过大，请缩小注册批次');throw error;}
+  });
+  async function buildReport(raw:Record<string,unknown>){
+    let input;try{input=parseReportQuery(raw);}catch{throw new ApiError(400,'报表筛选无效，请使用 UTC 时间及支持的筛选项');}
+    try{assertReportRetained(input);return assembleReport(await store.reporting.snapshot(input),input);}
+    catch(error){if(error instanceof ReportExpiredError)throw new ApiError(410,'批次已超出明细保留期，请读取已保存的归档','report_details_expired');
+      if(error instanceof ReportLimitError)throw new ApiError(413,'报表范围过大，请缩小注册批次');throw error;}
+  }
+  app.get('/admin/reports/data',async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');
+    const report=await buildReport((req.query??{}) as Record<string,unknown>);
+    return {report,payload_sha256:archivePayload(report).digest};
+  });
+  app.post('/admin/reports/archive',{bodyLimit:4096},async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');
+    const body=(req.body??{}) as Record<string,unknown>;
+    if(Object.keys(body).sort().join(',')!=='expected_payload_sha256,query'||!body.query||typeof body.query!=='object'||Array.isArray(body.query)||
+      typeof body.expected_payload_sha256!=='string'||! /^[a-f0-9]{64}$/.test(body.expected_payload_sha256))throw new ApiError(400,'请提供已查看报表的筛选和内容摘要');
+    const report=await buildReport(body.query as Record<string,unknown>);
+    if(archivePayload(report).digest!==body.expected_payload_sha256)throw new ApiError(409,'报表事实已变化，请重新加载后保存','report_changed');
+    return store.reporting.archives.save(report);
+  });
+  app.get('/admin/reports/archives',async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');
+    const raw=(req.query??{}) as Record<string,unknown>;let limit=20,cursor:string|undefined;
+    try{
+      if(Object.keys(raw).some(k=>!['limit','cursor'].includes(k)))throw new Error();
+      if(raw.limit!==undefined){if(typeof raw.limit!=='string'||! /^(?:[1-9]|[1-4][0-9]|50)$/.test(raw.limit))throw new Error();limit=Number(raw.limit);}
+      if(raw.cursor!==undefined){if(typeof raw.cursor!=='string')throw new Error();parseArchiveCursor(raw.cursor);cursor=raw.cursor;}
+    }catch{throw new ApiError(400,'归档页码或每页条数无效');}
+    return store.reporting.archives.list(limit,cursor);
+  });
+  app.get('/admin/reports/archives/:id',async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');
+    const id=(req.params as {id:string}).id;
+    if(! /^[a-f0-9]{64}$/.test(id))throw new ApiError(400,'归档标识无效');
+    const archive=await store.reporting.archives.get(id);if(!archive)throw new ApiError(404,'未找到归档');
+    return archive;
+  });
+  app.post('/admin/quality',{bodyLimit:2*1024*1024},async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');
+    try{return await store.reporting.quality.record(parseQualitySubmission(req.body));}
+    catch(error){if(error instanceof QualityValidationError)throw new ApiError(400,'质量记录须包含有版本绑定的逐题核验与独立复核声明');
+      if(error instanceof QualityConflictError)throw new ApiError(409,'评测 ID 已绑定其他执行记录','idempotency_conflict');throw error;}
+  });
+  app.get('/admin/quality',async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');
+    let query;try{query=parseQualityList((req.query??{}) as Record<string,unknown>);}catch{throw new ApiError(400,'质量筛选或页码无效');}
+    return store.reporting.quality.list(query);
+  });
+  app.get('/admin/quality/reports',async(_req,reply)=>{
+    if(!adminEnabled)throw new ApiError(404,'未启用');
+    return reply.header('Cache-Control','no-store').header('X-Robots-Tag','noindex, nofollow').header('Content-Security-Policy',QUALITY_PAGE_CSP)
+      .header('Referrer-Policy','no-referrer').header('X-Content-Type-Options','nosniff').type('text/html; charset=utf-8').send(renderQualityPage());
+  });
+  app.get('/admin/quality/:id',async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');
+    const id=(req.params as {id:string}).id;if(! /^[a-f0-9]{64}$/.test(id))throw new ApiError(400,'质量报告 ID 无效');
+    const record=await store.reporting.quality.get(id);if(!record)throw new ApiError(404,'未找到质量报告');return record;
+  });
+  app.post('/admin/quality/:id/withdraw',{bodyLimit:4096},async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');
+    const id=(req.params as {id:string}).id,body=(req.body??{}) as Record<string,unknown>;
+    if(! /^[a-f0-9]{64}$/.test(id)||Object.keys(body).sort().join(',')!=='reason,reference')throw new ApiError(400,'撤回记录格式无效');
+    let input;try{input=qualityWithdrawal(body.reference,body.reason);}catch{throw new ApiError(400,'撤回引用或原因无效');}
+    if(!await store.reporting.quality.withdraw(id,input.reference,input.reason))throw new ApiError(409,'报告不存在、已撤回或审计引用冲突','idempotency_conflict');
+    return {accepted:true};
+  });
+  app.post('/admin/devices/internal',async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');
+    const body=(req.body??{}) as Record<string,unknown>;
+    if(Object.keys(body).some(k=>!['device_id','is_internal','reference'].includes(k))||typeof body.device_id!=='number'||!Number.isSafeInteger(body.device_id)||body.device_id<=0||
+      typeof body.is_internal!=='boolean'||typeof body.reference!=='string'||! /^[A-Za-z0-9_-]{1,100}$/.test(body.reference))throw new ApiError(400,'内部设备标记格式无效');
+    if(!await store.reporting.setInternal(body.device_id,body.is_internal,body.reference))throw new ApiError(409,'设备不存在或审计标识冲突','idempotency_conflict');
+    return {accepted:true};
+  });
+  app.post('/v1/device-source',{bodyLimit:4096},async(req,reply)=>{
+    const {token}=await requireAccount(req,store);reply.header('Cache-Control','no-store');
+    const body=(req.body??{}) as Record<string,unknown>;
+    if(Object.keys(body).some(k=>k!=='source_group')||typeof body.source_group!=='string'||!['spi_entry','reading_practice_entry','direct','unknown'].includes(body.source_group))throw new ApiError(400,'来源格式无效');
+    if(!await store.reporting.source(token,body.source_group,'self_reported'))throw new ApiError(409,'已记录来源','idempotency_conflict');
+    return {accepted:true};
+  });
+  app.post('/admin/economics/expense-allocation',async(req,reply)=>{
+    requireAdmin(req);reply.header('Cache-Control','no-store');
+    const body=(req.body??{}) as Record<string,unknown>;let input:Omit<ReportExpense,'recordedAt'>;
+    try{
+      if(Object.keys(body).some(k=>!['reference','kind','currency','amount_micros','cohort_from','cohort_to','coverage_through','source','policy_version'].includes(k))||
+        typeof body.reference!=='string'||! /^[A-Za-z0-9_-]{1,100}$/.test(body.reference)||!['service','acquisition'].includes(String(body.kind))||
+        typeof body.kind!=='string'||typeof body.currency!=='string'||! /^[A-Z]{3}$/.test(body.currency)||typeof body.amount_micros!=='string')throw new Error('Invalid expense');
+      input={reference:body.reference,kind:body.kind as 'service'|'acquisition',currency:body.currency,amountMicros:decimal(body.amount_micros),
+        cohortFrom:reportTime(body.cohort_from),cohortTo:reportTime(body.cohort_to),coverageThrough:reportTime(body.coverage_through)};
+      const dimensions=parseReportQuery({cohort_from:body.cohort_from,cohort_to:body.cohort_to,source:body.source,policy_version:body.policy_version});
+      if(dimensions.source)input.sourceGroup=dimensions.source;if(dimensions.policyVersion)input.policyVersion=dimensions.policyVersion;
+      if(input.cohortFrom>=input.cohortTo||input.cohortTo>input.coverageThrough)throw new Error('Invalid expense coverage');
+    }catch{throw new ApiError(400,'费用分摊必须包含已核对的金额、币种、注册批次、覆盖截止时间和唯一审计引用');}
+    if(!await store.reporting.expense(input))throw new ApiError(409,'费用审计引用冲突','idempotency_conflict');return {accepted:true};
   });
 
   // POST /admin/grant — grant N free questions to a device, authorized by the admin secret in the
@@ -847,6 +940,7 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext): void {
     }
     const e = err as { statusCode?: number; message?: string };
     const statusCode = typeof e.statusCode === 'number' ? e.statusCode : 500;
+    if (statusCode === 413) return reply.code(413).send(errorBody('请求数据过大，请减少内容后重试。', 'payload_too_large'));
     const message = statusCode === 500 ? '服务器内部错误' : (e.message ?? '请求错误');
     return reply.code(statusCode).send(errorBody(message, statusCode === 500 ? 'internal' : 'bad_request'));
   });

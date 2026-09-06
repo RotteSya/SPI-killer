@@ -9,6 +9,12 @@
 
 ## 2. 正式评测
 
+付费前先执行 `node scripts/evaluation-preflight.mjs`。2026-09-06 本轮累计预算为 100 元人民币，
+其授权、题库查找结果和成本上界字段见 [评测准备记录](../../../docs/evaluation-readiness.md)。
+Objective 与 legacy runner 共用 `.eval-results/budget-ledger.sqlite3`，不得删除账本重置额度。
+两入口均要求 `NSPI_EVAL_COST_BOUND` 指向已核验币种、价格及候选 token 限制的有效上界文件；
+没有这些证据时不进行付费调用。该检查不替代题集授权或独立质量复核。
+
 准备一个隔离的测试设备令牌和已部署的候选服务，随后设置：
 
 ```sh

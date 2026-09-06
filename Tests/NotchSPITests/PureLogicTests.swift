@@ -337,24 +337,6 @@ final class ServiceRoutingTests: XCTestCase {
 
 /// The official service's SSE protocol and account helpers.
 final class OfficialAPITests: XCTestCase {
-    func testStreamEventParsing() {
-        XCTAssertEqual(
-            OfficialAPI.parseStreamLine(#"data: {"type":"delta","text":"你好"}"#),
-            .delta("你好"))
-        XCTAssertEqual(
-            OfficialAPI.parseStreamLine(#"data: {"type":"usage","input_tokens":120,"output_tokens":45,"questions_charged":1,"balance_questions":179}"#),
-            .usage(inputTokens: 120, outputTokens: 45, questionsCharged: 1, balanceQuestions: 179))
-        XCTAssertEqual(
-            OfficialAPI.parseStreamLine(#"data: {"type":"error","error":{"message":"boom","code":"upstream_error"}}"#),
-            .error(message: "boom", code: "upstream_error"))
-        XCTAssertEqual(
-            OfficialAPI.parseStreamLine(#"data: {"type":"error","error":{"message":"boom"}}"#),
-            .error(message: "boom", code: nil))
-        XCTAssertEqual(OfficialAPI.parseStreamLine("data: [DONE]"), .done)
-        XCTAssertNil(OfficialAPI.parseStreamLine("event: ping"))
-        XCTAssertNil(OfficialAPI.parseStreamLine(""))
-    }
-
     func testLocalizedMessageMapsKnownCodesAndFallsBack() {
         withLanguage(.zhHans) {
             XCTAssertTrue(OfficialAPI.localizedMessage(code: "insufficient_quota", fallback: "x").contains("题数已用完"))

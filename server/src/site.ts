@@ -19,6 +19,8 @@ export interface SiteInput {
   currency: string;
   lang: PageLang;
   aiProvider: string;
+  entry?: 'spi' | 'reading_practice';
+  entryStatus?: 'beta' | 'disabled';
 }
 
 /** ?lang wins; otherwise sniff Accept-Language; default Japanese (the selling entity is JP). */
@@ -86,186 +88,348 @@ interface SiteStrings {
 }
 
 const S: Record<PageLang, SiteStrings> = {
-  ja: {
-    metaDesc: 'NotchSPI は MacBook のノッチにひそむ AI 解答アシスタント。ショートカットひとつで画面上の問題を読み取り、答えをノッチからストリーミング表示。最大180問無料。',
-    navDownload: 'ダウンロード',
-    heroTitle: 'ノッチにひそむ、解答アシスタント。',
-    heroSub: 'ショートカットを押すだけ。画面上の問題を AI が読み取り、答えが MacBook のノッチからそっと流れ出します。画面録画・画面共有には一切映りません。',
-    heroCTA: 'Mac 用に無料ダウンロード',
-    heroCTASub: 'macOS 14+ · Apple 公証済み · アカウント登録不要',
-    heroFree: (n) => `いま始めると最大 ${n} 問ぶん無料`,
-    mockQuestion: '問題を画面に表示したまま…',
-    mockAnswerTitle: '学習チューター',
-    mockAnswerBody: 'この問題は等差数列の和を求めるものです。まず初項と公差を確認しましょう。a₁ = 3, d = 4 なので…',
-    mockStatus: '完了 · 残り179問',
-    howTitle: '使い方は 3 ステップ',
-    how: [
-      { t: '⇧⌘1 を押す', d: 'Web、PDF、テストアプリ — 問題が画面にあればどこでも。' },
-      { t: '画面をそっと読み取り', d: 'スクリーンショットは回答生成にのみ使われ、即座に破棄されます。' },
-      { t: 'ノッチから答えが流れる', d: '解説がリアルタイムでストリーミング表示。録画や共有画面には映りません。' },
-    ],
-    featTitle: 'まじめに作り込みました',
-    feats: [
-      { icon: '🎁', t: '最大180問ぶん無料', d: 'インストールするだけで無料枠。クレジットカード登録も不要。' },
-      { icon: '🫥', t: '画面キャプチャに映らない', d: 'ノッチパネルは録画・共有・スクリーンショットから除外されます。' },
-      { icon: '🌏', t: '日本語・中国語・英語', d: 'UI も答えの言語も切替可能。あいまいな問題は UI の言語で回答。' },
-      { icon: '🎚', t: '解説の詳しさを 4 段階で', d: '答えだけ / ヒント / ガイド / 全過程。カプセルをタップで即切替。' },
-      { icon: '🧭', t: '性格検査モード', d: 'SPI・玉手箱などの性格検査対策に。目指す人物像に沿った回答例を表示します。' },
-      { icon: '🔐', t: 'アカウント不要', d: '匿名のデバイス連携のみ。メールもパスワードも要りません。' },
-    ],
-    priceTitle: '料金',
-    priceSub: (n) => `新規ユーザーには最大 ${n} 問ぶんの無料枠。使い切ったら必要なぶんだけチャージ。サブスクではありません。`,
-    freeCard: { name: 'おためし', price: '¥0', unit: (n) => `最大${n}問ぶん`, note: 'インストールで自動付与' },
-    packUnit: (n) => `${n}問`,
-    perQuestion: '1問あたり約',
-    popular: '一番人気',
-    priceNote: '1 回の回答につき 1 問消費。エラー時は消費されません。決済は Stripe が安全に処理します。',
-    faqTitle: 'よくある質問',
-    faqs: [
-      { q: 'スクリーンショットは保存されますか？', a: 'いいえ。回答の生成にのみ使用し、処理後すぐに破棄します。学習にも利用しません。' },
-      { q: '回答に失敗したら？', a: '1問も消費されません。成功した回答のみカウントされます。' },
-      { q: '機種変更したら残高はどうなりますか？', a: '残高はデバイスに紐づきます。移行をご希望の場合はメールでご連絡ください。' },
-      { q: '返金はできますか？', a: 'デジタル商品の性質上、チャージ後の返金は原則承っておりませんが、二重課金など当方の不具合による場合は全額返金いたします。下記の返金ポリシーをご覧ください。' },
-      { q: '動作環境は？', a: 'ノッチ搭載の Apple Silicon Mac、macOS 14 以降。初回に画面収録の許可が必要です。' },
-    ],
-    legalTitle: '特定商取引法に基づく表記',
-    privacyTitle: 'プライバシーポリシー',
-    privacyBody: [
-      '収集する情報：匿名のデバイス識別子（ランダム生成トークン）、質問数の残高と利用量（トークン数）。氏名・メールアドレス等の個人情報は収集しません。',
-      'スクリーンショット：回答生成のためにのみ AI プロバイダー（{{AI_PROVIDER}}）へ送信され、当社サーバーには保存されません。処理後すぐに破棄されます。',
-      '決済情報：Stripe, Inc. が処理します。カード情報が当社に渡ることはありません。',
-      '第三者提供：法令に基づく場合を除き、収集した情報を第三者に提供しません。',
-      'お問い合わせ・削除請求：下記メールアドレスまでご連絡ください。デバイス残高の削除に対応します。',
-    ],
-    refundTitle: '返金・キャンセルポリシー',
-    refundBody: [
-      'デジタル商品（質問数チャージ）の性質上、チャージ完了後のお客様都合による返金は原則承っておりません。',
-      '二重課金・チャージ未反映など、当方の責によるトラブルの場合は全額返金いたします。お問い合わせから 7 日以内にメールでご連絡ください。',
-      '回答の生成に失敗した場合、質問数は消費されません（自動的に保護されます）。',
-    ],
-    reqNote: 'macOS 14 以降・ノッチ搭載 Apple Silicon Mac',
-    footerContact: 'お問い合わせ',
-  },
   zh: {
-    metaDesc: 'NotchSPI 是藏在 MacBook 刘海里的 AI 解题助手。一按快捷键，AI 读取屏幕上的题目，答案从刘海流出。录屏与共享画面完全不可见。最多赠送 180 题。',
-    navDownload: '下载',
-    heroTitle: '藏在刘海里的解题助手。',
-    heroSub: '只需按下快捷键，AI 读取屏幕上的题目，答案从 MacBook 刘海悄悄流出——录屏和屏幕共享完全看不见它。',
-    heroCTA: '免费下载 Mac 版',
-    heroCTASub: 'macOS 14+ · Apple 公证 · 无需注册账号',
-    heroFree: (n) => `现在开始最多送 ${n} 题`,
-    mockQuestion: '题目留在屏幕上…',
-    mockAnswerTitle: '学习辅导',
-    mockAnswerBody: '这道题考察等差数列求和。先确认首项和公差：a₁ = 3，d = 4，代入求和公式…',
-    mockStatus: '完成 · 剩余 179 题',
-    howTitle: '三步用起来',
-    how: [
-      { t: '按下 ⇧⌘1', d: '网页、PDF、题库软件——题目在屏幕上就行。' },
-      { t: '屏幕被轻轻读取', d: '截图只用于生成答案，用完立即销毁。' },
-      { t: '答案从刘海流出', d: '讲解实时流式浮现，录屏与共享画面里都不可见。' },
-    ],
-    featTitle: '每个细节都认真打磨',
-    feats: [
-      { icon: '🎁', t: '免费最多送 180 题', d: '装上就有，无需绑卡、无需注册。' },
-      { icon: '🫥', t: '截屏录屏都拍不到', d: '刘海面板被排除在录屏、共享和截图之外。' },
-      { icon: '🌏', t: '中·日·英三语', d: '界面与答案语言均可切换，语言不明的题目按界面语言回答。' },
-      { icon: '🎚', t: '讲解深度四档', d: '只要答案 / 提示 / 引导 / 完整推导，点胶囊即切。' },
-      { icon: '🧭', t: '性格测试模式', d: '为 SPI、玉手箱等性格测试提供贴合目标人物像的作答参考。' },
-      { icon: '🔐', t: '无需账号', d: '只有匿名设备绑定，不要邮箱不要密码。' },
-    ],
-    priceTitle: '价格',
-    priceSub: (n) => `新用户最多送 ${n} 题免费额度，用完按需充值题包，没有订阅。`,
-    freeCard: { name: '尝鲜', price: '¥0', unit: (n) => `最多 ${n} 题`, note: '安装即自动到账' },
-    packUnit: (n) => `${n} 题`,
-    perQuestion: '每题约',
-    popular: '最受欢迎',
-    priceNote: '每成功答一题消耗 1 题，失败不扣。支付由 Stripe 安全处理（日元结算）。',
-    faqTitle: '常见问题',
-    faqs: [
-      { q: '截图会被保存吗？', a: '不会。截图只用于生成答案，处理后立即销毁，也不用于训练。' },
-      { q: '答题失败会扣题吗？', a: '不会，只有成功的回答才计数。' },
-      { q: '换电脑后余额怎么办？', a: '额度与设备绑定；如需迁移请邮件联系我们。' },
-      { q: '可以退款吗？', a: '数字商品充值到账后原则上不退，但重复扣款等我方问题将全额退款，详见下方退款政策。' },
-      { q: '系统要求？', a: '带刘海的 Apple Silicon Mac，macOS 14 及以上，首次使用需授予屏幕录制权限。' },
-    ],
-    legalTitle: '特定商取引法に基づく表記（日本法定披露）',
-    privacyTitle: '隐私政策',
-    privacyBody: [
-      '收集的信息：匿名设备标识（随机生成的令牌）、题数余额与用量（token 数）。不收集姓名、邮箱等个人信息。',
-      '截图：仅为生成答案发送给 AI 服务方（{{AI_PROVIDER}}），不在我方服务器留存，处理后立即销毁。',
-      '支付信息：由 Stripe, Inc. 处理，我方不接触任何卡片信息。',
-      '第三方提供：除法律要求外，不向第三方提供收集的信息。',
-      '咨询与删除请求：请通过下方邮箱联系，我们支持删除设备余额数据。',
-    ],
-    refundTitle: '退款与取消政策',
-    refundBody: [
-      '题数充值属数字商品，到账后原则上不支持因个人原因的退款。',
-      '如遇重复扣款、支付后未到账等我方原因的问题，将全额退款；请在 7 天内邮件联系。',
-      '答题失败不消耗题数（系统自动保障）。',
-    ],
-    reqNote: 'macOS 14+ · 带刘海的 Apple Silicon Mac',
-    footerContact: '联系我们',
+  metaDesc: "NotchSPI：Mac 屏幕查题助手。新设备注册一次性获得免费额度，按题包付费。",
+  navDownload: "下载",
+  heroTitle: "在 Mac 屏幕上，一次查清一道题。",
+  heroSub: "选择屏幕上的一道题，在原位置附近查看答案。NotchSPI 是从刘海或屏幕顶部面板使用的 AI 学习助手。",
+  heroCTA: "免费下载 Mac 版",
+  heroCTASub: "macOS 14+ · Apple Silicon · 无需注册账号",
+  heroFree: (n: number) => "新设备首次注册，一次性获得 {n} 题".replace('{n}', String(n)),
+  mockQuestion: "操作说明 · 实际答案取决于你的题目",
+  mockAnswerTitle: "屏幕查题",
+  mockAnswerBody: "将一道题和选项显示在屏幕上，按 ⇧⌘1。答案生成后，请对照原题核验。",
+  mockStatus: "准备查题",
+  howTitle: "从题目到答案",
+  how: [
+  {
+    "t": "显示一道完整题目",
+    "d": "准备好题干和选项，按 ⇧⌘1。题型、语言和版面以已公布的支持范围为准。"
   },
+  {
+    "t": "查看并核对答案",
+    "d": "当前选用的 AI 服务处理截图。得到答案后，对照原题核验。"
+  },
+  {
+    "t": "继续你的学习",
+    "d": "看不清时重新截图，缺材料时补齐。官方服务的实际余额可在 App 中核对。"
+  }
+],
+  featTitle: "围绕一次查题任务",
+  feats: [
+  {
+    "icon": "🎁",
+    "t": "新设备注册免费 {{TRIAL}} 题",
+    "d": "一次性发放，历史余额保留，无需绑卡。"
+  },
+  {
+    "icon": "◉",
+    "t": "工作状态可见",
+    "d": "由你控制开始和停止。不能保证第三方录屏或共享工具看不到面板。"
+  },
+  {
+    "icon": "🌏",
+    "t": "中·日·英界面",
+    "d": "界面语言可切换。语言选择不会改变已验证的支持范围。"
+  },
+  {
+    "icon": "⌘",
+    "t": "快捷键查题",
+    "d": "在当前材料附近查看答案，减少复制粘贴。"
+  },
+  {
+    "icon": "🧭",
+    "t": "保留 SPI 入口",
+    "d": "SPI 备考与阅读练习使用同一 App；能力按实际开放范围启用。"
+  },
+  {
+    "icon": "🔐",
+    "t": "无需账号密码",
+    "d": "额度绑定本机设备凭证，请妥善保留。"
+  }
+],
+  priceTitle: "题包价格",
+  priceSub: (n: number) => "新设备注册一次性获得 {n} 题，历史余额完整保留。需要时按题包购买，无订阅。".replace('{n}', String(n)),
+  freeCard: {
+  name: "免费体验",
+  price: "0",
+  unit: (n: number) => "{n} 题".replace('{n}', String(n)),
+  note: "首次设备注册一次性发放",
+},
+  packUnit: (n: number) => "{n} 题".replace('{n}', String(n)),
+  perQuestion: "平均每题约",
+  popular: "题包",
+  priceNote: "一次请求交付可用答案扣 1 题；没有可用答案的失败不扣。可用不等于保证答对，重新执行是新请求。支付由 Stripe 处理。",
+  faqTitle: "常见问题",
+  faqs: [
+  {
+    "q": "截图会被保存吗？",
+    "a": "默认服务端不保存图片和答案正文。新题组材料在本机最多保留 15 分钟；你主动导出的反馈文件会保留到自行删除。"
+  },
+  {
+    "q": "答题失败会扣题吗？",
+    "a": "没有可用答案的失败不扣题。断线后请先核对本次结算状态；再次执行可能产生新请求。"
+  },
+  {
+    "q": "换电脑后余额怎么办？",
+    "a": "额度与设备凭证绑定；如需迁移请邮件联系支持。"
+  },
+  {
+    "q": "可以退款吗？",
+    "a": "题包退款规则见下方政策。答错反馈需核验，额度补偿与现金退款分别处理。"
+  },
+  {
+    "q": "系统要求？",
+    "a": "Apple Silicon Mac，macOS 14 及以上。无刘海屏幕使用顶部面板；首次使用需授予屏幕录制权限。"
+  }
+],
+  legalTitle: "特定商取引法に基づく表記（日本法定披露）",
+  privacyTitle: "隐私与数据使用",
+  privacyBody: [
+  "服务记录包含随机设备凭证、额度、请求结算、模型用量与成本及付款核对信息。正常注册无需姓名和邮箱。",
+  "官方服务将截图和必要指令交给 AI 服务方（{{AI_PROVIDER}}）处理，实际模型按服务配置选择。图片、题目和答案正文不写入默认数据库或日志。自带 Key 时由你选择的服务处理。",
+  "支付由 Stripe 处理，我方不接收卡片信息。支持邮件及你主动提交的材料按相应用途单独处理。",
+  "自愿的可靠性数据可在设置关闭。关闭即删除待发送队列并停止行为上传，必要的计费记录仍保留。详细事件保留 90 天，本机待发送队列最多 7 天。",
+  "来源选择可在首次引导跳过。你选择的来源与本机注册关联，不根据题目场景或界面语言推断来源。",
+  "问题反馈先预览并导出到本机，由你自行提交。默认仅排查本次问题；质量评测用途需另选，授权最长 90 天，外部模型处理需另行同意。收取的材料在到期或撤回时删除，本机原件由你删除。咨询、撤回或删除请联系下方邮箱，并附导出文件中的反馈编号。"
+],
+  refundTitle: "退款与取消政策",
+  refundBody: [
+  "题数充值属数字商品，到账后原则上不支持因个人原因的退款。",
+  "如遇重复扣款、支付后未到账等我方原因的问题，将全额退款；请在 7 天内邮件联系。",
+  "答题失败不消耗题数（系统自动保障）。"
+],
+  reqNote: "macOS 14+ · Apple Silicon Mac",
+  footerContact: "联系我们",
+},
+  ja: {
+  metaDesc: "NotchSPI は Mac の画面から使う AI 学習アシスタントです。新規デバイス登録時に一度だけ無料枠を付与します。",
+  navDownload: "ダウンロード",
+  heroTitle: "Mac の画面から、一問ずつ。",
+  heroSub: "画面上の一問を選び、回答をその場で確認。NotchSPI はノッチや画面上部のパネルから使える AI 学習アシスタントです。",
+  heroCTA: "Mac 用に無料ダウンロード",
+  heroCTASub: "macOS 14+ · Apple Silicon · アカウント登録不要",
+  heroFree: (n: number) => "新規デバイス登録時に一度だけ {n} 問ぶん無料".replace('{n}', String(n)),
+  mockQuestion: "操作案内 · 回答内容は問題によって異なります",
+  mockAnswerTitle: "画面の問題",
+  mockAnswerBody: "一問と選択肢を画面に表示し、⇧⌘1。生成された回答は、元の問題と照らし合わせて確認してください。",
+  mockStatus: "準備",
+  howTitle: "問題から回答へ",
+  how: [
+  {
+    "t": "一問を表示する",
+    "d": "問題文と選択肢を揃え、⇧⌘1。対応する題型・言語・レイアウトは公開範囲を確認してください。"
+  },
+  {
+    "t": "回答を確認する",
+    "d": "選択中の AI サービスが画像を処理します。回答を元の問題と照らし合わせます。"
+  },
+  {
+    "t": "次の学習へ進む",
+    "d": "読めない部分は撮り直し、必要な材料を揃えます。公式サービスの残高はアプリで確認できます。"
+  }
+],
+  featTitle: "一回の学習を支える機能",
+  feats: [
+  {
+    "icon": "🎁",
+    "t": "新規登録時に{{TRIAL}}問無料",
+    "d": "一度だけ付与。既存残高は維持され、カード登録も不要です。"
+  },
+  {
+    "icon": "◉",
+    "t": "動作状況が見える",
+    "d": "開始・停止を自分で操作できます。他社の録画や画面共有から見えなくなることは保証しません。"
+  },
+  {
+    "icon": "🌏",
+    "t": "日本語・中国語・英語 UI",
+    "d": "表示言語を切り替えられます。言語の選択によって検証済みの対応範囲が広がることはありません。"
+  },
+  {
+    "icon": "⌘",
+    "t": "ショートカットで質問",
+    "d": "表示中の材料の近くで回答を確認し、コピー操作を減らします。"
+  },
+  {
+    "icon": "🧭",
+    "t": "SPI の入口を維持",
+    "d": "SPI 対策と読解練習は同じアプリを利用し、機能は公開範囲に応じて有効になります。"
+  },
+  {
+    "icon": "🔐",
+    "t": "アカウント不要",
+    "d": "残高はデバイス認証情報に紐づきます。認証情報は大切に保管してください。"
+  }
+],
+  priceTitle: "題数パック",
+  priceSub: (n: number) => "新規デバイス登録時に {n} 問ぶんを一度だけ付与。既存の残高は維持されます。必要な分だけ追加購入でき、サブスクはありません。".replace('{n}', String(n)),
+  freeCard: {
+  name: "おためし",
+  price: "0",
+  unit: (n: number) => "{n}問ぶん".replace('{n}', String(n)),
+  note: "初回のデバイス登録で一度だけ",
+},
+  packUnit: (n: number) => "{n}問".replace('{n}', String(n)),
+  perQuestion: "1問あたり約",
+  popular: "題数パック",
+  priceNote: "一つの依頼で利用可能な回答を受け取ると 1 問分を消費。回答なしの失敗は消費しません。利用可能は正解保証ではありません。別の再実行は新しい依頼です。決済は Stripe が処理します。",
+  faqTitle: "よくある質問",
+  faqs: [
+  {
+    "q": "スクリーンショットは保存されますか？",
+    "a": "通常のサーバー処理では画像や回答本文を保存しません。新しい材料グループは本機で最大 15 分保持。自分で書き出したフィードバックは自分で削除するまで残ります。"
+  },
+  {
+    "q": "回答に失敗したら？",
+    "a": "利用可能な回答がない失敗では消費しません。切断した場合は精算状況を確認してください。再実行は新しい依頼になる場合があります。"
+  },
+  {
+    "q": "機種変更したら残高は？",
+    "a": "残高はデバイス認証情報に紐づきます。移行はメールでサポートにご相談ください。"
+  },
+  {
+    "q": "返金はできますか？",
+    "a": "下記の返金ポリシーをご覧ください。誤答の報告は確認が必要で、題数の補償と返金は別に処理します。"
+  },
+  {
+    "q": "動作環境は？",
+    "a": "Apple Silicon Mac、macOS 14 以降。ノッチのない画面では上部パネルを使います。初回に画面収録の許可が必要です。"
+  }
+],
+  legalTitle: "特定商取引法に基づく表記",
+  privacyTitle: "プライバシーとデータ利用",
+  privacyBody: [
+  "サービス記録にはランダムなデバイス認証情報、残高、依頼の精算、モデル利用量・費用、決済の照合情報を含みます。通常の登録に氏名やメールは不要です。",
+  "公式サービスでは画像と必要な指示を AI プロバイダー（{{AI_PROVIDER}}）で処理します。実際のモデル構成は配信設定に従います。画像・問題・回答本文は通常のデータベースやログに保存しません。自分のキーでは選択したサービスを利用します。",
+  "決済は Stripe が処理し、カード情報は当方には届きません。問い合わせメールや自発的に提供された材料は、その用途に沿って別に扱います。",
+  "任意の信頼性データは設定で停止できます。停止時に未送信キューを消去し、行動記録を送りません。必要な請求記録は残ります。詳細イベントは 90 日、本機の送信待ちは最大 7 日です。",
+  "入口の回答は任意で、初回案内からスキップできます。選んだ回答はデバイス登録と関連付けます。問題の種類や表示言語から入口を推測しません。",
+  "問題フィードバックは確認して本機へ書き出し、自分で送信します。標準では今回の問題調査のみ。品質評価は別途選び、許諾は最大 90 日間です。外部モデル処理は別の同意が必要です。受領資料は期限・撤回時に削除し、本機の原本は自分で削除してください。問い合わせ・撤回・削除は下記メールへ、書き出したファイルのフィードバック番号を添えてください。"
+],
+  refundTitle: "返金・キャンセルポリシー",
+  refundBody: [
+  "デジタル商品（質問数チャージ）の性質上、チャージ完了後のお客様都合による返金は原則承っておりません。",
+  "二重課金・チャージ未反映など、当方の責によるトラブルの場合は全額返金いたします。お問い合わせから 7 日以内にメールでご連絡ください。",
+  "回答の生成に失敗した場合、質問数は消費されません（自動的に保護されます）。"
+],
+  reqNote: "macOS 14 以降・Apple Silicon Mac",
+  footerContact: "お問い合わせ",
+},
   en: {
-    metaDesc: 'NotchSPI is the AI answer assistant hiding in your MacBook notch. One hotkey reads the question on your screen and streams the answer from the notch — invisible to recordings and screen shares. Up to 180 questions free.',
-    navDownload: 'Download',
-    heroTitle: 'The answer assistant hiding in your notch.',
-    heroSub: 'Press one hotkey. AI reads the question on your screen and the answer flows quietly from your MacBook’s notch — invisible to screen recordings and shares.',
-    heroCTA: 'Download free for Mac',
-    heroCTASub: 'macOS 14+ · Notarized by Apple · No account needed',
-    heroFree: (n) => `Start with up to ${n} free questions`,
-    mockQuestion: 'Your question stays on screen…',
-    mockAnswerTitle: 'Study Tutor',
-    mockAnswerBody: 'This is an arithmetic series. First identify the first term and common difference: a₁ = 3, d = 4, then apply the sum formula…',
-    mockStatus: 'Done · 179 questions left',
-    howTitle: 'Three steps',
-    how: [
-      { t: 'Press ⇧⌘1', d: 'Web pages, PDFs, quiz apps — anywhere a question is on screen.' },
-      { t: 'Your screen is read, gently', d: 'The screenshot is used only to generate the answer, then destroyed.' },
-      { t: 'The answer flows from the notch', d: 'Streams in real time — never visible in recordings or shares.' },
-    ],
-    featTitle: 'Obsessively crafted',
-    feats: [
-      { icon: '🎁', t: 'Up to 180 questions free', d: 'Just install. No card, no sign-up.' },
-      { icon: '🫥', t: 'Invisible to capture', d: 'The notch panel is excluded from recordings, shares, and screenshots.' },
-      { icon: '🌏', t: 'Japanese · Chinese · English', d: 'Switch the UI and answer language anytime.' },
-      { icon: '🎚', t: 'Four explanation depths', d: 'Answer-only / hints / guided / full working. One tap to cycle.' },
-      { icon: '🧭', t: 'Personality-test mode', d: 'Shows reference answers for SPI-style aptitude questionnaires, aligned to your target persona.' },
-      { icon: '🔐', t: 'No account', d: 'Anonymous device binding only. No email, no password.' },
-    ],
-    priceTitle: 'Pricing',
-    priceSub: (n) => `Up to ${n} free questions for every new user. Top up only when you need more — no subscription.`,
-    freeCard: { name: 'Starter', price: '¥0', unit: (n) => `up to ${n} questions`, note: 'Granted on install' },
-    packUnit: (n) => `${n} questions`,
-    perQuestion: 'about',
-    popular: 'Most popular',
-    priceNote: 'Each successful answer costs one question; failures are never charged. Payments handled securely by Stripe (JPY).',
-    faqTitle: 'FAQ',
-    faqs: [
-      { q: 'Are my screenshots stored?', a: 'No. They are used only to generate the answer, destroyed right after, and never used for training.' },
-      { q: 'What if an answer fails?', a: 'You are not charged — only successful answers count.' },
-      { q: 'What about my balance on a new Mac?', a: 'Credits are tied to the device; email us to migrate.' },
-      { q: 'Can I get a refund?', a: 'Digital credits are generally non-refundable once delivered, but our-fault issues (double charges etc.) are fully refunded — see the policy below.' },
-      { q: 'Requirements?', a: 'An Apple Silicon Mac with a notch, macOS 14+. Screen-recording permission is requested on first use.' },
-    ],
-    legalTitle: '特定商取引法に基づく表記 (Japanese commerce disclosure)',
-    privacyTitle: 'Privacy Policy',
-    privacyBody: [
-      'What we collect: an anonymous device identifier (random token), question balance, and usage (token counts). No names, emails, or other personal data.',
-      'Screenshots: sent to the AI provider ({{AI_PROVIDER}}) solely to generate the answer; never stored on our servers; destroyed after processing.',
-      'Payments: processed by Stripe, Inc. Card details never reach us.',
-      'Third parties: we do not share collected data except as required by law.',
-      'Contact & deletion: email us below; we will delete device balance data on request.',
-    ],
-    refundTitle: 'Refund & Cancellation Policy',
-    refundBody: [
-      'Question credits are digital goods and are generally non-refundable after delivery.',
-      'Issues caused by us — double charges, credits not delivered — are fully refunded; email within 7 days.',
-      'Failed answers never consume credits (enforced automatically).',
-    ],
-    reqNote: 'macOS 14+ · Apple Silicon Mac with a notch',
-    footerContact: 'Contact',
+  metaDesc: "NotchSPI is an AI study assistant for questions on your Mac screen. New devices receive a one-time free grant, with question packs for further use.",
+  navDownload: "Download",
+  heroTitle: "One question, right on your Mac.",
+  heroSub: "Select a question on screen and review the answer nearby. NotchSPI is an AI study assistant in your notch or at the top of your display.",
+  heroCTA: "Download free for Mac",
+  heroCTASub: "macOS 14+ · Apple Silicon · No account needed",
+  heroFree: (n: number) => "{n} free questions, once on first device registration".replace('{n}', String(n)),
+  mockQuestion: "How to use it · Actual answers depend on your question",
+  mockAnswerTitle: "Screen question",
+  mockAnswerBody: "Show one question and its options, then press ⇧⌘1. Check the generated answer against the original question.",
+  mockStatus: "Ready to start",
+  howTitle: "From question to answer",
+  how: [
+  {
+    "t": "Show one complete question",
+    "d": "Include the question and options, then press ⇧⌘1. Check the published support for question types, languages and layouts."
   },
+  {
+    "t": "Review the answer",
+    "d": "Your selected AI service processes the screenshot. Compare the answer with the original question."
+  },
+  {
+    "t": "Continue studying",
+    "d": "Retake unclear images and supply missing material. Check the actual official-service balance in the app."
+  }
+],
+  featTitle: "Built around one question",
+  feats: [
+  {
+    "icon": "🎁",
+    "t": "{{TRIAL}} questions on first registration",
+    "d": "A one-time grant. Existing balances are preserved; no card is required."
+  },
+  {
+    "icon": "◉",
+    "t": "Visible working state",
+    "d": "You control when it starts and stops. Invisibility to third-party recording or sharing tools is not guaranteed."
+  },
+  {
+    "icon": "🌏",
+    "t": "Japanese · Chinese · English UI",
+    "d": "Switch the interface language. This does not expand the evaluated support range."
+  },
+  {
+    "icon": "⌘",
+    "t": "A hotkey for your question",
+    "d": "Review the answer near your material, with less copying and pasting."
+  },
+  {
+    "icon": "🧭",
+    "t": "The SPI entry stays",
+    "d": "SPI preparation and reading practice use the same app, with features enabled for their released scope."
+  },
+  {
+    "icon": "🔐",
+    "t": "No account password",
+    "d": "Credits are tied to this device credential. Keep it safe."
+  }
+],
+  priceTitle: "Question packs",
+  priceSub: (n: number) => "New device registrations receive {n} questions once. Existing balances are preserved. Buy question packs when needed, with no subscription.".replace('{n}', String(n)),
+  freeCard: {
+  name: "Try it",
+  price: "0",
+  unit: (n: number) => "{n} questions".replace('{n}', String(n)),
+  note: "Once on first device registration",
+},
+  packUnit: (n: number) => "{n} questions".replace('{n}', String(n)),
+  perQuestion: "Per question, about",
+  popular: "Question pack",
+  priceNote: "One request delivering a usable answer costs one question. Failures without a usable answer are not charged. Usable does not guarantee correct; running it again is a new request. Stripe processes payments.",
+  faqTitle: "FAQ",
+  faqs: [
+  {
+    "q": "Are my screenshots stored?",
+    "a": "The server does not store images or answer text by default. New question groups keep local material for up to 15 minutes. Feedback files you export remain until you delete them."
+  },
+  {
+    "q": "What if an answer fails?",
+    "a": "A failure without a usable answer is not charged. After a disconnect, check settlement first. Running it again may create a new request."
+  },
+  {
+    "q": "What about my balance on a new Mac?",
+    "a": "Credits are tied to the device credential. Contact support by email about migration."
+  },
+  {
+    "q": "Can I get a refund?",
+    "a": "See the policy below. Reports of incorrect answers require review; credit compensation and cash refunds are handled separately."
+  },
+  {
+    "q": "Requirements?",
+    "a": "Apple Silicon Mac, macOS 14+. Displays without a notch use a top panel. Screen-recording permission is requested on first use."
+  }
+],
+  legalTitle: "特定商取引法に基づく表記 (Japanese commerce disclosure)",
+  privacyTitle: "Privacy and data use",
+  privacyBody: [
+  "Service records include a random device credential, balance, request settlement, model usage and costs, and payment reconciliation. Normal registration needs no name or email.",
+  "The official service processes screenshots and necessary instructions through the AI provider ({{AI_PROVIDER}}); actual model routing follows service configuration. Images, questions and answer text are excluded from the default database and logs. Your own key uses the service you select.",
+  "Stripe processes payments; card details do not reach us. Support emails and material you voluntarily submit are handled separately for their stated purpose.",
+  "Optional reliability sharing can be disabled in Settings. Disabling clears queued events and stops behavioral uploads; necessary billing records remain. Detailed events are kept for 90 days, with up to 7 days queued locally.",
+  "The onboarding source question is optional. A selected answer is linked to this device registration. Question profile and display language do not determine your source.",
+  "Preview and export problem feedback locally, then submit it yourself. Permission defaults to investigating this problem; quality evaluation is a separate choice. Permission lasts at most 90 days, and external model processing needs separate consent. Received material is deleted at expiry or withdrawal; delete your own local originals yourself. Email below for support, withdrawal or deletion, including the feedback reference in your export."
+],
+  refundTitle: "Refund & Cancellation Policy",
+  refundBody: [
+  "Question credits are digital goods and are generally non-refundable after delivery.",
+  "Issues caused by us — double charges, credits not delivered — are fully refunded; email within 7 days.",
+  "Failed answers never consume credits (enforced automatically)."
+],
+  reqNote: "macOS 14+ · Apple Silicon Mac",
+  footerContact: "Contact",
+},
 };
 
 /** 特定商取引法 disclosure — kept in Japanese in every UI language (it is a JP legal text). */
@@ -281,15 +445,52 @@ function tokushohoTable(): string {
     ['支払時期', 'ご購入手続き完了時'],
     ['商品の引渡時期', '決済完了後、ただちに質問数残高へ反映'],
     ['返品・キャンセル', 'デジタル商品の性質上、チャージ後の返金は原則不可。当方の不具合による場合は全額返金いたします（返金ポリシー参照）'],
-    ['動作環境', 'ノッチ搭載の Apple Silicon Mac / macOS 14 以降'],
+    ['動作環境', 'Apple Silicon Mac / macOS 14 以降（ノッチのない画面では上部パネル）'],
   ];
   return rows
     .map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`)
     .join('\n');
 }
 
+function entryCopy(input:SiteInput) {
+  if(!input.entry)return null;
+  const reading=input.entry==='reading_practice',beta=input.entryStatus==='beta';
+  if(input.lang==='zh')return {
+    title:reading?'在 Mac 上练习阅读题。':'在 Mac 上准备 SPI。',
+    description:reading?'把题目、选项和阅读材料放在一起，围绕一道题练习理解。与 SPI 入口使用同一 NotchSPI、下载和题包。':'保留熟悉的 SPI 备考入口，围绕屏幕上的一道题查看答案。与阅读练习共用 NotchSPI、下载和题包。',
+    scopeTitle:'当前支持与开放状态',
+    scope:reading?(beta?'阅读练习处于内部测试，尚无完成独立评测的公开支持组合。':'阅读练习尚未开放，授权题集与独立评测仍在准备。'):
+      '既有 SPI 入口继续可用。新版查题合约的题型、语言和版面组合仍待独立评测；不能把历史 SPI 结果视为所有题目的正确率。',
+    journey:'一次只处理一个目标问题。新版材料补充、先看答案和按需解释按 App 的实际开放范围提供；未开放功能不会因下载此页面的安装包而启用。AI 答案需要核验。',
+    attribution:'安装后的来源选择可以跳过。选择仅用于比较入口，不改变题目模式、免费额度或功能；下载点击不等于安装记录。',
+  };
+  if(input.lang==='ja')return {
+    title:reading?'Mac で読解練習。':'Mac で SPI 対策。',
+    description:reading?'問題・選択肢・文章を揃えて、一問の理解に取り組みます。SPI の入口と同じ NotchSPI、ダウンロード、題数パックを使います。':'慣れた SPI 対策の入口から、画面上の一問の回答を確認。読解練習と同じ NotchSPI、ダウンロード、題数パックです。',
+    scopeTitle:'現在の対応範囲と公開状況',
+    scope:reading?(beta?'読解練習は内部テスト中です。独立評価が完了した公開対応の組み合わせはまだありません。':'読解練習はまだ公開されていません。許諾済みの問題集と独立評価を準備しています。'):
+      '既存の SPI 入口は継続します。新しい質問機能の題型・言語・レイアウトは独立評価待ちです。過去の SPI 結果を全問題の正解率とは扱いません。',
+    journey:'一度に対象とするのは一問です。材料追加、回答優先、任意の説明はアプリで公開された範囲で提供します。このページからダウンロードしても未公開機能は有効になりません。AI の回答は確認してください。',
+    attribution:'インストール後の入口選択はスキップできます。入口の比較にのみ使い、問題モード・無料枠・機能は変えません。ダウンロードのクリックはインストール記録ではありません。',
+  };
+  return {
+    title:reading?'Practice reading questions on your Mac.':'Prepare for SPI on your Mac.',
+    description:reading?'Bring the question, options and reading material together to work through one question. Use the same NotchSPI app, download and question packs as the SPI entry.':'Keep the familiar SPI preparation entry and review one question on screen. It shares the NotchSPI app, download and question packs with reading practice.',
+    scopeTitle:'Current scope and availability',
+    scope:reading?(beta?'Reading practice is in internal testing. No public support combinations have completed independent evaluation yet.':'Reading practice is not open yet. Authorized material and independent evaluation are being prepared.'):
+      'The existing SPI entry continues. Question types, languages and layouts for the new query contract await independent evaluation. Historical SPI results do not establish accuracy for all questions.',
+    journey:'Work on one target question at a time. Material support, answers first and optional explanations follow the features actually enabled in the app. Downloading here does not enable unreleased features. Verify AI answers against your material.',
+    attribution:'You can skip the source choice after installation. It helps compare entry points and does not change modes, free credits or features. A download click is not an installation record.',
+  };
+}
+
 export function renderLandingPage(input: SiteInput): string {
   const s = S[input.lang];
+  const entry = entryCopy(input);
+  const pagePath = input.entry === 'spi' ? '/spi' : input.entry === 'reading_practice' ? '/reading-practice' : '/';
+  const trialText = (value: string): string => value
+    .replaceAll('{{TRIAL}}', String(input.trialQuestions))
+    .replaceAll('{{REMAINING}}', String(Math.max(0, input.trialQuestions - 1)));
   const langAttr = input.lang === 'zh' ? 'zh-CN' : input.lang;
   const rose = roseSVGPath();
   const providerName = input.aiProvider === 'deepseek' ? 'DeepSeek'
@@ -315,7 +516,7 @@ export function renderLandingPage(input: SiteInput): string {
     .join('\n');
 
   const featCards = s.feats
-    .map((f) => `<div class="feat"><div class="ficon">${f.icon}</div><h3>${escapeHtml(f.t)}</h3><p>${escapeHtml(f.d)}</p></div>`)
+    .map((f) => `<div class="feat"><div class="ficon">${f.icon}</div><h3>${escapeHtml(trialText(f.t))}</h3><p>${escapeHtml(trialText(f.d))}</p></div>`)
     .join('\n');
 
   const faqItems = s.faqs
@@ -328,18 +529,24 @@ export function renderLandingPage(input: SiteInput): string {
   const refund = s.refundBody.map((p) => `<p>${escapeHtml(p)}</p>`).join('\n');
 
   const langLink = (l: PageLang, label: string) =>
-    `<a class="lang${input.lang === l ? ' on' : ''}" href="/?lang=${l}">${label}</a>`;
+    `<a class="lang${input.lang === l ? ' on' : ''}" href="${pagePath}?lang=${l}"${input.lang===l?' aria-current="page"':''}>${label}</a>`;
 
   return `<!doctype html>
 <html lang="${langAttr}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NotchSPI — ${s.heroTitle}</title>
-<meta name="description" content="${escapeHtml(s.metaDesc)}">
+<title>NotchSPI — ${escapeHtml(entry?.title??s.heroTitle)}</title>
+<meta name="description" content="${escapeHtml(entry ? entry.description + ' ' + entry.scope : trialText(s.metaDesc))}">
 <meta property="og:title" content="NotchSPI">
-<meta property="og:description" content="${escapeHtml(s.metaDesc)}">
+<meta property="og:description" content="${escapeHtml(entry ? entry.description + ' ' + entry.scope : trialText(s.metaDesc))}">
 <style>
   :root { --accent:#7aa0ff; --accent-hi:#a3bdff; --ink:#eef1f8; --dim:#9aa3bd; --faint:#626b85; }
   * { box-sizing:border-box; margin:0; }
+  a:focus-visible, summary:focus-visible { outline:3px solid var(--accent-hi); outline-offset:5px; }
+  .entrylinks { display:flex; justify-content:center; flex-wrap:wrap; gap:12px; margin:20px 0; }
+  .entrylinks a { border:1px solid #687899; border-radius:12px; padding:10px 16px; color:var(--ink); text-decoration:none; }
+  .entrylinks a[aria-current] { background:#273650; }
+  .scope { max-width:680px; margin:28px auto; padding:22px; border:1px solid #687899; border-radius:16px; text-align:left; }
+  .scope p { margin-top:12px; color:var(--dim); }
   html { scroll-behavior:smooth; }
   body {
     font: 16px/1.7 -apple-system, "Hiragino Sans", "PingFang SC", system-ui, sans-serif;
@@ -475,8 +682,13 @@ export function renderLandingPage(input: SiteInput): string {
 </header>
 
 <div class="hero">
-  <h1>${s.heroTitle}</h1>
-  <p class="sub">${escapeHtml(s.heroSub)}</p>
+  <h1>${escapeHtml(entry?.title??s.heroTitle)}</h1>
+  <p class="sub">${escapeHtml(entry?.description??s.heroSub)}</p>
+  <nav class="entrylinks" aria-label="${escapeHtml(input.lang==='zh'?'学习入口':input.lang==='ja'?'学習の入口':'Study entry points')}">
+    <a href="/spi?lang=${input.lang}"${input.entry==='spi'?' aria-current="page"':''}>${input.lang==='zh'?'SPI 备考':input.lang==='ja'?'SPI 対策':'SPI preparation'}</a>
+    <a href="/reading-practice?lang=${input.lang}"${input.entry==='reading_practice'?' aria-current="page"':''}>${input.lang==='zh'?'阅读练习':input.lang==='ja'?'読解練習':'Reading practice'}</a>
+  </nav>
+  ${entry?`<section class="scope" aria-labelledby="scope-title"><h2 id="scope-title">${escapeHtml(entry.scopeTitle)}</h2><p>${escapeHtml(entry.scope)}</p><p>${escapeHtml(entry.journey)}</p><p>${escapeHtml(entry.attribution)}</p></section>`:''}
   <div class="freeTag">🎁 ${s.heroFree(input.trialQuestions)}</div>
   <div class="cta">
     <a class="dl" href="${DOWNLOAD}">${s.heroCTA}</a>
@@ -490,7 +702,7 @@ export function renderLandingPage(input: SiteInput): string {
           <div class="nhead">
             <svg viewBox="0 0 100 100" fill="none"><path d="${rose}" stroke="#a3bdff" stroke-width="6" stroke-linecap="round"/></svg>
             <span class="nmode">${s.mockAnswerTitle}</span>
-            <span class="nstat">${s.mockStatus}</span>
+            <span class="nstat">${escapeHtml(trialText(s.mockStatus))}</span>
             <span class="ncap">⇧⌘1</span>
           </div>
           <div class="nbody">${escapeHtml(s.mockAnswerBody)}<span class="cursor"></span></div>
@@ -517,7 +729,7 @@ export function renderLandingPage(input: SiteInput): string {
   <div class="packs">
     <div class="card">
       <div class="q">${s.freeCard.name}</div>
-      <div class="price">${s.freeCard.price}</div>
+      <div class="price">${formatMoney(0,input.currency)}</div>
       <div class="per">${s.freeCard.unit(input.trialQuestions)} · ${s.freeCard.note}</div>
     </div>
     ${packCards}

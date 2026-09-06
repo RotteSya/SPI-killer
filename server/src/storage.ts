@@ -23,6 +23,9 @@ export async function makeStore(config: Config): Promise<{ store: Store; kind: S
     const ssl = resolvePostgresSSL({ connectionString: config.postgresUrl, mode: config.postgresSSLMode, caCert });
     return { store: new PostgresStore(config.postgresUrl, ssl), kind: 'postgres' };
   }
+  if (config.requireDurableStorage || (config.isServerless && (config.provider !== 'mock' || config.paymentProvider === 'stripe'))) {
+    throw new Error('Durable Postgres storage is required for production service and payments');
+  }
   if (config.isServerless) {
     const { MemoryStore } = await import('./db-memory.ts');
     return { store: new MemoryStore(), kind: 'memory' };

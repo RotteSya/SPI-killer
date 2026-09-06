@@ -3,7 +3,9 @@
 // an operator must set for production (vendor keys, payment provider) is surfaced here and
 // documented in .env.example.
 
+import { FIXED_TRIAL_POLICY } from './billing.ts';
 import { parsePacks, DEFAULT_PACKS_JSON } from './pricing.ts';
+import { estimateModelCostMicros } from './telemetry.ts';
 
 function envInt(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -86,18 +88,24 @@ export const config = {
   // The account balance is an integer number of QUESTIONS; one successful capture costs one
   // question. Money only appears at purchase time (the top-up page sells question packs).
 
-  // Free questions granted to each newly registered device. The grant is RANDOMIZED per device
-  // across [trialMinQuestions, trialMaxQuestions] (see the register route) so the onboarding
-  // "welcome gift" feels personal — no two players get the same number. The range defaults to
-  // 100–180; set min === max for a fixed grant (the deterministic route tests do exactly this).
-  // `trialQuestions` remains the advertised ceiling used by the public site copy.
-  trialQuestions: envInt('TRIAL_QUESTIONS', 180),
-  trialMinQuestions: envInt('TRIAL_MIN_QUESTIONS', 100),
-  trialMaxQuestions: envInt('TRIAL_MAX_QUESTIONS', 180),
+  // Compatibility environment inputs must agree with the active policy.
+  quotaPolicyVersion: envStr('QUOTA_POLICY_VERSION', FIXED_TRIAL_POLICY.version),
+  trialQuestions: envInt('TRIAL_QUESTIONS', 30),
+  trialMinQuestions: envInt('TRIAL_MIN_QUESTIONS', 30),
+  trialMaxQuestions: envInt('TRIAL_MAX_QUESTIONS', 30),
+  requireDurableStorage: envStr('REQUIRE_DURABLE_STORAGE', '0') === '1' || envStr('NODE_ENV', '') === 'production',
+  requestHmacKeysJSON: envStr('REQUEST_HMAC_KEYS_JSON', '{}'),
+  requestHmacKeyVersion: envStr('REQUEST_HMAC_KEY_VERSION', 'v1'),
+  cronSecret: envStr('CRON_SECRET', ''),
+  screenQueryEnabled: envStr('SCREEN_QUERY_ENABLED', '0') === '1',
+  explanationEnabled: envStr('EXPLANATION_ENABLED', '0') === '1',
+  enabledSupportProfiles: envStr('ENABLED_SUPPORT_PROFILES', ''),
+  modelCostCurrency: envStr('MODEL_COST_CURRENCY', 'USD'),
 
   // Question packs sold on the top-up page: JSON `[{"id":"pack100","questions":100,"amount_cents":900}, …]`.
   // Prices are cents in `currency`. Falls back to the default catalog on parse errors.
   packs: parsePacks(envStr('PACKS_JSON', DEFAULT_PACKS_JSON)),
+  catalogVersion: envStr('CATALOG_VERSION', 'pricing-v1'),
 
   // Currency the packs are priced in (display + payment provider). Defaults to JPY to match
   // the production Stripe account's settlement currency; override with CURRENCY for others.
@@ -132,8 +140,8 @@ export const config = {
   // Real payments: Stripe Checkout (hosted page; card / Alipay / WeChat Pay etc. are picked
   // dynamically from the Dashboard's payment-method settings). Setting STRIPE_SECRET_KEY
   // activates the Stripe provider automatically — prefer a RESTRICTED key (rk_…) with only
-  // Checkout Sessions write permission. STRIPE_WEBHOOK_SECRET (whsec_…) verifies the
-  // checkout.session.completed webhook that actually credits the questions.
+  // Checkout Sessions write and Refunds read permission. STRIPE_WEBHOOK_SECRET (whsec_…)
+  // verifies paid checkout and refund notifications before durable reconciliation.
   stripeSecretKey: envStr('STRIPE_SECRET_KEY', ''),
   stripeWebhookSecret: envStr('STRIPE_WEBHOOK_SECRET', ''),
 
@@ -173,6 +181,32 @@ export const config = {
   eventBatchPerMinute: boundedInt(envInt('EVENT_BATCH_PER_MINUTE', 30), 30, 0, 10_000),
   modelPricingJSON: envStr('MODEL_PRICING_JSON', '[]'),
   modelPricingVersion: envStr('MODEL_PRICING_VERSION', 'unset'),
+  modelDailyBudgetMicros: envInt('MODEL_DAILY_BUDGET_MICROS', 0),
+  attemptBudgetUpperMicros: envInt('ATTEMPT_BUDGET_UPPER_MICROS', 0),
 } as const;
 
 export type Config = typeof config;
+
+export function validateTrialPolicy(c: Config): void {
+  if (c.quotaPolicyVersion === FIXED_TRIAL_POLICY.version &&
+      [c.trialQuestions,c.trialMinQuestions,c.trialMaxQuestions].some(n => n !== 30)) {
+    throw new Error('fixed30 requires TRIAL_QUESTIONS, TRIAL_MIN_QUESTIONS and TRIAL_MAX_QUESTIONS to equal 30');
+  }
+  if (c.requireDurableStorage && c.quotaPolicyVersion !== FIXED_TRIAL_POLICY.version) {
+    throw new Error('Production registration requires the fixed30 quota policy');
+  }
+  if (c.requireDurableStorage &&
+      (![c.modelDailyBudgetMicros,c.attemptBudgetUpperMicros].every(n=>Number.isSafeInteger(n)&&n>0)
+        || c.attemptBudgetUpperMicros>c.modelDailyBudgetMicros)) {
+    throw new Error('Production model calls require MODEL_DAILY_BUDGET_MICROS and ATTEMPT_BUDGET_UPPER_MICROS');
+  }
+  if (c.requireDurableStorage) {
+    if(c.provider==='mock'||c.objectiveProvider==='mock') throw new Error('Production model slots must use real providers');
+    if(!/^[A-Z]{3}$/.test(c.modelCostCurrency)||c.modelPricingVersion==='unset') throw new Error('Production model currency and pricing version are required');
+    for(const [provider,model] of [[c.provider,c.model],[c.objectiveProvider,c.objectiveModel]]) {
+      if((estimateModelCostMicros(c.modelPricingJSON,provider+':'+model,1,1)
+          ??estimateModelCostMicros(c.modelPricingJSON,model!,1,1))===undefined) throw new Error('Production model slots require known prices');
+    }
+    if(c.isServerless&&c.cronSecret.length<32) throw new Error('Serverless reservation recovery requires CRON_SECRET of at least 32 characters');
+  }
+}

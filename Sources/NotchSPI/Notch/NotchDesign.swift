@@ -254,21 +254,18 @@ enum NotchType {
         }
 
         let out = NSMutableAttributedString()
+        out.append(card(final, afterContent: false))
         let hasWorking = !parse.working.isEmpty
         if hasWorking {
+            out.append(NSAttributedString(string: "\n"))
             if p.depth == "brief" && p.finished {
-                // The condensation moment: scratch folds into a quiet, reopenable line.
                 out.append(toggleLine(expanded: p.revealed))
                 if p.revealed {
                     out.append(NSAttributedString(string: "\n"))
                     out.append(body(parse.working, dim: true))
                 }
-            } else {
-                out.append(body(parse.working, dim: p.depth == "brief"))
-            }
+            } else { out.append(body(parse.working, dim: p.depth == "brief")) }
         }
-        if out.length > 0 { out.append(NSAttributedString(string: "\n")) }
-        out.append(card(final, afterContent: out.length > 0))
         if !parse.overflow.isEmpty {
             // Contract-violating trailing scratch: quiet notes below the card, clear of the
             // chip's bottom inset (spacingBefore covers cardPadV plus breathing room).

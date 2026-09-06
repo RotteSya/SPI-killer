@@ -23,17 +23,49 @@ struct TelemetryRemoteConfig: Codable, Equatable {
     }
 }
 
+struct ScreenQueryRemoteConfig: Codable, Equatable {
+    let capabilities: [String]
+    let enabledProfiles: [String]?
+    enum CodingKeys: String, CodingKey {
+        case capabilities
+        case enabledProfiles = "enabled_profiles"
+    }
+}
+
+struct PaymentPackRemoteConfig: Codable, Equatable {
+    let id: String
+    let questions: Int
+    let amountMinor: Int
+    enum CodingKeys: String, CodingKey { case id, questions; case amountMinor = "amount_minor" }
+}
+
+struct PaymentsRemoteConfig: Codable, Equatable {
+    let purchaseSessions: Bool
+    let catalogVersion: String
+    let currency: String
+    let packs: [PaymentPackRemoteConfig]
+    enum CodingKeys: String, CodingKey {
+        case purchaseSessions = "purchase_sessions"
+        case catalogVersion = "catalog_version"
+        case currency, packs
+    }
+}
+
 struct NotchClientConfig: Codable, Equatable {
     let schemaVersion: Int
     let revision: String
     let objectiveResultV1: ObjectiveExperimentConfig
     let telemetry: TelemetryRemoteConfig
+    var screenQuery: ScreenQueryRemoteConfig? = nil
+    var payments: PaymentsRemoteConfig? = nil
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
         case revision
         case objectiveResultV1 = "objective_result_v1"
         case telemetry
+        case screenQuery = "screen_query"
+        case payments
     }
 
     static let base = NotchClientConfig(
@@ -80,7 +112,7 @@ final class ClientConfigService {
                   (response as? HTTPURLResponse)?.statusCode == 200,
                   let decoded = try? JSONDecoder().decode(NotchClientConfig.self, from: data),
                   decoded.accepted else { return }
-            if decoded.revision != current.revision {
+            if decoded != current {
                 current = decoded
             }
             if let cache = try? JSONEncoder().encode(Cache(fetchedAt: Date(), config: decoded)) {

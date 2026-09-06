@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { composeObjectiveResult, normalizeObjectiveAnswer } from '../server/src/objective-result.ts';
 import { objectiveEvalAnswerHit } from '../server/src/objective-eval-scoring.ts';
+import { openEvaluationBudget } from './lib/evaluation-budget.mts';
 
 if (process.env.NSPI_RUN_OBJECTIVE_EVAL !== '1') {
   console.error('Set NSPI_RUN_OBJECTIVE_EVAL=1 to run the paid 240-call release evaluation.');
@@ -15,6 +16,7 @@ if (process.env.NSPI_RUN_OBJECTIVE_EVAL !== '1') {
 const required = ['NSPI_EVAL_BASE_URL', 'NSPI_EVAL_DEVICE_TOKEN', 'NSPI_EVAL_MODEL',
   'NSPI_EVAL_COMMIT', 'NSPI_EVAL_APP_VERSION', 'NSPI_EVAL_EXECUTOR', 'NSPI_EVAL_REVIEWER'];
 for (const key of required) if (!process.env[key]) throw new Error(`${key} is required`);
+if (process.env.NSPI_EVAL_EXECUTOR.trim() === process.env.NSPI_EVAL_REVIEWER.trim()) throw new Error('Release evaluation requires a different independent reviewer');
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixtureRoot = resolve(root, 'Tests/Fixtures/objective-v1');
@@ -30,6 +32,9 @@ await mkdir(outputDir, { recursive: true });
 const stamp = new Date().toISOString().replaceAll(':', '-');
 const jsonl = resolve(outputDir, `${stamp}.jsonl`);
 const baseURL = process.env.NSPI_EVAL_BASE_URL.replace(/\/$/, '');
+const budget = openEvaluationBudget(root, process.env.NSPI_EVAL_MODEL, baseURL);
+process.once('exit', () => budget.close());
+console.log('CNY budget preflight:', budget.checkWholeRun(manifest.fixtures.length));
 
 // Preview deployments stay protected. A temporary Vercel share token is exchanged once for the
 // HttpOnly deployment cookie, then every evaluation request carries that cookie. Production or
@@ -57,15 +62,15 @@ const records = [];
 for (const [index, fixture] of manifest.fixtures.entries()) {
   const image = (await readFile(resolve(fixtureRoot, fixture.image))).toString('base64');
   const started = performance.now();
-  const response = await fetch(`${baseURL}/v1/captures`, {
+  const response = await budget.fetchText('/v1/captures', {
     method: 'POST', headers: { ...evaluationHeaders,
       authorization: `Bearer ${process.env.NSPI_EVAL_DEVICE_TOKEN}`,
       'content-type': 'application/json', 'x-app-version': process.env.NSPI_EVAL_APP_VERSION },
     body: JSON.stringify({ system: SYSTEM, task: TASK,
       image_base64: image, image_media_type: 'image/png', result_protocol: 'objective_v1',
       capture_id: crypto.randomUUID() }),
-  });
-  const body = await response.text();
+  }, fixture.id, 'answer');
+  const body = response.body;
   if (!response.ok) throw new Error(`fixture ${fixture.id} failed with HTTP ${response.status}`);
   const events = body.split(/\r?\n/).flatMap((line) => {
     if (!line.startsWith('data: ') || line === 'data: [DONE]') return [];
@@ -74,6 +79,7 @@ for (const [index, fixture] of manifest.fixtures.entries()) {
   const raw = events.filter((event) => event.type === 'delta').map((event) => event.text).join('');
   const usage = events.find((event) => event.type === 'usage');
   const streamError = events.find((event) => event.type === 'error');
+  budget.observeUsage(response.dispatchId, usage?.input_tokens, usage?.output_tokens);
   if (streamError || !usage) throw new Error(`fixture ${fixture.id} ended without a usage result`);
   const parsed = composeObjectiveResult(raw, true);
   const answerHit = fixture.expected_state === 'retake'
@@ -90,6 +96,7 @@ for (const [index, fixture] of manifest.fixtures.entries()) {
     prompt_version: manifest.prompt_version, commit: process.env.NSPI_EVAL_COMMIT,
     app_version: process.env.NSPI_EVAL_APP_VERSION, executor: process.env.NSPI_EVAL_EXECUTOR,
     reviewer: process.env.NSPI_EVAL_REVIEWER,
+    budget_dispatch_id: response.dispatchId, budget_upper_cny_micros: response.upperCNYMicros,
   };
   records.push(record);
   await appendFile(jsonl, `${JSON.stringify(record)}\n`);

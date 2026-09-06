@@ -1,3 +1,4 @@
+import type { BillingStore, RegistrationInput } from './billing.ts';
 import { createHash, randomBytes } from 'node:crypto';
 
 // Data access is behind this interface so the SQLite implementation can be swapped for
@@ -71,6 +72,40 @@ export interface TopUpSummary {
   deviceTotalQuestions: number;
 }
 
+export interface PurchaseSessionInput {
+  token: string;
+  purchaseId: string;
+  packId: string;
+  catalogVersion: string;
+  questions: number;
+  amountCents: number;
+  currency: string;
+  lang: string;
+}
+
+/** Short-lived browser handoff. `secret` is returned once and only its hash is persisted. */
+export interface PurchaseSession {
+  sessionId: string;
+  secret: string;
+  deviceId: number;
+  packId: string;
+  catalogVersion: string;
+  questions: number;
+  amountCents: number;
+  currency: string;
+  lang: string;
+  expiresAt: string;
+  checkoutSessionId: string | null;
+  checkoutURL: string | null;
+  consumedAt: string | null;
+}
+
+export interface StoredPurchaseSession extends Omit<PurchaseSession, 'secret'> {
+  secretHash: string;
+  purchaseId: string;
+  deviceToken?: string;
+}
+
 /**
  * Outcome of a quota hold. `balanceQuestions` is the balance AFTER the hold, which is exactly
  * what the client's `usage` event reports — no second read, so no window for it to drift.
@@ -80,6 +115,7 @@ export type ReserveResult =
   | { ok: false; reason: 'unknown_token' | 'insufficient_quota' };
 
 export interface ProductEventInput {
+  extensions?: Record<string, unknown>;
   eventId: string;
   captureId: string | null;
   occurredAt: string;
@@ -110,6 +146,25 @@ export interface StoredProductEvent extends ProductEventInput {
 export interface ProductEventWriteResult {
   accepted: number;
   duplicate: number;
+  rejected?: number;
+}
+
+export interface WebhookEventInput {
+  providerEventId: string;
+  eventType: string;
+  resourceId: string;
+  eventCreatedAt: string | null;
+}
+
+export type PaymentAdjustmentType = 'refund' | 'dispute' | 'fee';
+export interface PaymentAdjustmentInput {
+  providerRef: string;
+  orderReference: string;
+  type: PaymentAdjustmentType;
+  amountCents: number;
+  currency: string;
+  status: 'observed' | 'applied' | 'ignored';
+  effectiveAt: string;
 }
 
 export interface ProductMetricsQuery { from: string; to: string; variant?: string }
@@ -118,6 +173,7 @@ export interface ProductMetricVariant {
   variant: string;
   captures_started: number;
   captures_completed: number;
+  usable_results: number;
   capture_success_rate: number;
   protocol_valid_rate: number;
   legacy_fallback_rate: number;
@@ -126,16 +182,18 @@ export interface ProductMetricVariant {
   actions: Record<string, number>;
   latency_ms: { p50: number | null; p95: number | null };
   tokens: { avg_input: number | null; avg_output: number | null };
-  estimated_cost_micros: { total: number; avg_per_charged_capture: number | null };
+  estimated_cost_micros: { total: number | null; known_subtotal: number; unknown_count: number; avg_per_charged_capture: number | null };
 }
 
 export interface ProductMetrics {
+  metric_definition_version: string;
   from: string;
   to: string;
   variants: ProductMetricVariant[];
 }
 
 export interface StoredUsageMetric {
+  deviceId?:number;
   captureId: string | null;
   inputTokens: number;
   outputTokens: number;
@@ -144,11 +202,12 @@ export interface StoredUsageMetric {
 }
 
 export interface Store {
-  registerDevice(input: {
-    platform: string;
-    appVersion: string;
-    trialQuestions: number;
-  }): Promise<RegisteredDevice>;
+  readonly finance: import('./payment-finance.ts').PaymentFinance;
+  readonly reporting: import('./reporting.ts').ReportingStore;
+  readonly observations: import('./observation.ts').ObservationStore;
+  readonly payments: import('./payment-ledger.ts').PaymentLedger;
+  readonly billing: BillingStore;
+  registerDevice(input: RegistrationInput): Promise<RegisteredDevice>;
 
   /** Account snapshot for a bearer token, or null if the token is unknown/invalid. */
   getAccount(token: string): Promise<Account | null>;
@@ -183,6 +242,10 @@ export interface Store {
   }): Promise<void>;
 
   recordProductEvents(token: string, events: ProductEventInput[]): Promise<ProductEventWriteResult>;
+  /** Persist the small, normalized webhook receipt used for replay diagnostics. */
+  recordWebhookEvent(input: WebhookEventInput): Promise<boolean>;
+  /** Store refund/dispute/fee facts separately from quota goodwill credits. */
+  recordPaymentAdjustment(input: PaymentAdjustmentInput): Promise<boolean>;
   getProductMetrics(input: ProductMetricsQuery): Promise<ProductMetrics>;
   pruneProductEvents(before: string): Promise<number>;
 
@@ -207,6 +270,14 @@ export interface Store {
     provider: string;
     reference: string;
     note?: string;
+  }): Promise<number | null>;
+  createPurchaseSession(input: PurchaseSessionInput): Promise<PurchaseSession | null>;
+  getPurchaseSession(sessionId: string, secret: string): Promise<StoredPurchaseSession | null>;
+  getPurchaseSessionByCheckout(checkoutSessionId: string): Promise<StoredPurchaseSession | null>;
+  attachPurchaseCheckout(sessionId: string, checkoutSessionId: string, checkoutURL?: string): Promise<boolean>;
+  creditDevice(input: {
+    deviceId: number; questions: number; amountCents: number; currency: string;
+    provider: string; reference: string; note?: string;
   }): Promise<number | null>;
 
   /**

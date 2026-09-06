@@ -7,6 +7,7 @@ import type { FastifyInstance } from 'fastify';
 process.env.DB_PATH = ':memory:';
 process.env.OFFICIAL_PROVIDER = 'mock';
 process.env.CURRENCY = 'JPY';
+process.env.QUOTA_POLICY_VERSION = 'legacy-test';
 process.env.TRIAL_QUESTIONS = '180';
 process.env.PACKS_JSON = JSON.stringify([
   { id: 'pack100', questions: 100, amount_cents: 300 },
@@ -38,11 +39,11 @@ test('GET / renders the Japanese site by default with live pricing and legal sec
   assert.equal(res.status, 200);
   assert.match(res.headers.get('content-type') ?? '', /text\/html/);
   const html = await res.text();
-  assert.match(html, /ノッチにひそむ/);                     // hero (ja default)
+  assert.match(html, /Mac の画面から、一問ずつ/);            // hero (ja default)
   assert.match(html, /180 問ぶん無料|180問ぶん/);            // trial from config
   assert.match(html, /¥800/);                               // live pack price
   assert.match(html, /特定商取引法に基づく表記/);            // JP commerce disclosure
-  assert.match(html, /プライバシーポリシー/);                // privacy
+  assert.match(html, /プライバシーとデータ利用/);            // privacy
   assert.match(html, /返金・キャンセルポリシー/);            // refunds
   assert.match(html, /raysyadesu@gmail\.com/);              // contact
   assert.match(html, /href="\/dl"/);                        // download CTA → our own counted endpoint
@@ -60,20 +61,20 @@ test('the site never links a visitor to where the app is hosted or built', async
 
 test('?lang switches the site language; the JP disclosure stays present', async () => {
   const zh = await (await fetch(`${base}/?lang=zh`)).text();
-  assert.match(zh, /藏在刘海里的解题助手/);
+  assert.match(zh, /在 Mac 屏幕上，一次查清一道题/);
   assert.match(zh, /特定商取引法に基づく表記/);
   const en = await (await fetch(`${base}/?lang=en`)).text();
-  assert.match(en, /answer assistant hiding in your notch/);
+  assert.match(en, /One question, right on your Mac/);
   assert.match(en, /特定商取引法に基づく表記/);
 });
 
 test('Accept-Language negotiation picks zh/en; unknown falls back to ja', async () => {
   const zh = await (await fetch(`${base}/`, { headers: { 'accept-language': 'zh-CN,zh;q=0.9' } })).text();
-  assert.match(zh, /藏在刘海里的解题助手/);
+  assert.match(zh, /在 Mac 屏幕上，一次查清一道题/);
   const en = await (await fetch(`${base}/`, { headers: { 'accept-language': 'en-US,en;q=0.9' } })).text();
-  assert.match(en, /hiding in your notch/);
+  assert.match(en, /One question, right on your Mac/);
   const fr = await (await fetch(`${base}/`, { headers: { 'accept-language': 'fr-FR' } })).text();
-  assert.match(fr, /ノッチにひそむ/);
+  assert.match(fr, /Mac の画面から、一問ずつ/);
 });
 
 test('resolveSiteLang: explicit query beats headers; header order respected', () => {
@@ -100,4 +101,47 @@ test('the privacy disclosure names the configured AI provider', () => {
   });
   assert.match(html, /AI provider \(DeepSeek\)/);
   assert.doesNotMatch(html, /\{\{AI_PROVIDER\}\}/);
+});
+
+test('both entry pages preserve their route across languages and use the shared distribution endpoint', async () => {
+  for (const path of ['/spi', '/reading-practice']) for (const lang of ['ja', 'zh', 'en']) {
+    const response = await fetch(`${base}${path}?lang=${lang}`);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    for (const target of ['ja', 'zh', 'en']) assert.ok(html.includes(`href="${path}?lang=${target}"`));
+    assert.match(html, /href="\/dl"/);
+    assert.match(html, /¥800/);
+    assert.doesNotMatch(html, /<script|github\.com|utm_source|device_token/i);
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+    assert.match(response.headers.get('content-security-policy') ?? '', /default-src 'none'.*frame-ancestors 'none'/);
+  }
+});
+
+test('entry descriptions distinguish unsupported reading practice from the existing SPI entry', async () => {
+  const reading = await (await fetch(`${base}/reading-practice?lang=en`)).text();
+  assert.match(reading, /Practice reading questions on your Mac/);
+  assert.match(reading, /Reading practice is not open yet/);
+  assert.match(reading, /Authorized material and independent evaluation/);
+  assert.match(reading, /You can skip the source choice/);
+  assert.match(reading, /A download click is not an installation record/);
+  const spi = await (await fetch(`${base}/spi?lang=en`)).text();
+  assert.match(spi, /Prepare for SPI on your Mac/);
+  assert.match(spi, /The existing SPI entry continues/);
+  assert.match(spi, /Historical SPI results do not establish accuracy for all questions/);
+});
+
+test('beta reading scope remains explicit and fixed30 pricing renders from the current catalog', () => {
+  const input = {packs: [{id:'current', questions:100, amountCents:500}], trialQuestions:30,
+    currency:'USD', lang:'en' as const, aiProvider:'openai' as const, entry:'reading_practice' as const, entryStatus:'beta' as const};
+  const html = renderLandingPage(input);
+  assert.match(html, /Reading practice is in internal testing/);
+  assert.match(html, /No public support combinations have completed independent evaluation/);
+  assert.match(html, /30 free questions/); assert.match(html, /class="price">\$5<\/div>/); assert.match(html, /class="price">\$0<\/div>/);
+  assert.doesNotMatch(html, /¥0|180 free questions|\{\{TRIAL\}\}|invisible|notarized|Most popular/i);
+  for (const lang of ['zh', 'ja', 'en'] as const) {
+    const page = renderLandingPage({...input, lang});
+    const visibleCopy = page.replace(/<style>[\s\S]*?<\/style>/g, '').replace(/<[^>]*>/g, ' ');
+    assert.doesNotMatch(visibleCopy, /绝对隐身|完全不可见|100%|必ず正解|always correct|unlimited free/i);
+    assert.match(page, /raysyadesu@gmail\.com/);
+  }
 });

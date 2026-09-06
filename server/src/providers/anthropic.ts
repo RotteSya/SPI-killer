@@ -25,7 +25,7 @@ export class AnthropicProvider implements Provider {
   ): Promise<Usage> {
     const body = {
       model: this.model,
-      max_tokens: this.maxTokens,
+      max_tokens: Math.min(req.maxTokens ?? this.maxTokens, this.maxTokens),
       stream: true,
       system: req.system,
       messages: [
@@ -61,12 +61,12 @@ export class AnthropicProvider implements Provider {
       throw new Error(await vendorErrorMessage(res));
     }
 
-    const usage: Usage = { inputTokens: 0, outputTokens: 0 };
+    const usage: Usage = { inputTokens: null, outputTokens: null };
     await readVendorSSE(res.body, (payload) => {
       const ev = payload as AnthropicEvent;
       switch (ev.type) {
         case 'message_start':
-          usage.inputTokens = ev.message?.usage?.input_tokens ?? usage.inputTokens;
+          usage.inputTokens = typeof ev.message?.usage?.input_tokens === 'number' ? ev.message.usage.input_tokens : usage.inputTokens;
           break;
         case 'content_block_delta':
           if (ev.delta?.type === 'text_delta' && typeof ev.delta.text === 'string') {
@@ -74,7 +74,7 @@ export class AnthropicProvider implements Provider {
           }
           break;
         case 'message_delta':
-          usage.outputTokens = ev.usage?.output_tokens ?? usage.outputTokens;
+          usage.outputTokens = typeof ev.usage?.output_tokens === 'number' ? ev.usage.output_tokens : usage.outputTokens;
           break;
         case 'error':
           throw new Error(ev.error?.message ?? 'Anthropic 流式错误');

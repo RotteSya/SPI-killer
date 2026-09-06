@@ -507,10 +507,10 @@ private final class GeneralPageController: NSViewController, SettingsPage {
         telemetryCheckbox.frame = NSRect(x: 36 + 160, y: y, width: 350, height: 20)
         root.addSubview(telemetryCheckbox)
         let telemetryCaption = captionLabel(L10n.t(
-            "仅发送固定类型的完成状态、解析路径、耗时和按钮动作；不发送截图、题目、答案、提示词或原始错误。",
-            "完了状態・解析経路・所要時間・操作のみを送信します。画像、問題、回答、プロンプト、元のエラーは送信しません。",
-            "Sends only fixed completion states, parser paths, timings, and actions—never screenshots, questions, answers, prompts, or raw errors."))
-        telemetryCaption.frame = NSRect(x: 36 + 160, y: y + 24, width: contentWidth - 160, height: 42)
+            "共享完成状态、场景、耗时、操作和数据缺失记录。关闭后清空待传数据，仅同步共享偏好；必要的计费记录仍会保留。不会上传截图、题目、答案或提示词。",
+            "完了状態・用途・時間・操作とデータ欠落を共有します。停止すると送信待ちデータを削除し、共有設定のみ同期します。必要な課金記録は保持します。画像・問題・回答・プロンプトは送信しません。",
+            "Shares completion states, profiles, timings, actions, and data gaps. Turning this off clears pending data and syncs only the preference; required billing records remain. Screenshots, questions, answers, and prompts are excluded."))
+        telemetryCaption.frame = NSRect(x: 36 + 160, y: y + 24, width: contentWidth - 160, height: 88)
         root.addSubview(telemetryCaption)
 
         view = root
@@ -1029,7 +1029,7 @@ private final class AccountPageController: NSViewController, SettingsPage {
         usageLabel.stringValue = L10n.t("累计已答 \(OfficialAPI.totalQuestions) 题",
                                         "これまでに\(OfficialAPI.totalQuestions)問回答",
                                         "\(OfficialAPI.totalQuestions) questions answered so far")
-        let tk = OfficialAPI.totalInputTokens + OfficialAPI.totalOutputTokens
+        let tk = OfficialAPI.accumulateUsage(OfficialAPI.totalInputTokens, OfficialAPI.totalOutputTokens)
         tokensLabel.stringValue = tk > 0 ? "· \(tk) tokens" : ""
         deviceLabel.stringValue = registered
             ? L10n.t("设备 ID：", "デバイスID：", "Device ID: ") + OfficialAPI.truncatedToken(OfficialAPI.deviceToken ?? "")
@@ -1050,6 +1050,27 @@ private final class AccountPageController: NSViewController, SettingsPage {
     }
 
     @objc private func topUpTapped() {
+        if let payments = ClientConfigService.shared.current.payments,
+           payments.purchaseSessions,
+           let pack = payments.packs.sorted(by: { $0.questions < $1.questions }).dropFirst().first ?? payments.packs.first {
+            statusLabel.stringValue = L10n.t("正在准备购买页面…", "購入ページを準備中…", "Preparing the purchase page…")
+            Task { @MainActor in
+                do {
+                    let handoff = try await OfficialAPI.createPurchaseSession(packID: pack.id, catalogVersion: payments.catalogVersion)
+                    guard handoff.belongs() else {
+                        statusLabel.stringValue = OfficialAPI.accountChangedMessage
+                        return
+                    }
+                    NSWorkspace.shared.open(handoff.purchaseURL)
+                    statusLabel.stringValue = L10n.t("已在浏览器打开购买页面。支付完成后点「刷新」。", "ブラウザで購入ページを開きました。完了後「更新」を押してください。", "Purchase page opened in your browser — hit Refresh after payment.")
+                } catch let error as OfficialAPIError {
+                    statusLabel.stringValue = error.message
+                } catch {
+                    statusLabel.stringValue = L10n.t("支付暂时不可用，请稍后重试。", "決済は一時的に利用できません。", "Payments are temporarily unavailable.")
+                }
+            }
+            return
+        }
         guard let url = OfficialAPI.topUpURL(
             baseURL: OfficialAPI.baseURL, deviceToken: OfficialAPI.deviceToken,
             lang: OfficialAPI.topUpLang) else { return }
@@ -1108,14 +1129,18 @@ private final class AccountPageController: NSViewController, SettingsPage {
         alert.addButton(withTitle: L10n.t("重置并重新领取", "リセットして再取得", "Reset & re-claim"))
         alert.addButton(withTitle: L10n.cancel)
         guard alert.runModal() == .alertFirstButtonReturn else { return }
-        OfficialAPI.resetCredential()
+        guard OfficialAPI.resetCredential() else {
+            statusLabel.stringValue = L10n.t("凭证未能重置，请解锁钥匙串后重试。", "リセットできません。キーチェーンを解除して再試行してください。",
+                                            "The credential could not be reset. Unlock Keychain and retry.")
+            return
+        }
         statusLabel.stringValue = ""
         reload()
         claimTapped() // mint and register a fresh device token
     }
 }
 
-/// The quota at a glance: a true conic-gradient arc (proportion of the 180-question grant,
+/// The quota at a glance: a true conic-gradient arc (proportion of the fixed 30-question grant,
 /// capped at full) around a live rolling number. The arc lands on a soft spring and the number
 /// counts to its new value — one glance says both "how much" and "which way it just moved".
 /// Amber when running low, so "time to top up" is felt before it's read.
@@ -1153,7 +1178,7 @@ final class QuotaRingView: NSView {
 
     func setBalance(_ newBalance: Int?, animated: Bool) {
         balance = newBalance
-        let target = CGFloat(min(1, max(0, Double(newBalance ?? 0) / 180.0)))
+        let target = CGFloat(min(1, max(0, Double(newBalance ?? 0) / 30.0)))
         if arcTween == nil {
             arcTween = DisplayTween(host: self, value: 0)
             arcTween?.ease = NotchMotion.springSettle   // the arc lands with a soft breath past target

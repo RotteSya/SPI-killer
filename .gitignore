@@ -5,6 +5,7 @@
 /dist/
 /dist-qa/
 /.eval-results/
+/.release-evidence/
 /objective-eval-output/
 /.venv-fixtures/
 /server/node_modules/

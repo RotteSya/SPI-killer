@@ -31,7 +31,9 @@ PORT=18787 \
 
 step "swift tests (serial, warnings-as-errors)"
 # Shared UserDefaults/Keychain make two first-run migration tests race under --parallel.
-swift test -Xswiftc -warnings-as-errors
+# Generic secret migration tests use the DEBUG in-process vault. The account integration
+# suite explicitly uses a separate real Keychain service for its Security API coverage.
+NSPI_QA_EPHEMERAL=1 swift test -Xswiftc -warnings-as-errors
 
 step "release arm64 build"
 swift build -c release --arch arm64

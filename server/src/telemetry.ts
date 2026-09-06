@@ -11,11 +11,16 @@ const DEPTHS = new Set(['brief', 'hint', 'guided', 'full']);
 const KINDS = new Set(['single_choice', 'multiple_choice', 'ordering', 'short_fill', 'other']);
 const STATES = new Set(['ready', 'review', 'retake']);
 const PATHS = new Set(['v1', 'legacy_fallback', 'legacy', 'none']);
-const ACTIONS = new Set(['copy', 'reveal_reasoning', 'retry']);
+const ACTIONS = new Set(['copy', 'reveal_reasoning', 'retry', 'show_explanation', 'add_context', 'remove_context', 'start_new_session', 'select_region', 'confirm_review', 'recover_answer', 'export_feedback']);
+const ERROR_CODES = new Set(['protocol_invalid','invalid_scope','multiple_targets','unsupported_scope','no_usable_result','feature_disabled','budget_exceeded','upstream_error','internal','transport_error','blank_capture','capture_failed','watchdog_timeout','user_toggled','capture_hotkey','stop_button','question_cap','quota_exhausted','run_failed','idle_timeout','hash_failures']);
+const VARIANTS = new Set(['control','objective_v1']);
 const EVENT_KEYS = new Set([
   'event_id', 'capture_id', 'occurred_at', 'event_name', 'trigger', 'channel', 'mode', 'depth',
   'context_count', 'question_kind', 'result_state', 'parser_path', 'error_code', 'action',
   'capture_ms', 'first_token_ms', 'total_ms', 'config_revision', 'variant',
+  'profile_id', 'profile_version', 'source_group', 'source_method', 'usable_result', 'completion_kind',
+  'operation', 'session_id', 'consent_epoch', 'queue_drop_count',
+  'event_sequence',
 ]);
 
 function nullableString(value: unknown, max: number): string | null | undefined {
@@ -35,7 +40,7 @@ function boundedInt(value: unknown, min: number, max: number): number | null | u
 }
 
 export function validateProductEvent(
-  raw: unknown, appVersion: string | null, now = new Date(),
+  raw: unknown, appVersion: string | null, now = new Date(), schemaVersion = 1,
 ): ProductEventInput | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
   const input = raw as Record<string, unknown>;
@@ -43,7 +48,7 @@ export function validateProductEvent(
   if (typeof input.event_id !== 'string' || !UUID.test(input.event_id)) return null;
   if (typeof input.occurred_at !== 'string') return null;
   const occurred = Date.parse(input.occurred_at);
-  if (!Number.isFinite(occurred) || Math.abs(occurred - now.getTime()) > 7 * 86_400_000) return null;
+  if (!Number.isFinite(occurred) || (occurred < now.getTime() - 7 * 86_400_000 || occurred > now.getTime() + 300_000)) return null;
   if (typeof input.event_name !== 'string' || !EVENT_NAMES.has(input.event_name)) return null;
 
   const capture = nullableString(input.capture_id, 36);
@@ -57,12 +62,12 @@ export function validateProductEvent(
   const state = enumValue(input.result_state, STATES);
   const parserPath = enumValue(input.parser_path, PATHS);
   const action = enumValue(input.action, ACTIONS);
-  const errorCode = nullableString(input.error_code, 64);
+  const errorCode = enumValue(input.error_code, ERROR_CODES);
   const captureMs = boundedInt(input.capture_ms, 0, 600_000);
   const firstTokenMs = boundedInt(input.first_token_ms, 0, 600_000);
   const totalMs = boundedInt(input.total_ms, 0, 600_000);
-  const revision = nullableString(input.config_revision, 128);
-  const variant = nullableString(input.variant, 64);
+  const revision = nullableString(input.config_revision, 64);
+  const variant = enumValue(input.variant, VARIANTS);
   const optionalChecks: Array<[string, unknown]> = [
     ['capture_id', capture], ['trigger', trigger], ['channel', channel], ['mode', mode],
     ['depth', depth], ['context_count', contextCount], ['question_kind', kind],
@@ -72,9 +77,32 @@ export function validateProductEvent(
   ];
   if (optionalChecks.some(([key, value]) => key in input && value === undefined)) return null;
 
+  const fields: Record<string, unknown> = {};
+  const extraEnums: Record<string, string[]> = {
+    profile_id: ['spi', 'reading_practice', 'general'], profile_version: ['screen-query-v1-r1'],
+    source_group: ['spi_entry', 'reading_practice_entry', 'direct', 'unknown'],
+    source_method: ['self_reported', 'attributed', 'unknown'],
+    completion_kind: ['usable', 'retake', 'no_result', 'failed', 'canceled'], operation: ['solve', 'explain', 'recover'],
+  };
+  for (const [key, values] of Object.entries(extraEnums)) {
+    if (key in input) { if (typeof input[key] !== 'string' || !values.includes(input[key])) return null; fields[key] = input[key]; }
+  }
+  if ('usable_result' in input) { if (typeof input.usable_result !== 'boolean') return null; fields.usable_result = input.usable_result; }
+  if ('session_id' in input) { if (typeof input.session_id !== 'string' || !UUID.test(input.session_id)) return null; fields.session_id = input.session_id.toLowerCase(); }
+  for (const key of ['consent_epoch', 'queue_drop_count', 'event_sequence']) {
+    if (key in input) { const value=boundedInt(input[key],0,1_000_000_000); if(value===undefined||value===null)return null; fields[key]=value; }
+  }
+  if(schemaVersion===2) {
+    if(typeof fields.consent_epoch!=='number'||typeof fields.event_sequence!=='number')return null;
+    if(input.event_name==='capture_completed'&&(!capture||typeof fields.usable_result!=='boolean'||!fields.completion_kind||!fields.operation))return null;
+    if(fields.usable_result===true&&(fields.completion_kind!=='usable'||fields.operation!=='solve'||mode!=='tutor'||depth==='hint'||errorCode!=null||
+      !((parserPath==='v1'&&(state==='ready'||state==='review'))||parserPath==='legacy_fallback')))return null;
+    fields.schema_version=2;
+  }
   return {
-    eventId: input.event_id,
-    captureId: capture ?? null,
+    extensions: Object.keys(fields).length ? fields : undefined,
+    eventId: input.event_id.toLowerCase(),
+    captureId: capture?.toLowerCase() ?? null,
     occurredAt: new Date(occurred).toISOString(),
     eventName: input.event_name,
     trigger: trigger ?? null,
@@ -106,6 +134,8 @@ function percentile(values: number[], fraction: number): number | null {
 export function aggregateProductMetrics(
   rows: StoredProductEvent[], query: ProductMetricsQuery, usageRows: StoredUsageMetric[] = [],
 ): ProductMetrics {
+  const captureOwners=new Map<string,Set<number>>();
+  for(const row of rows)if(row.captureId){const key=row.captureId.toLowerCase(),owners=captureOwners.get(key)??new Set<number>();owners.add(row.deviceId);captureOwners.set(key,owners);}
   const groups = new Map<string, StoredProductEvent[]>();
   for (const row of rows) {
     const variant = row.variant ?? 'control';
@@ -115,9 +145,11 @@ export function aggregateProductMetrics(
     groups.set(variant, group);
   }
   const variants = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([variant, events]) => {
-    const started = events.filter((e) => e.eventName === 'capture_started');
-    const completed = events.filter((e) => e.eventName === 'capture_completed');
-    const successful = completed.filter((e) => e.parserPath !== 'none' && e.errorCode === null);
+    const unique = (name: string) => [...new Map(events.filter(e => e.eventName === name)
+      .map(e => [e.captureId ? e.deviceId + ':' + e.captureId.toLowerCase() : e.eventId.toLowerCase(), e])).values()];
+    const started = unique('capture_started');
+    const completed = unique('capture_completed');
+    const successful = completed.filter(usableProductResult);
     // An objective-v1 treatment completion with parserPath=none is a protocol failure, not a
     // missing observation. Control has no V1 denominator; mixed/custom queries retain the older
     // path-based denominator so legacy traffic cannot depress the treatment metric.
@@ -137,12 +169,19 @@ export function aggregateProductMetrics(
     const valid = protocol.filter((e) => e.parserPath === 'v1').length;
     const fallback = protocol.filter((e) => e.parserPath === 'legacy_fallback').length;
     const captureVariants = new Map(events.flatMap((event) => event.captureId
-      ? [[event.captureId, event.variant ?? 'control'] as const] : []));
-    const usage = usageRows.filter((row) => (row.captureId ? captureVariants.get(row.captureId) : 'control') === variant);
+      ? [[event.deviceId+':'+event.captureId.toLowerCase(), event.variant ?? 'control'] as const] : []));
+    const usage = usageRows.filter(row=>{
+      if(!row.captureId)return variant==='control';
+      const id=row.captureId.toLowerCase(),owners=captureOwners.get(id);
+      const device=row.deviceId??(owners?.size===1?[...owners][0]:undefined);
+      return device!==undefined&&captureVariants.get(device+':'+id)===variant;
+    });
     const charged = usage.filter((row) => row.questions > 0);
-    const totalCost = usage.reduce((sum, row) => sum + (row.estimatedCostMicros ?? 0), 0);
+    const unknownCosts = usage.filter(row => row.estimatedCostMicros === null).length;
+    const knownCost = usage.reduce((sum, row) => sum + (row.estimatedCostMicros ?? 0), 0);
+    const totalCost = usage.length > 0 && unknownCosts === 0 ? knownCost : null;
     return {
-      variant, captures_started: started.length, captures_completed: completed.length,
+      variant, captures_started: started.length, captures_completed: completed.length, usable_results: successful.length,
       capture_success_rate: started.length ? successful.length / started.length : 0,
       protocol_valid_rate: protocol.length ? valid / protocol.length : 0,
       legacy_fallback_rate: protocol.length ? fallback / protocol.length : 0,
@@ -153,12 +192,12 @@ export function aggregateProductMetrics(
         avg_output: usage.length ? usage.reduce((sum, row) => sum + row.outputTokens, 0) / usage.length : null,
       },
       estimated_cost_micros: {
-        total: totalCost,
-        avg_per_charged_capture: charged.length ? totalCost / charged.length : null,
+        total: totalCost, known_subtotal: knownCost, unknown_count: unknownCosts,
+        avg_per_charged_capture: charged.length && totalCost !== null ? totalCost / charged.length : null,
       },
     };
   });
-  return { from: query.from, to: query.to, variants };
+  return { from: query.from, to: query.to, metric_definition_version: 'usable-solve-v2', variants };
 }
 
 interface ModelPricingEntry {
@@ -186,4 +225,14 @@ export function estimateModelCostMicros(
     return Math.round((inputTokens * entry.input_micros_per_million_tokens
       + outputTokens * entry.output_micros_per_million_tokens) / 1_000_000);
   } catch { return undefined; }
+}
+
+export function usableProductResult(event: StoredProductEvent): boolean {
+  if(event.extensions?.schema_version===2&&(event.extensions.usable_result!==true||event.extensions.operation!=='solve'||event.extensions.completion_kind!=='usable'))return false;
+  if (event.eventName !== 'capture_completed' || event.mode !== 'tutor' || event.depth === 'hint' || event.errorCode !== null) return false;
+  if (event.extensions?.operation && event.extensions.operation !== 'solve') return false;
+  if (event.extensions?.usable_result === false) return false;
+  if (event.extensions?.completion_kind && event.extensions.completion_kind !== 'usable') return false;
+  return (event.parserPath === 'v1' && (event.resultState === 'ready' || event.resultState === 'review'))
+    || event.parserPath === 'legacy_fallback';
 }

@@ -1,0 +1,22 @@
+import {createHash} from 'node:crypto';
+import {escapeHtml,formatMoney,normalizeLang} from './payments.ts';
+import type {StoredPurchaseSession} from './db.ts';
+const strings={
+  zh:{title:'购买题包',questions:'题',buy:'继续支付',processing:'正在创建支付页面…',network:'连接中断，请重试。',error:'暂时无法打开支付页面，请稍后重试。',expired:'购买链接已失效，请返回 App 重新发起购买。',changed:'购买状态或价格已更新，请返回 App 刷新。',security:'此链接短期有效。到账以 App 账户余额为准。',complete:'请在 App 中确认到账',notice:'请返回 notchSPI 的账户页并刷新余额。支付跳转不代表额度已经到账；到账确认可能需要片刻。',cancel:'如已取消支付，确认未付款后，可返回 App 重新购买。'},
+  ja:{title:'問題パックを購入',questions:'問',buy:'支払いに進む',processing:'支払いページを準備中…',network:'接続が切れました。再試行してください。',error:'支払いページを開けません。しばらくしてから再試行してください。',expired:'購入リンクの有効期限が切れました。アプリから購入を開始してください。',changed:'購入状態または価格が更新されました。アプリに戻って更新してください。',security:'このリンクは短時間のみ有効です。反映状況はアプリの残高で確認してください。',complete:'アプリで残高を確認してください',notice:'notchSPI のアカウント画面に戻り、残高を更新してください。決済後の移動だけでは付与は確定しません。確認には少し時間がかかる場合があります。',cancel:'支払いをキャンセルした場合は、未決済であることを確認してからアプリで購入をやり直してください。'},
+  en:{title:'Buy a question pack',questions:'questions',buy:'Continue to payment',processing:'Preparing your payment page…',network:'Connection interrupted. Please retry.',error:'The payment page is unavailable. Please retry shortly.',expired:'This purchase link has expired. Start a purchase from the app.',changed:'The purchase status or price has changed. Refresh your account in the app.',security:'This link expires shortly. Check your app balance to confirm delivery.',complete:'Confirm your balance in the app',notice:'Return to the account page in notchSPI and refresh your balance. A payment redirect does not confirm that questions have been credited. Confirmation may take a moment.',cancel:'If you canceled, confirm that no payment was made before starting another purchase in the app.'},
+};
+const script=String.raw`(()=>{'use strict';const b=document.querySelector('#buy'),o=document.querySelector('#status');b.onclick=async()=>{b.disabled=true;o.textContent=b.dataset.processing;try{const r=await fetch('/purchase/checkout',{method:'POST',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify({session:b.dataset.session})});const j=await r.json();if(r.ok&&j.url){location.assign(j.url);return;}o.textContent=r.status===410?b.dataset.expired:r.status===409?b.dataset.changed:b.dataset.error;}catch{o.textContent=b.dataset.network;}b.disabled=false;};})();`;
+export const PURCHASE_CSP="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; connect-src 'self'; style-src 'unsafe-inline'; script-src 'sha256-"+createHash('sha256').update(script).digest('base64')+"'";
+function shell(lang:string,title:string,body:string,interactive=false):string {
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>notchSPI · ${escapeHtml(title)}</title><style>*{box-sizing:border-box}body{margin:0;padding:24px;background:#0b0e1a;color:#eef1f8;font:16px/1.65 -apple-system,BlinkMacSystemFont,sans-serif}main{max-width:480px;margin:12vh auto;padding:28px;border:1px solid #384159;border-radius:20px}h1{font-size:26px;line-height:1.3}p{overflow-wrap:anywhere}button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:12px 20px;color:#101828;background:#b6c7ff;cursor:pointer}button:focus-visible{outline:3px solid #fff;outline-offset:4px}button:disabled{opacity:.6;cursor:wait}.muted{color:#b2bccf}</style></head><body><main>${body}</main>${interactive?'<script>'+script+'</script>':''}</body></html>`;
+}
+export function renderPurchase(session:StoredPurchaseSession,secret:string):string {
+  const lang=normalizeLang(session.lang),s=strings[lang];
+  const data={session:secret,processing:s.processing,network:s.network,error:s.error,expired:s.expired,changed:s.changed};
+  return shell(lang,s.title,`<h1>${s.title}</h1><p>${session.questions} ${s.questions}</p><p>${escapeHtml(formatMoney(session.amountCents,session.currency))} ${escapeHtml(session.currency)}</p><button id="buy" ${Object.entries(data).map(([key,value])=>'data-'+key+'="'+escapeHtml(value)+'"').join(' ')}>${s.buy}</button><p id="status" role="status" aria-live="polite"></p><p class="muted">${s.security}</p>`,true);
+}
+export function renderPurchaseComplete(language:string,canceled:boolean):string {
+  const lang=normalizeLang(language),s=strings[lang];
+  return shell(lang,s.complete,`<h1>${s.complete}</h1><p>${s.notice}</p>${canceled?'<p class="muted">'+s.cancel+'</p>':''}`);
+}

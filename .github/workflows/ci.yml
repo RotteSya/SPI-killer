@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, codex/product-update-2-12]
   pull_request:
 
 permissions:
@@ -10,22 +10,30 @@ permissions:
 
 jobs:
   node:
-    name: Node
+    name: Node ${{ matrix.node }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.18.0', '24.20.0']
     defaults:
       run:
         working-directory: server
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.18.0'
+          node-version: ${{ matrix.node }}
           cache: npm
           cache-dependency-path: server/package-lock.json
-      - run: npm ci
+      - run: npm ci --include=optional
       - run: npm audit --omit=dev --audit-level=high
       - run: npm run typecheck
-      - run: npm test
+      - run: node --test --test-reporter=tap --test-concurrency=2 'test/*.test.ts' | tee "$RUNNER_TEMP/node-tests.tap"
         env:
           OFFICIAL_PROVIDER: mock
       - name: Isolated local-server smoke
@@ -41,16 +49,28 @@ jobs:
           VERCEL: '1'
           NSPI_QA_EPHEMERAL: '0'
           PORT: '18787'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: node-${{ matrix.node }}-tests
+          path: ${{ runner.temp }}/node-tests.tap
+          if-no-files-found: ignore
 
   postgres:
-    name: Postgres store
+    name: Postgres ${{ matrix.postgres }} / Node ${{ matrix.node }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.18.0', '24.20.0']
+        postgres: ['16', '17']
     defaults:
       run:
         working-directory: server
     services:
       postgres:
-        image: postgres:16
+        image: postgres:${{ matrix.postgres }}
         env:
           POSTGRES_USER: notchspi
           POSTGRES_PASSWORD: notchspi
@@ -64,22 +84,66 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.18.0'
+          node-version: ${{ matrix.node }}
           cache: npm
           cache-dependency-path: server/package-lock.json
-      - run: npm ci
-      - run: npm test
+      - run: npm ci --include=optional
+      - run: node --test --test-reporter=tap --test-concurrency=2 'test/*.test.ts' | tee "$RUNNER_TEMP/postgres-tests.tap"
         env:
           OFFICIAL_PROVIDER: mock
           TEST_POSTGRES_URL: postgres://notchspi:notchspi@localhost:5432/notchspi_test?sslmode=disable
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: postgres-${{ matrix.postgres }}-node-${{ matrix.node }}-tests
+          path: ${{ runner.temp }}/postgres-tests.tap
+          if-no-files-found: ignore
+
+  linux-native:
+    name: Node 24 / AL2023 native resources
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NSPI_NODE_IMAGE: public.ecr.aws/lambda/nodejs@sha256:ba8267e65e24c53ab13256b11bd004a01e23c4ec7f0d5301522a57fba6868b63
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install target Linux native dependencies
+        run: >-
+          docker run --rm --entrypoint npm
+          -v "$GITHUB_WORKSPACE:/work" -w /work/server
+          "$NSPI_NODE_IMAGE" ci --include=optional --no-audit --no-fund
+      - name: Verify 1 GiB native decoder bounds without network
+        run: >-
+          docker run --rm --network none --memory 1024m --memory-swap 1024m
+          --cpus 1 --pids-limit 256 --entrypoint node
+          -v "$GITHUB_WORKSPACE:/work:ro" -w /work
+          "$NSPI_NODE_IMAGE" scripts/verify-linux-runtime.mjs
+          > "$RUNNER_TEMP/linux-native-resource.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-native-resource
+          path: ${{ runner.temp }}/linux-native-resource.json
+          if-no-files-found: ignore
 
   macos:
     name: macOS
     runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      NSPI_QA_EPHEMERAL: '1'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22.18.0'

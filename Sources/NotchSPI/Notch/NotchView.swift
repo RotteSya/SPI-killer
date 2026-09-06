@@ -19,6 +19,13 @@ import QuartzCore
 ///     ride retargetable critically-damped springs, so arriving tokens pour the card open in one
 ///     continuous glide instead of a staircase of `setFrame` jumps.
 final class NotchView: NSView {
+    var onExplanation: (() -> Void)?
+    var onAddMaterial: (() -> Void)?
+    var onNewGroup: (() -> Void)?
+    var onSelectRegion: (() -> Void)?
+    var onRemoveMaterial: ((UUID) -> Void)?
+    private let materialStrip = QuestionMaterialStrip()
+
     private let model: TutorModel
     private let onHover: (Bool) -> Void
     private let onCycleDepth: () -> Void
@@ -126,7 +133,7 @@ final class NotchView: NSView {
         ])
 
         configureAnswerArea()
-        [modeLabel, statusText, capsule, gearButton, answerScroll].forEach { expandedContent.addSubview($0) }
+        [modeLabel, statusText, capsule, gearButton, answerScroll, materialStrip].forEach { expandedContent.addSubview($0) }
         expandedContent.wantsLayer = true
         expandedContent.layer?.mask = contentMask
         addSubview(expandedContent)
@@ -160,10 +167,16 @@ final class NotchView: NSView {
         answerScroll.borderType = .noBorder
         answerScroll.horizontalScrollElasticity = .none
         answerScroll.documentView = answerStream
+        materialStrip.onExplain = { [weak self] in self?.onExplanation?() }
+        materialStrip.onAdd = { [weak self] in self?.onAddMaterial?() }
+        materialStrip.onClear = { [weak self] in self?.onNewGroup?() }
+        materialStrip.onSelect = { [weak self] in self?.onSelectRegion?() }
+        materialStrip.onRemove = { [weak self] id in self?.onRemoveMaterial?(id) }
         answerStream.onToggleReasoning = { [weak self] in self?.onToggleReasoning() }
         answerStream.canCopyAnswer = { [weak self] in
             guard let self else { return false }
             return self.model.mode != "personality" && self.model.resultState != .retake
+                && self.model.status != .running && self.model.status != .streaming
                 && AnswerComposer.clipboardAnswer(self.model.answer) != nil
         }
         answerStream.onCopyAnswer = { [weak self] in self?.onCopyAnswer() }
@@ -191,6 +204,8 @@ final class NotchView: NSView {
         if model.status == .streaming, model.answer.count > lastAnswerLen { luma.pulse() }
         lastAnswerLen = model.answer.count
 
+        materialStrip.isHidden = !model.showMaterialStrip
+        if model.showMaterialStrip { materialStrip.update(model.materials, explanationAvailable: model.explanationAvailable) }
         statusText.stringValue = model.statusText
         statusText.textColor = model.resultState == .review
             ? NSColor(calibratedRed: 0.95, green: 0.66, blue: 0.20, alpha: 1)
@@ -203,7 +218,7 @@ final class NotchView: NSView {
                 ? (model.personaLabel.isEmpty ? L10n.t("设置人物像", "人物像を設定", "Set persona") : model.personaLabel)
                 : model.depthLabel
 
-        let attr = NotchType.answerString(model.answer, presentation: NotchType.presentation(for: model))
+        let attr = NotchType.answerString(model.renderedAnswer, presentation: NotchType.presentation(for: model))
         answerStream.setAnswer(attr, isPlaceholder: model.answer.isEmpty)
         // While streaming, keep the newest text in view (a long answer scrolls within its region).
         if model.status == .streaming { followBottom = true }
@@ -462,14 +477,16 @@ final class NotchView: NSView {
 
         // Answer fills below the header; the panel height is sized by the controller, so a long
         // answer scrolls within this fixed region and a short one hugs it.
-        let top = NotchLayout.headerHeight
+        let stripHeight: CGFloat = model.showMaterialStrip ? 74 : 0
+        materialStrip.frame = CGRect(x: inset, y: NotchLayout.headerHeight, width: size.width - inset * 2, height: stripHeight)
+        let top = NotchLayout.headerHeight + stripHeight
         let h = max(0, size.height - top - NotchLayout.answerBottomPad)
         let w = max(0, size.width - inset * 2)
         answerScroll.frame = CGRect(x: inset, y: top, width: w, height: h)
 
         // The streaming view is the scroll's documentView, sized to the FULL content height so a
         // long answer scrolls; the CTFramesetter measure matches what it draws.
-        let docH = max(h, NotchType.answerHeight(model.answer,
+        let docH = max(h, NotchType.answerHeight(model.renderedAnswer,
                                                  presentation: NotchType.presentation(for: model), width: w))
         answerStream.frame = CGRect(x: 0, y: 0, width: w, height: docH)
         updateScrollFade()
