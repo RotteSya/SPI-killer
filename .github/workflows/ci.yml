@@ -133,6 +133,73 @@ jobs:
           path: ${{ runner.temp }}/linux-native-resource.json
           if-no-files-found: ignore
 
+  vercel-bundle:
+    name: Node 24 / Vercel Linux function bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NSPI_NODE_IMAGE: public.ecr.aws/lambda/nodejs@sha256:ba8267e65e24c53ab13256b11bd004a01e23c4ec7f0d5301522a57fba6868b63
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Cache the verified public project settings without credentials
+        # Read from the project's API on 2026-09-07. Deployment settings and secrets
+        # still require a fresh production check; this job only builds locally.
+        run: |
+          mkdir -p .vercel "$RUNNER_TEMP/nspi-vercel"
+          cat > .vercel/project.json <<'JSON'
+          {
+            "projectId": "prj_w2DZOa9GeyLV1K2yaRtOr4TS82ib",
+            "orgId": "team_DD9AF4JMSeYki6LwJ5HPX6Oa",
+            "projectName": "notchspi-api",
+            "settings": {
+              "createdAt": 1783726557685,
+              "framework": "fastify",
+              "devCommand": null,
+              "installCommand": null,
+              "buildCommand": null,
+              "outputDirectory": null,
+              "rootDirectory": "server",
+              "directoryListing": false,
+              "nodeVersion": "24.x"
+            }
+          }
+          JSON
+      - name: Install the pinned Vercel CLI on AL2023
+        run: >-
+          docker run --rm --entrypoint npm
+          -v "$RUNNER_TEMP/nspi-vercel:/toolchain" -w /toolchain
+          "$NSPI_NODE_IMAGE" install --save-exact --include=optional --no-audit --no-fund vercel@59.11.7
+      - name: Build the actual function without deployment credentials
+        run: >-
+          docker run --rm --entrypoint node
+          -e CI=1 -e VERCEL_TELEMETRY_DISABLED=1 -e NO_COLOR=1
+          -v "$GITHUB_WORKSPACE:/work" -v "$RUNNER_TEMP/nspi-vercel:/toolchain:ro" -w /work
+          "$NSPI_NODE_IMAGE" /toolchain/node_modules/vercel/dist/index.js
+          build --standalone --non-interactive --local-config /work/server/vercel.json --global-config /tmp/vercel-auth
+          2>&1 | tee "$RUNNER_TEMP/vercel-build.log"
+      - name: Inspect and exercise the packaged function without external network
+        run: >-
+          docker run --rm --network none --memory 1024m --memory-swap 1024m
+          --cpus 1 --pids-limit 256 --entrypoint node
+          -v "$GITHUB_WORKSPACE:/work:ro" -w /work
+          "$NSPI_NODE_IMAGE" scripts/verify-vercel-output.mjs .vercel/output
+          > "$RUNNER_TEMP/vercel-bundle.json"
+      - name: Archive the validated standalone build output
+        run: >-
+          tar -C .vercel/output -czf "$RUNNER_TEMP/vercel-function-node24-linux-x64.tar.gz"
+          config.json functions static
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vercel-linux-bundle
+          path: |
+            ${{ runner.temp }}/vercel-build.log
+            ${{ runner.temp }}/vercel-bundle.json
+            ${{ runner.temp }}/vercel-function-node24-linux-x64.tar.gz
+          if-no-files-found: ignore
+
   macos:
     name: macOS
     runs-on: macos-15

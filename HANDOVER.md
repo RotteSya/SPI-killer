@@ -152,6 +152,7 @@ SPI 与阅读练习页面分别为 `/spi`、`/reading-practice`，三语共用�
 - 打包：`./scripts/package.sh qa` → `dist-qa/NotchSPI.app`；`./scripts/package.sh release` → `dist/NotchSPI.dmg`（Developer ID + 公证 + staple）。无证书的 release 必须显式 `--unsigned`。
 - Owner-only：push、tag `v${APP_VERSION}`、GitHub Release 上传 DMG、Vercel 部署、Stripe webhook 配置。
 - 服务端契约新字段先于客户端发版（`INV-DEPLOY-001`）。
+- Vercel 静态输出只允许 `server/public/robots.txt`；`outputDirectory=public` 防止默认静态打包公开 src/test。`scripts/verify-vercel-output.mjs` 检查真实构建包的公开清单、目标原生模块、动态 SQL 导入及入口 HTTP/SSE；CI 用固定 CLI 59.11.7 在 AL2023 构建后于断网容器执行。macOS 生成的 sharp 包只能做宿主诊断，不能交付 Linux。Fluid 当前计费模式忽略函数 memory 设置，1 GiB 测试是保守资源约束，不是生产内存配置证明。具体证据和边界见 [Vercel 函数包核验](docs/vercel-bundle-verification.md)。
 - 过期请求通过独立 `GET /api/internal/reap` 调度恢复，使用独立 `CRON_SECRET`。2026-09-07 已只读核验 notchspi-api 使用 Node 24.x，所属团队为 Hobby；当前每分钟 Vercel cron 配置超出该套餐能力，会阻断部署。生产须落实已有外部分钟调度，或经费用授权升级支持分钟调度的套餐，再验证实际恢复日志。调度方案待确认，进程内计时器不能替代它。已收费请求的恢复失败或 worker 终止均只补偿一次 goodwill。
 
 支付运营：Stripe webhook 必须同时订阅 `checkout.session.completed`、`checkout.session.async_payment_succeeded` 及 `refund.created` / `refund.updated` / `refund.failed`。受限 key 需要 Checkout Sessions read/write 和退款对象 read 权限，无需发起退款权限。订单入账与额度同事务；退款先读当前资源再按持久化 generation 应用，全额成功撤回未用 paid lot，处理中冻结，失败恢复。部分退款需 `/admin/payments/refund-decision` 的明确题数和当前指纹；历史 `legacy_unknown` 不猜测归属。`GET /admin/payments` 为受限核对视图，不能代替全量财务聚合。细节见 API 文档和发布记录。

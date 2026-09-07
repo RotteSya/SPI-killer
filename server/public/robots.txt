@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /admin
+Disallow: /api/
+Disallow: /v1/
+Disallow: /purchase
+Disallow: /topup

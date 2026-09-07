@@ -21,3 +21,5 @@ PostgreSQL 使用固定镜像 `postgres@sha256:18cfe3ef5e6815560c98237d6216d1e51
 sharp 的 ESM / CommonJS 包装器都在初始化时启用共享原生缓存。探针先加载诊断使用的 CommonJS 包装器，再加载生产模块，让生产的禁用缓存配置最后生效；否则诊断代码本身会重置配置。缓存和队列断言必须保留，不能为通过测试删除。RSS 与 cgroup 峰值、采样堆内存、事件循环延迟都保存，但 QEMU 的耗时不能用作真实设备或生产 SLA。
 
 当前验证结果、原始日志和 QA 摘要统一见 [发布进度记录](release-progress-2026-09-06.md)。正式发布仍须执行 Vercel 构建/原生依赖打包核验、真实入口与 SSE 验证、独立分钟恢复日志及生产迁移。实际团队为 Hobby，每分钟 cron 会阻断部署；调度方案确定前不能将本地容器通过标记为已上线。
+
+原生补验已在 [GitHub Actions 34068252074](https://github.com/RotteSya/notch-SPI/actions/runs/34068252074) 完成：Node 22.18/24.20 与 Postgres 16/17 的四组矩阵各 627 项全过；AL2023 同 digest 镜像在 x86_64 runner 上全新安装依赖，并在独立、无外网的 1 GiB 容器通过 25 次 16MP 解码及 10 次并发拒绝，覆盖 8 位和 16 位 RGBA。原生资源峰值 RSS 419.34 MiB；结果绑定 commit `90e368ec54e7ba6e310289f6caf2c2666cd32715`。QEMU 第二轮曾出现一次未解释的财务文件进程退出，独立 27 项及四组原生完整回归均通过，原日志继续保留。

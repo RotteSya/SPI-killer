@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
+  "outputDirectory": "public",
   "git": { "deploymentEnabled": { "codex/product-update-2-12": false } },
   "fluid": true,
   "crons": [{ "path": "/api/internal/reap", "schedule": "* * * * *" }],
