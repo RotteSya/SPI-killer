@@ -82,6 +82,23 @@ Vercel 只读 API 完整列出 41 个部署，分页 `next=null`、均 READY，�
 
 本轮所有 QA 与本机服务均停止，依据已记录文件清单清理 2 张测试图片、剩余 0，见 `cleanup-validation.json`。没有真实模型或支付调用。系统偶发慢响应、完整框选流程和正式多设备性能验收仍待完成；客户端无限等待与重复发起枚举的缺口已修复。
 
-## 当前可核对的候选包
+## 系统等待保护阶段的候选包
 
-`dist/NotchSPI.dmg` 对应 `be9676c355b5c84c661749958816741885455fbb`，2.12 / build 19，arm64、最低 macOS 14.0，3,046,082 字节；SHA-256 `f3cdfd6992cc6e597b71b3760ee7fc59226699c0fffd8afdd24a2ad49e1dfaf9`。Apple 公证 `190f159a-5b64-4565-9f7e-00bcc7009905` Accepted，装订、完整性、strict codesign 与 Gatekeeper 通过。61 个客户端/资源/打包输入摘要与提交一致。证据为 `capture-diagnostic/release-package.log`、`artifact-verification.log`、`notarized-artifact-manifest.json`；未公开发布。
+`.release-evidence/2026-09-09/pre-preparation-dist/NotchSPI.dmg` 对应 `be9676c355b5c84c661749958816741885455fbb`，2.12 / build 19，arm64、最低 macOS 14.0，3,046,082 字节；SHA-256 `f3cdfd6992cc6e597b71b3760ee7fc59226699c0fffd8afdd24a2ad49e1dfaf9`。Apple 公证 `190f159a-5b64-4565-9f7e-00bcc7009905` Accepted，装订、完整性、strict codesign 与 Gatekeeper 通过。61 个客户端/资源/打包输入摘要与提交一致。证据为 `capture-diagnostic/release-package.log`、`artifact-verification.log`、`notarized-artifact-manifest.json`；未公开发布。
+
+
+## 取消截图准备与系统服务阻断（最新）
+
+`2f16605` 新增 CapturePreparationTask，由 NotchController 持有截图准备任务。清空或更换题目上下文、开始新运行、退出与 watchdog 会取消当前准备；已取消的操作不能在系统回调迟到后继续编码或发请求。generation 防止旧任务完成时清掉新任务的取消句柄。全屏捕获恢复面板时同时检查可见性和退出状态，取消不进入后备捕获；保存材料保留实际超时错误。三项测试覆盖取消前不启动、等待系统回调时取消，以及旧任务迟到完成与替换任务之间的竞态。
+
+`345d677` 仅增加 DEBUG 隔离测试入口 `--qa-capture-region`，自动进入实际 selectQuestionRegion 流程，便于不调用界面截图工具时诊断。未注入图片或模拟框选；Release 排除该入口。完整 Swift warnings-as-errors 本地与 CI 均执行 297 项、2 项真实模型评测显式跳过、0 失败。[CI 34262542311](https://github.com/RotteSya/notch-SPI/actions/runs/34262542311) 10/10 成功；Node 22/24 各 509 通过，PostgreSQL 16/17 × Node 22/24 四组各 630 通过，类型检查、审计及部署资源检查通过。证据 `capture-cancellation/preparation-tests.log`、`swift-full.log`、`ci-status.json`、`ci.log`。
+
+实际点击框选后，系统图片接口再次等待约 10.22 秒，调用者超时结束；该 App 随后 Cmd-Q 正常 exit 0。第二次使用自动框选入口，捕获期间没有 Computer Use 调用，系统窗口枚举仍超过四分钟未返回，调用者已按期限结束等待。两秒 replayd 采样显示 connectionManagerQueue 在集合/字典相等比较中持续工作，多个依赖的 XPC 队列同步等待；其中包含当前 QA 进程及已退出客户端的连接。该采样支持系统服务侧积压的诊断，但不能证明死锁，也不能认定唯一根因。原始采样为 0600 私有文件 `replayd.sample.private`。
+
+两个隔离账户均余额 30、累计查题 0；capture、reservation、model attempt、cost 全部为 0，没有真实模型或支付调用。最后的 QA 和 localhost 服务已用 SIGINT 停止，不计为正常退出验收；剩余测试图片 0，见 `runtime-validation.json`。完整截图→框选→答案仍不通过，正式性能/多设备验收尚缺。
+
+系统服务恢复的下一步候选是重启当前用户的 replayd 后做一次隔离验证；因为它与其他 App 共用，可能中断录屏或屏幕共享，需要先向用户说明并取得此次系统范围操作的确认。尚未重启该服务。替代办法是在另一台已授权测试 Mac 完成同样流程；不能拿另一台的成功掩盖本机复现记录。公开发布保持暂停。
+
+## 最新可核对安装包
+
+`dist/NotchSPI.dmg` 对应 `345d67758777996eadacbef0f8ad0a0f5d2b7e59`，2.12 / build 19，arm64、最低 macOS 14.0，3,050,176 字节；SHA-256 `db8e49599c167a6ddcb24912ac7b26c25a7627d20233aa28c3371cf6d4a8ec0b`。Apple 公证 `97bafef1-4e51-4f0e-bab3-d096de631d7a` Accepted，装订、映像完整性、只读挂载 strict codesign 与 Gatekeeper 均通过，62 个客户端/资源/打包输入摘要匹配候选提交。证据 `capture-cancellation/release-package-final.log`、`artifact-verification.log`、`notarized-artifact-manifest.json`。`pre-region-hook-dist` 为中间包；未公开发布、未部署新版生产、未启用 Cloudflare 定时触发，CNY 20/日新预算仍待新版上线才生效。
