@@ -39,6 +39,34 @@ final class StreamingAnswerView: NSView {
 
     override var isFlipped: Bool { true }   // top-aligned text inside the scroll view
 
+    // Use the composed display string: protocol markers and folded reasoning have already
+    // been removed here, so speech and the visible answer share the same content contract.
+    override func isAccessibilityElement() -> Bool { attributed.length > 0 }
+    override func accessibilityRole() -> NSAccessibility.Role? { .staticText }
+    override func accessibilityLabel() -> String? {
+        isPlaceholder ? L10n.t("操作提示", "操作のヒント", "Usage hint") : L10n.t("答案", "回答", "Answer")
+    }
+    override func accessibilityValue() -> Any? { attributed.string }
+    override func accessibilityCustomActions() -> [NSAccessibilityCustomAction]? {
+        guard !isPlaceholder else { return nil }
+        var actions: [NSAccessibilityCustomAction] = []
+        if canCopyAnswer?() == true, onCopyAnswer != nil {
+            actions.append(NSAccessibilityCustomAction(name: L10n.t("复制答案", "回答をコピー", "Copy Answer")) { [weak self] in
+                guard let self, !self.isPlaceholder, self.canCopyAnswer?() == true,
+                      let copy = self.onCopyAnswer else { return false }
+                copy(); return true
+            })
+        }
+        if toggleRange != nil, onToggleReasoning != nil {
+            actions.append(NSAccessibilityCustomAction(name: L10n.t("展开或收起推理过程", "考え方を開く／閉じる", "Expand or collapse reasoning")) { [weak self] in
+                guard let self, !self.isPlaceholder, self.toggleRange != nil,
+                      let toggle = self.onToggleReasoning else { return false }
+                toggle(); return true
+            })
+        }
+        return actions.isEmpty ? nil : actions
+    }
+
     // MARK: - Content (diff → births)
 
     /// Streaming contract: the answer grows by suffix during a turn and is replaced wholesale on a
@@ -46,6 +74,10 @@ final class StreamingAnswerView: NSView {
     /// is on the PARSED string, so an in-progress Markdown token only re-births the streaming tail.
     func setAnswer(_ attr: NSAttributedString, isPlaceholder: Bool) {
         let new = attr.string
+        let accessibilityChanged = new != plain || isPlaceholder != self.isPlaceholder
+        defer {
+            if accessibilityChanged { NSAccessibility.post(element: self, notification: .valueChanged) }
+        }
         self.isPlaceholder = isPlaceholder
         attributed = attr
         frameCache = nil
