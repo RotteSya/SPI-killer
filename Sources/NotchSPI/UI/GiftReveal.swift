@@ -40,6 +40,9 @@ final class DigitOdometerView: NSView {
 
     override var isFlipped: Bool { false }
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .staticText }
+    override func accessibilityLabel() -> String? { "\(target) \(suffix)".trimmingCharacters(in: .whitespaces) }
 
     private var digitFont: NSFont { .monospacedDigitSystemFont(ofSize: fontSize, weight: .bold) }
     private var suffixFont: NSFont { .systemFont(ofSize: fontSize * 0.34, weight: .semibold) }
@@ -60,6 +63,7 @@ final class DigitOdometerView: NSView {
     /// Roll up to `newTarget`. Under Reduce Motion the number simply appears.
     func roll(to newTarget: Int, duration: CFTimeInterval = 1.5) {
         target = max(0, newTarget)
+        NSAccessibility.post(element: self, notification: .valueChanged)
         invalidateIntrinsicContentSize()
         guard !reduceMotion else {
             value = target; displayValue = Double(target)
@@ -84,6 +88,7 @@ final class DigitOdometerView: NSView {
     func setImmediate(_ v: Int) {
         link?.isPaused = true
         target = v; value = v; displayValue = Double(v)
+        NSAccessibility.post(element: self, notification: .valueChanged)
         invalidateIntrinsicContentSize()
         needsDisplay = true
     }

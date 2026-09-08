@@ -47,6 +47,8 @@ SQLite 在切换 WAL 时可能绕过 busy handler 直接返回 SQLITE_BUSY；初
 
 注册重试同时受 token 与注册凭证的唯一性约束。SQL 插入处理两个唯一索引的并发冲突后，按 token 锁定并核验原凭证绑定，只在实际插入时创建 trial lot/ledger；Memory 执行同一不可重绑检查。冲突不能新发试用额度，也不能返回其他凭证所属设备。
 
+2026-09-08：2.12 / build 19 已生成公证并装订的正式候选 DMG，未公开发布。Cloudflare `notchspi-reaper` 已部署，生产接口就绪前保持无定时触发；Vercel 生产环境已配置 CNY 20/日、上海零点重置的成本预算，部署新版后才生效。部署记录与当前剩余闸门见 [本轮发布记录](docs/release-progress-2026-09-08.md)，恢复任务说明见 [Cloudflare 调度](docs/cloudflare-scheduler.md)。
+
 2.12 / build 19 是尚未发布的候选。题组、区域选择、解释、恢复及新合约仍受放行开关控制；完整蓝图进度与未完成闸门见 [发布进度记录](docs/release-progress-2026-09-06.md)。不得将本地软件测试通过视为新场景模型评测或生产灰度通过。
 
 SPI 与阅读练习页面分别为 `/spi`、`/reading-practice`，三语共用实际定价与下载；未完成评测的阅读范围明确显示未开放/内部测试。引导新增可跳过的自报来源：先本地持久化、再绑定当前 host/device 同步，只有确认后标记 self_reported，跳过保持 unknown。它不改变题目模式、额度或功能。

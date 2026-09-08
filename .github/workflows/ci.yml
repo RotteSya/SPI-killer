@@ -9,6 +9,26 @@ permissions:
   contents: read
 
 jobs:
+  scheduler:
+    name: Cloudflare scheduler
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: scheduler
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.20.0'
+          cache: npm
+          cache-dependency-path: scheduler/package-lock.json
+      - run: npm ci --include=optional
+      - run: npm audit --audit-level=high
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
   node:
     name: Node ${{ matrix.node }}
     runs-on: ubuntu-latest

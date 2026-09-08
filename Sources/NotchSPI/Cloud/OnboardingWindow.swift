@@ -669,9 +669,9 @@ private final class HowItWorksPage: OnboardingPage {
                     "NotchSPI が画面を読み取り問題を認識。コピー&ペーストは不要。",
                     "NotchSPI captures the screen and reads the question — no copy-paste, ever.")),
             (L10n.t("答案从刘海流出", "ノッチから答えが流れ出す", "The answer flows from the notch"),
-             L10n.t("讲解在刘海下方逐字浮现，且不会出现在录屏和共享画面里。",
-                    "解説がノッチの下に少しずつ現れます。画面録画や共有には映りません。",
-                    "The explanation streams in below the notch — invisible to recordings and screen shares.")),
+             L10n.t("答案在刘海下方逐字显示。共享前请先确认录屏工具是否会捕获此窗口。",
+                    "答えがノッチの下に表示されます。共有前に、録画ツールがこのウィンドウを映すか確認してください。",
+                    "The answer streams in below the notch. Before sharing, check whether your recording tool captures this window.")),
         ]
         for (i, d) in descLabels.enumerated() { d.stringValue = texts[i].1 }
         for (i, t) in titleLabels.enumerated() { t.stringValue = texts[i + 1].0 }
@@ -769,9 +769,9 @@ private final class PermissionPage: OnboardingPage {
     override func rebuildStrings() {
         heading.stringValue = L10n.t("允许 NotchSPI 看到屏幕", "画面へのアクセスを許可", "Let NotchSPI see your screen")
         body.stringValue = L10n.t(
-            "为了读取屏幕上的题目，需要你在系统设置里勾选「屏幕录制」权限。截图只在按下快捷键的那一刻发生，用完即删。",
-            "画面上の問題を読み取るために、システム設定で「画面収録」の許可が必要です。撮影はショートカットを押した瞬間だけ。使用後は即座に削除されます。",
-            "To read questions on your screen, macOS asks you to allow Screen Recording. A capture happens only at the moment you press the hotkey, and is deleted right after use.")
+            "读取题目需要系统的「屏幕录制」权限。查题时会读取所选画面；保存的题目材料会临时保留，你可以随时清空题组。",
+            "問題を読み取るには「画面収録」の許可が必要です。解答時に選択した画面を読み取り、保存した問題資料は一時的に保持されます。問題セットはいつでも消去できます。",
+            "Reading questions requires Screen Recording permission. NotchSPI captures the selected content when solving. Saved question materials are kept temporarily; you can clear the question set at any time.")
         refreshStatus(animated: false)
     }
 
@@ -880,6 +880,7 @@ private final class GiftPage: OnboardingPage {
 
         odometer.color = .white
         odometer.fontSize = 58
+        odometer.minColumns = 1
         odometer.frame = NSRect(x: 40, y: sealCenterY - 58, width: size.width - 80, height: 116)
         odometer.isHidden = true
         addSubview(odometer)

@@ -19,4 +19,10 @@ HTTP 冒烟子进程只继承明确的测试环境；本地 mock 仅用于验证
 
 真实生产日志表明当前 Fluid Active CPU 计费会忽略 vercel.json 中的 memory 设置。1 GiB 资源测试仍提供保守限额证据，但不是线上内存配置或延迟 SLA。package.json 的开放 Node 最低版本范围仍需与正式构建输出中的 nodejs24.x 一起检查，平台升级不能跳过这道产物闸门。
 
+## 实际执行结果
+
+[CI 34069961702](https://github.com/RotteSya/notch-SPI/actions/runs/34069961702) 在提交 `a797ef18c8d2ce7c808e240e25c93dc8b2563041` 上全部 9 项通过。函数包任务使用 AL2023、Node 24.20.0、CLI 59.11.7、@vercel/node 12.0.1。包内 551 个函数文件共 23,007,333 字节，静态文件仅 robots.txt；全部打包后 HTTP/SSE、图片与动态 SQL 检查通过。归档含 553 个文件，下载后逐一复核摘要通过，归档 SHA-256 为 `c47fb6c770beed5b90c59d30a186f18950eba71e8d243896a3ad69a33b9590b0`。
+
+原始产物与日志位于 `.release-evidence/2026-09-06/native-ci-a797ef1/vercel-linux-bundle/`。真实旧快照的回归拒绝证据为 `vercel-bundle-before-static-fix.json` / `.log`，不是合成文件替代实际构建。
+
 成功的本地或 CI 构建不验证 Hobby 分钟 cron 能力、生产密钥/价格/预算、数据库迁移与旧写入实例退出、真实 Stripe、SSE 平台代理行为、真实 UI 或模型留出集。正式部署和灰度仍受这些闸门约束。

@@ -33,6 +33,20 @@ if (process.env.TEST_POSTGRES_URL) {
 }
 
 for (const [name,make] of implementations) {
+  test(`${name}: CNY cap is shared across devices and resets only at Shanghai midnight`, async () => {
+    const store = await make();
+    try {
+      const accounts = await Promise.all(Array.from({length: 4}, () => store.registerDevice({platform: 'macos', appVersion: 'test', trialQuestions: 30})));
+      const midnight = Date.parse('2026-09-08T16:00:00.000Z');
+      const reserve = (token: string, now: number, amount = 1_000_000) => store.billing.reserveBudget(token,
+        randomUUID(), 'official', 'CNY', amount, 20_000_000, 86_400_000, now, 480);
+      const holds = await Promise.all(Array.from({length: 25}, (_, i) => reserve(accounts[i % 4]!.token, midnight - 1)));
+      assert.equal(holds.filter(Boolean).length, 20);
+      assert.equal(await reserve(accounts[0]!.token, midnight - 1, 1), false);
+      assert.equal(await reserve(accounts[0]!.token, midnight, 20_000_000), true);
+      assert.equal(await reserve(accounts[1]!.token, midnight + 1, 1), false);
+    } finally { await store.close(); }
+  });
   test(`${name}: original and recovered answers share one transactional explanation slot`, async () => {
     const store = await make();
     try {

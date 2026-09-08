@@ -1,0 +1,28 @@
+{
+  "approved_at": "2026-09-08",
+  "review_after_production_days": 7,
+  "auto_increase": false,
+  "budget_timezone": "Asia/Shanghai",
+  "valuation": {
+    "currency": "CNY",
+    "usd_to_cny_ceiling": 8,
+    "basis": "Conservative budget valuation, not an exchange-rate quote or vendor invoice. DeepSeek uses peak cache-miss rates; no prepaid daily charge.",
+    "sources": [
+      "https://platform.claude.com/docs/en/about-claude/pricing",
+      "https://platform.claude.com/docs/en/build-with-claude/vision",
+      "https://api-docs.deepseek.com/quick_start/pricing/",
+      "https://www.boc.cn/sourcedb/whpj/"
+    ]
+  },
+  "environment": {
+    "MODEL_COST_CURRENCY": "CNY",
+    "MODEL_DAILY_BUDGET_MICROS": "20000000",
+    "MODEL_BUDGET_UTC_OFFSET_MINUTES": "480",
+    "ATTEMPT_BUDGET_UPPER_MICROS": "10000000",
+    "MODEL_PRICING_VERSION": "2026-09-08-cny-usd-ceiling8-peak",
+    "MODEL_PRICING_JSON": "[{\"model\":\"anthropic:claude-opus-4-8\",\"input_micros_per_million_tokens\":40000000,\"output_micros_per_million_tokens\":200000000},{\"model\":\"deepseek:deepseek-v4-flash-vision-exp\",\"input_micros_per_million_tokens\":3520000,\"output_micros_per_million_tokens\":10560000}]",
+    "OFFICIAL_MODEL": "claude-opus-4-8",
+    "OFFICIAL_MAX_TOKENS": "4096",
+    "OBJECTIVE_RESULT_V1_MAX_TOKENS": "4096"
+  }
+}

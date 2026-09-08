@@ -12,3 +12,8 @@
 /server/data/
 /server/*.db*
 /server/.env
+/scheduler/node_modules/
+/scheduler/.wrangler/
+/scheduler/.dev.vars*
+/scheduler/.env*
+/.wrangler/

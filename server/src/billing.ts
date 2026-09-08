@@ -77,7 +77,7 @@ export interface BillingStore {
   startAttempt(token: string, input: Omit<Attempt, 'status' | 'inputTokens' | 'outputTokens' | 'costMicros' | 'startedAt' | 'finishedAt'>): Promise<boolean>;
   finishAttempt(token: string, attemptId: string, input: Pick<Attempt, 'status' | 'inputTokens' | 'outputTokens' | 'costMicros'>): Promise<void>;
   reserveBudget(token: string, attemptId: string, scope: string, currency: string,
-    reservedUpperMicros: number, limitMicros: number, windowMs?: number, now?: number): Promise<boolean>;
+    reservedUpperMicros: number, limitMicros: number, windowMs?: number, now?: number, utcOffsetMinutes?: number): Promise<boolean>;
   releaseBudget(token: string, attemptId: string): Promise<void>;
   settleBudget(token: string, attemptId: string, actualMicros: number | null): Promise<void>;
   creditDevice(deviceId: number, input: Omit<CreditInput, 'token'>): Promise<number | null>;

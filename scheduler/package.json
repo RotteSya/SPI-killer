@@ -1,0 +1,21 @@
+{
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "miniflare": "5.20260907.0-alpha",
+    "typescript": "5.9.3",
+    "wrangler": "4.129.1"
+  },
+  "name": "notchspi-reaper",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "typecheck": "wrangler types --check && tsc --noEmit",
+    "build": "wrangler deploy --dry-run",
+    "types": "wrangler types"
+  }
+}

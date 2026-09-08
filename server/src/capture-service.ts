@@ -71,7 +71,7 @@ export class CaptureService {
     let owned:CaptureRecord|null=null,beginUncertain=false;
     try {
       if(!await store.billing.reserveBudget(token,admission.attemptId,'official',config.modelCostCurrency,
-        config.attemptBudgetUpperMicros,config.modelDailyBudgetMicros))throw new ApiError(503,'当前服务预算已用完，请稍后再试','budget_exceeded');
+        config.attemptBudgetUpperMicros,config.modelDailyBudgetMicros,86_400_000,Date.now(),config.modelBudgetUtcOffsetMinutes))throw new ApiError(503,'当前服务预算已用完，请稍后再试','budget_exceeded');
       if(abort.signal.aborted)return;
       beginUncertain=true;
       const hold=await store.billing.begin({...input,requestId});

@@ -343,11 +343,12 @@ export class SQLBilling implements BillingStore {
     })());
   }
   reserveBudget(token: string, attemptId: string, scope: string, currency: string, reservedUpperMicros: number,
-    limitMicros: number, windowMs = 86_400_000, now = Date.now()): Promise<boolean> {
+    limitMicros: number, windowMs = 86_400_000, now = Date.now(), utcOffsetMinutes = 0): Promise<boolean> {
     if (limitMicros <= 0 || reservedUpperMicros <= 0) return Promise.resolve(true);
     return this.run((function* (): Transaction<boolean> {
       const d = yield* device(token); if (!d) return false;
-      const start = Math.floor(now / windowMs) * windowMs;
+      const offset = utcOffsetMinutes * 60_000;
+      const start = Math.floor((now + offset) / windowMs) * windowMs - offset;
       const windowStart = new Date(start).toISOString(), expiresAt = new Date(start + windowMs).toISOString();
       yield* query(`INSERT INTO budget_windows(scope,window_start,currency,limit_micros,expires_at)
         VALUES (?,?,?,?,?) ON CONFLICT(scope,window_start,currency) DO NOTHING`, scope, windowStart, currency, limitMicros, expiresAt);

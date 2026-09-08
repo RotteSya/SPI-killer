@@ -1,12 +1,18 @@
 # 2.12 / build 19 实施与发布进度
 
-状态：**候选已构建、签名并通过原生 CI；未公证、未部署、未放量。** 最新验证快照为 `90e368e`，8 个 CI 任务全部通过。本记录覆盖 2026-09-06 至 2026-09-07 的实现与验证周期；完整蓝图的真实 UI、质量、资金和生产闸门仍待完成，工程目标继续有效。
+状态：**2026-09-08 候选已完成 Developer ID 签名、Apple 公证及 DMG 装订，尚未公开发布。** Cloudflare 恢复 Worker 已部署但暂停；CNY 20/日预算配置已写入 Vercel 并回读，新服务部署后生效。最新进度见 [2026-09-08 发布记录](release-progress-2026-09-08.md)。以下为历史周期记录；其中缺少授权、公证及预算的结论已被新记录取代。
 
 ## 实际 Vercel 打包检查补充
 
 2026-09-07 对 `90e368e` 执行真实 Vercel CLI 构建，发现默认静态输出包含 115 个源码/测试文件。对现网两条路径的 HEAD 检查也返回 200；没有读取正文。新增 `outputDirectory=public` 与实际 robots.txt 后，本地构建静态清单仅有该文件，打包入口的三语页面、鉴权恢复、30 题注册、SSE 单次结算、动态 SQL 导入与原生图片校验通过。旧快照重新构建后被新增产物检查明确拒绝，保留失败日志。
 
-新增第 9 个原生 CI 任务验证 AL2023 上的完整 Vercel 函数包；结果须以该后续任务实跑为准，不能沿用前述 8 个任务的通过结论。诊断方法、产物检查和生产边界见 [Vercel 函数包核验](vercel-bundle-verification.md)。Swift 源码及已签名 QA 二进制未变化。此修复尚未部署，现网静态源码暴露尚未消除。
+后续 [CI 34069961702](https://github.com/RotteSya/notch-SPI/actions/runs/34069961702) 对 `a797ef18c8d2ce7c808e240e25c93dc8b2563041` 的 9 个任务全部通过：两个 Node 版本各 507/0/0；四个 Postgres 16/17 × Node 22.18/24.20 组合各 627/0/0；Swift 273 执行、2 个显式模型评测跳过、0 失败，warnings-as-errors 与 arm64 Release 编译通过。严格 TypeScript 和生产依赖审计通过。原生 1 GiB 资源探针与新增 Vercel 函数包任务均通过。
+
+函数包由 CLI 59.11.7 / @vercel/node 12.0.1 在 AL2023、Node 24.20.0、x86_64 上生成，551 个函数文件、23,007,333 字节；加上路由配置和 robots.txt 共 553 个文件。下载后逐文件 SHA-256 和公开资产内容核对通过；归档 SHA-256 为 `c47fb6c770beed5b90c59d30a186f18950eba71e8d243896a3ad69a33b9590b0`。诊断方法、产物检查和生产边界见 [Vercel 函数包核验](vercel-bundle-verification.md)。Swift 源码及已签名 QA 二进制未变化。此修复尚未部署，现网静态源码暴露尚未消除。
+
+生产环境只读配置审计确认缺少 `MODEL_DAILY_BUDGET_MICROS`、`ATTEMPT_BUDGET_UPPER_MICROS` 与 `CRON_SECRET`，新能力所需 HMAC 密钥也未配置。Vercel 将 provider/model、数据库和 Stripe 敏感值返回为遮蔽标记，不能用这些标记执行有效配置或权限核验；价格注册表可见，但未能与被遮蔽的实际模型核对。私有临时文件已删除，没有启动候选服务或数据库迁移。现有 100 CNY 授权只适用于评测，生产预算需批准的运营基线。
+
+Apple 公证只读预检退出 69：发行脚本默认钥匙串 profile `notchtutor` 不存在。未提交公证任务，未生成正式 DMG。生产仍是原 deployment `dpl_BStwrGFdwhRC7FP3g2m6snSpcgfC` / READY；Hobby 分钟调度方案、Stripe 重新认证、真实 UI/质量数据、备份迁移和分档观察仍待完成。
 
 ## 基线与授权
 

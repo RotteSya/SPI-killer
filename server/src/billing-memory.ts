@@ -185,10 +185,11 @@ export class MemoryBilling implements BillingStore {
     const state=this.state(d),old=state.attempts.get(id);
     if(old?.status==='running') state.attempts.set(id,{...old,...input,finishedAt:new Date().toISOString()});
   }
-  async reserveBudget(token:string,attemptId:string,scope:string,currency:string,reservedUpperMicros:number,limitMicros:number,windowMs=86_400_000,now=Date.now()):Promise<boolean> {
+  async reserveBudget(token:string,attemptId:string,scope:string,currency:string,reservedUpperMicros:number,limitMicros:number,windowMs=86_400_000,now=Date.now(),utcOffsetMinutes=0):Promise<boolean> {
     const d = this.lookup(token); if (!d) return false;
     if (limitMicros<=0 || reservedUpperMicros<=0) return true;
-    const start=Math.floor(now/windowMs)*windowMs,key=`${scope}:${start}:${currency}`,existing=this.budgetHolds.get(attemptId);
+    const offset=utcOffsetMinutes*60_000,start=Math.floor((now+offset)/windowMs)*windowMs-offset;
+    const key=`${scope}:${start}:${currency}`,existing=this.budgetHolds.get(attemptId);
     if (existing) return existing.deviceId===d.id && (existing.state==='held'||existing.state==='settled');
     const budget=this.budgets.get(key)??{limit:limitMicros,spent:0,held:0,end:start+windowMs};
     if (budget.spent+budget.held+reservedUpperMicros>budget.limit) return false;

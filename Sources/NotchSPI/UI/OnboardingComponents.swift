@@ -52,11 +52,27 @@ final class GlowButton: NSControl {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    override var acceptsFirstResponder: Bool { false }
+    override var acceptsFirstResponder: Bool { isEnabled && isActionable }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { style == .confirm ? .staticText : .button }
+    override func accessibilityLabel() -> String? { title }
+    override func isAccessibilityEnabled() -> Bool { isEnabled }
+    override func accessibilityPerformPress() -> Bool {
+        guard isEnabled, isActionable, !isHiddenOrHasHiddenAncestor else { return false }
+        onClick?()
+        return true
+    }
+    override func keyDown(with event: NSEvent) {
+        if [UInt16(36), 49, 76].contains(event.keyCode) { _ = accessibilityPerformPress() }
+        else { super.keyDown(with: event) }
+    }
+    override func becomeFirstResponder() -> Bool { needsDisplay = true; return super.becomeFirstResponder() }
+    override func resignFirstResponder() -> Bool { needsDisplay = true; return super.resignFirstResponder() }
+
     /// `.confirm` is state, not a control — no pointer, no press, no glow.
-    private var isActionable: Bool { style != .confirm }
+    private var isActionable: Bool { style != .confirm && isEnabled }
 
     private var titleFont: NSFont { .systemFont(ofSize: 13.5, weight: style == .primary ? .semibold : .medium) }
 
@@ -139,6 +155,11 @@ final class GlowButton: NSControl {
         let ts = (title as NSString).size(withAttributes: attrs)
         (title as NSString).draw(
             at: NSPoint(x: b.midX - ts.width / 2, y: b.midY - ts.height / 2), withAttributes: attrs)
+        if window?.firstResponder === self {
+            NSColor.keyboardFocusIndicatorColor.setStroke()
+            capsule.lineWidth = 2
+            capsule.stroke()
+        }
     }
 
     override func updateTrackingAreas() {
@@ -159,7 +180,7 @@ final class GlowButton: NSControl {
     override func mouseUp(with event: NSEvent) {
         let inside = bounds.contains(convert(event.locationInWindow, from: nil))
         pressed = false
-        if inside, isActionable { onClick?() }
+        if inside { _ = accessibilityPerformPress() }
     }
 }
 
@@ -173,6 +194,7 @@ final class LanguagePill: NSControl {
         didSet {
             needsDisplay = true
             if isChosen, !oldValue { pop() }
+            if isChosen != oldValue { NSAccessibility.post(element: self, notification: .valueChanged) }
         }
     }
     var onPick: ((AppLanguage) -> Void)?
@@ -189,6 +211,23 @@ final class LanguagePill: NSControl {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override var acceptsFirstResponder: Bool { isEnabled }
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .radioButton }
+    override func accessibilityLabel() -> String? { language.pickerLabel }
+    override func accessibilityValue() -> Any? { isChosen ? 1 : 0 }
+    override func isAccessibilityEnabled() -> Bool { isEnabled }
+    override func accessibilityPerformPress() -> Bool {
+        guard isEnabled, !isHiddenOrHasHiddenAncestor else { return false }
+        onPick?(language)
+        return true
+    }
+    override func keyDown(with event: NSEvent) {
+        if [UInt16(36), 49, 76].contains(event.keyCode) { _ = accessibilityPerformPress() }
+        else { super.keyDown(with: event) }
+    }
+    override func becomeFirstResponder() -> Bool { needsDisplay = true; return super.becomeFirstResponder() }
+    override func resignFirstResponder() -> Bool { needsDisplay = true; return super.resignFirstResponder() }
     override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
 
     override var intrinsicContentSize: NSSize {
@@ -236,6 +275,12 @@ final class LanguagePill: NSControl {
         let ts = (language.pickerLabel as NSString).size(withAttributes: attrs)
         (language.pickerLabel as NSString).draw(
             at: NSPoint(x: bounds.midX - ts.width / 2, y: bounds.midY - ts.height / 2), withAttributes: attrs)
+        if window?.firstResponder === self {
+            NSColor.keyboardFocusIndicatorColor.setStroke()
+            let ring = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 13, yRadius: 13)
+            ring.lineWidth = 2
+            ring.stroke()
+        }
     }
 
     override func updateTrackingAreas() {
@@ -250,7 +295,7 @@ final class LanguagePill: NSControl {
     override func mouseEntered(with event: NSEvent) { hovering = true }
     override func mouseExited(with event: NSEvent) { hovering = false }
     override func mouseUp(with event: NSEvent) {
-        if bounds.contains(convert(event.locationInWindow, from: nil)) { onPick?(language) }
+        if bounds.contains(convert(event.locationInWindow, from: nil)) { _ = accessibilityPerformPress() }
     }
 }
 

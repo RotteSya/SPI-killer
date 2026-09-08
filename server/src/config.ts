@@ -182,12 +182,16 @@ export const config = {
   modelPricingJSON: envStr('MODEL_PRICING_JSON', '[]'),
   modelPricingVersion: envStr('MODEL_PRICING_VERSION', 'unset'),
   modelDailyBudgetMicros: envInt('MODEL_DAILY_BUDGET_MICROS', 0),
+  modelBudgetUtcOffsetMinutes: Number(envStr('MODEL_BUDGET_UTC_OFFSET_MINUTES', '0')),
   attemptBudgetUpperMicros: envInt('ATTEMPT_BUDGET_UPPER_MICROS', 0),
 } as const;
 
 export type Config = typeof config;
 
 export function validateTrialPolicy(c: Config): void {
+  if (!Number.isInteger(c.modelBudgetUtcOffsetMinutes) || c.modelBudgetUtcOffsetMinutes < -720 || c.modelBudgetUtcOffsetMinutes > 840) {
+    throw new Error('MODEL_BUDGET_UTC_OFFSET_MINUTES must be an integer from -720 to 840');
+  }
   if (c.quotaPolicyVersion === FIXED_TRIAL_POLICY.version &&
       [c.trialQuestions,c.trialMinQuestions,c.trialMaxQuestions].some(n => n !== 30)) {
     throw new Error('fixed30 requires TRIAL_QUESTIONS, TRIAL_MIN_QUESTIONS and TRIAL_MAX_QUESTIONS to equal 30');

@@ -1,0 +1,2 @@
+# Wrangler checks generated runtime declarations byte for byte. Preserve upstream whitespace.
+scheduler/worker-configuration.d.ts linguist-generated=true whitespace=-blank-at-eol
