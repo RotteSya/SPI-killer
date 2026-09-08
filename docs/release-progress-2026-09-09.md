@@ -27,7 +27,7 @@
 
 - `3c09b33`：StreamingAnswerView 将实际合成后的可见文本提供给辅助功能，包括折叠/展开状态；复制和展开操作走现有真实回调并重新检查可用性。两个测试及实际返回答案的辅助功能树核验通过。
 - `6d9f369`：MaterialActionButton 支持不成为 key window 的 NotchPanel 与辅助功能操作。删除闭包仅持有材料 UUID，避免辅助功能客户端保留旧按钮时连带保留图片。新增测试先复现失败，再在修复后通过。
-- `645c1de`：真实删除最后一张材料仍残留文件，进一步发现隐藏的 QuestionMaterialStrip 跳过更新并保留旧 assets。现在隐藏时仍同步材料状态；完整 NotchView 回归同样先失败后通过。最终实机验证不能由这两个自动测试替代。
+- `645c1de`：真实删除最后一张材料仍残留文件，进一步发现隐藏的 QuestionMaterialStrip 跳过更新并保留旧 assets。现在隐藏时仍同步材料状态；完整 NotchView 回归同样先失败后通过。随后最终版实际保存一张截图，点击“删除第 1 张材料”后立即确认对应文件不存在，最后一张材料删除的实机验收已补齐，见 `material-final-ui/delete-result.json`。
 - CaptureFileLifecycle 将 JPEG 与题组目录注册到本进程所有权集合，写入和退出清理共用锁，禁止退出后迟到写入重新创建文件。目录 0700、图片 0600；正常 App 退出等待后台清理，失败取消退出并给出重试提示。启动清理包含过期的 capture 目录。并发写入、无关文件保留及迟到写入拒绝测试通过。
 - 真实捕获后的 Cmd-Q 曾确认 App exit 0，所跟踪的 1 张图片与其目录都不存在，见 `cleanup-live-validation.json`。不把后续 SIGINT 停止记作正常退出验收。
 - 真实捕获耗时出现 295/312/325ms 及 10,591ms；材料保存另观察到约 20–21 秒等待。工具取状态的延迟不能直接归因于 App 死锁，也不能据此宣布性能达标。
@@ -44,8 +44,26 @@
 
 ## 未完成验收与外部条件
 
-实际全屏捕获→localhost mock 请求→答案显示与结算已通过，四个隔离测试账户各从 30 变为 29、累计查题 1，4 个预留均 settled、无 held。这只证明传输与 UI/结算链路，不能证明模型质量；完整捕获→框选→请求组合仍待验收。材料操作暴露了下述两个真实文件持有问题，修复后自动测试通过，最终版实机删除/清空尚未验收。Computer Use 状态读取再次超时并重置 Node 运行时；正常退出测试已单独成功一次，最后一个旧版 QA 进程通过 SIGINT 停止，仅其已记录的测试文件由脚本清理。测试 App 与 localhost mock 服务均已停止，没有真实模型或支付调用。完整 VoiceOver 语音、其他显示器/设备仍待验证。
+实际全屏捕获→localhost mock 请求→答案显示与结算已通过，四个隔离测试账户各从 30 变为 29、累计查题 1，4 个预留均 settled、无 held。这只证明传输与 UI/结算链路，不能证明模型质量；完整捕获→框选→请求组合仍待验收。材料操作暴露了两个真实文件持有问题，修复后自动测试通过，最终版删除最后一张材料及“新题组”清空的实机验收均已通过。Computer Use 状态读取出现超时；正常退出测试另有独立成功证据，SIGINT 停止不计为正常退出。隔离 QA App 与 localhost mock 服务均已停止，没有真实模型或支付调用。完整 VoiceOver 语音、其他显示器/设备仍待验证。
 
 400 道新增授权留出题、80 份独立解释复核、同候选 240 题基线、正式旧写入隔离及数据切换、支付端到端对账、生产恢复调度、反馈删除演练和分档观察门槛仍未完成，详情继承 [9 月 8 日发布记录](release-progress-2026-09-08.md)。生产新能力保持关闭，Cloudflare 定时触发仍暂停；CNY 20/日模型预算待新版生产部署后才生效。
 
 证据目录：`.release-evidence/2026-09-09/ui/`。包括 `region-validation.json`、`region-keyboard.png`、`region-escape.log`、`region-mouse.log`、`region-tests-final.log`、`swift-full-tests.log`、`ci-full.log` 和 `ci-status.json`。
+
+## 最终版实机删除与部署清单补验
+
+`material-final-ui/validation.json` 记录最终代码的实际截图和删除结果：保存后新增 1 张材料，点击删除后剩余 0 张。最初错误提示仅用于 DEBUG 展示操作入口，新增材料来自实际 ScreenCapture；未连接模型或支付服务。此轮没有修改产品代码，公证包及 CI 证据仍对应 `645c1de`。
+
+清空题组前两次被 Computer Use `get_app_state` 超时中断，两个隔离 QA 进程用 SIGINT 停止。确认工具请求终止并恢复连接后，第三次独立尝试实际保存材料、点击“新题组”，在 App 退出前确认文件剩余 0，再 Cmd-Q 正常退出、exit 0。证据 `clear-input.json` / `clear-result.json` / `validation.json`；前两次 SIGINT 不算正常退出验收。
+
+Vercel 只读 API 完整列出 41 个部署，分页 `next=null`、均 READY，原始清单见 `material-final-ui/deployment-inventory.json`。READY 仅表示部署构建状态，不能证明是否仍在运行、可公开访问或使用同一数据库凭证。生产停流/排空时必须按此完整清单核验旧入口、角色及连接隔离；当前未删除任何旧部署、未撤销生产凭证或切换流量。正式质量材料和独立复核仍未提供。
+
+生产项目回读同时确认主路由仍为旧部署 `dpl_BStwrGFdwhRC7FP3g2m6snSpcgfC`，项目已有 `all_except_custom_domains` SSO 保护，见 `material-final-ui/production-routing.json`。这限制部署地址访问，但不证明旧数据库凭证已撤销；未更改现有保护设置。
+
+## 新发现的性能阻断
+
+最终版完整框选请求尝试未通过。点击真实“框选题目”完成本机注册后，窗口状态读取连续超时；App 自身标准输出记录 `capture took 128575ms`。这是真实客户端计时，不能仅归因于工具等待。该隔离数据库 1 个设备、余额 30、capture/reservation 均 0，没有扣题或模型调用，见 `material-final-ui/region-chain-incomplete.json`。两秒进程采样显示主线程处于正常事件循环，不能据此证明异步截图操作正常，也没有证据认定主线程死锁。
+
+为排除同时使用界面截图工具的影响，确认所有前序 Computer Use 请求已终止后，使用现有 DEBUG `--qa-capture 3` 自动入口运行同一真实查题实现，期间没有 Computer Use 调用。进程运行 3 分 22 秒时仍为 0 captures、0 reservations、余额 30，随后停止 App 及本机服务。三次计划触发不能算成三次完成；后续触发可能被现有 running 防重入拦截。证据为 `capture-isolated-status.json`、`capture-isolated-client.log` 和 `capture-isolated-server.log`。
+
+现有证据确认了长等待及请求未提交，尚未定位到共享窗口枚举、截图 API、注册后的状态转换中的具体等待点；也不能推断只是 Computer Use 同时截图导致。**候选未通过运行性能验收，公开发布继续暂停。** 下一步需对实际等待阶段加有界诊断，查明回调、取消和缓存刷新路径，再验证恢复与失败提示；不得用延长等待或单次成功替代修复。产品源代码本轮未改，已公证包和通过的 CI 仍对应 `645c1de`，它们证明打包与已有检查通过，不证明此运行问题已解决。
