@@ -32,7 +32,17 @@ Worker 运行时测试最初失败：Cloudflare 不接受 Fetch 的 `redirect: e
 
 代码提交 `81f69b0b6d41cd0ffcb622f42a4bbc1353a1c8c4` 的 [GitHub CI 34241607923](https://github.com/RotteSya/notch-SPI/actions/runs/34241607923) 已 10/10 成功：Node 22.18/24.20、Postgres 16/17 四组合、macOS 15、AL2023 1 GiB 原生资源、实际 Vercel Linux 函数包及 Cloudflare 调度。两个 Node 组合各 509 通过，四个 PostgreSQL 组合各 630 通过，均无失败或跳过。完整 CI 日志、测试 TAP 与函数包已下载保存；551 个函数文件摘要逐项一致，静态目录仅 robots.txt。公证包的 59 个客户端输入摘要与该提交全部一致。
 
-当前正式候选：`dist/NotchSPI.dmg`，SHA-256 `9fbff1929096ae0468dd4a4af9dab79ff94895b328b2d4f79f9965f4674afa61`。只读挂载后重新核验 App 的签名、版本、最低系统、4 个文件摘要和 Gatekeeper；59 个客户端输入已登记。原 `dist` 的 5 个文件已保存到私有证据目录并逐项记录摘要。此包未上传 GitHub Release、未发布更新通知。
+前一轮正式候选（现已保存到 `pre-settings-dist`）：SHA-256 `9fbff1929096ae0468dd4a4af9dab79ff94895b328b2d4f79f9965f4674afa61`。只读挂载后重新核验 App 的签名、版本、最低系统、4 个文件摘要和 Gatekeeper；59 个客户端输入已登记。原 `dist` 的 5 个文件已保存到私有证据目录并逐项记录摘要。此包未上传 GitHub Release、未发布更新通知。
+
+## 设置与材料实机复验（本轮最新）
+
+设置侧栏六个分类和五个主题色现有完整辅助功能角色、名称、选择状态、键盘操作与焦点描边；侧栏支持上下方向键。账户余额圆环可读出“尚未获取”或实际剩余题数。两个真实窗口集成测试验证分类切换、焦点及主题偏好更新。实际 QA App 已验证侧栏方向键、Tab/空格切页和切换主题；本机注册后辅助功能读出“30 题可用”。
+
+本轮 Swift warnings-as-errors 完整运行 278 项、0 失败；最初跳过 3 项，其中隔离凭证测试随后以 `NSPI_QA_EPHEMERAL=1` 单独运行通过，剩余 2 项需要真实模型评测。候选提交 `e28cda3fd48ad6cbf2cfae6623adcb409594d900` 的 [CI 34247512780](https://github.com/RotteSya/notch-SPI/actions/runs/34247512780) 已 10/10 成功，完整日志保存在 `ui/ci-full.log`。
+
+通过刘海菜单真实保存了一张本机材料，界面出现材料缩略图和删除入口。框选按钮操作与随后的状态读取遇到 Computer Use 超时，未完成区域选择及取消验收；两秒进程采样显示主事件循环正常处理，不能据此认定应用死锁，也不能记为框选通过。材料删除/清空、完整 VoiceOver、其他显示设备及生产完整交互仍待验收。隔离 QA App 和 localhost 服务已停止；此次没有真实模型或支付调用。证据为 `ui/settings-and-material-validation.json`、`ui/settings-theme-keyboard.png` 和 `ui/settings-quota-readable.png`。
+
+**当前候选**仍为 2.12 / build 19：`dist/NotchSPI.dmg`，3,310,068 字节，SHA-256 `1f6ce5824a83d1b3b16fa008c89064c79b72bfae08521e03cc752922bf36436f`。已重新 Release 编译、Developer ID 签名、公证 Accepted（提交 `d79e49a0-2334-45f5-aa92-20d5b7bc0a3c`）、装订；只读挂载后 strict codesign 与 Gatekeeper 均通过。59 个客户端输入摘要逐项匹配上述候选提交，见 `ui/notarized-artifact-manifest.json`，打包日志为 `ui/release-package.log`。未上传公开 Release 或切换生产。
 
 ## 仍未放行的生产条件
 
