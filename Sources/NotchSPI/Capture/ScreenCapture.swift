@@ -12,12 +12,22 @@ enum CaptureError: Error {
     case appNotRunning(name: String)
     case noCapturableWindow(name: String)
     case captureFailed
+    case captureTimedOut
     /// Full screen only: the caller asked to exclude its own panel window but it wasn't in
     /// the shareable list. Internal signal — the controller falls back to hiding the panel.
     case panelNotExcludable
 }
 
 enum ScreenCapture {
+    #if DEBUG
+    /// Opt-in local timing diagnostics contain no image, window, account or prompt data.
+    static func trace(_ stage: String) {
+        guard ProcessInfo.processInfo.environment["NSPI_CAPTURE_TRACE"] == "1",
+              ProcessInfo.processInfo.environment["NSPI_QA_EPHEMERAL"] == "1" else { return }
+        let line = "[CaptureTrace] \(ProcessInfo.processInfo.systemUptime) \(stage)\n"
+        FileHandle.standardError.write(Data(line.utf8))
+    }
+    #endif
     struct Shot {
         let path: String
         let blank: Bool
@@ -81,20 +91,53 @@ enum ScreenCapture {
     /// stacking changes constantly, and a stale pick could capture the wrong window.
     @MainActor private static var cachedContent: SCShareableContent?
     @MainActor private static var refreshing = false
+    @MainActor private static var contentGeneration: UInt64 = 0
+    private struct EnumeratedContent {
+        let generation: UInt64
+        let content: SCShareableContent
+    }
+    @MainActor private static let fullScreenEnumeration = CaptureSystemOperation<EnumeratedContent>(coalescesRequests: true)
+    @MainActor private static let appEnumeration = CaptureSystemOperation<SCShareableContent>()
+    @MainActor private static let imageCapture = CaptureSystemOperation<CGImage>()
+    @MainActor private static let hashCapture = CaptureSystemOperation<CGImage>()
+
+    @MainActor private static func fullScreenContent() async throws -> SCShareableContent {
+        let generation = contentGeneration
+        let content = try await fullScreenEnumeration.run {
+            #if DEBUG
+            trace("enumeration.system.begin")
+            defer { trace("enumeration.system.end") }
+            #endif
+            let value = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            // A slow background enumeration can still warm the next capture. Display
+            // changes invalidate its publication, and expired callers never take a shot.
+            if generation == contentGeneration { cachedContent = value }
+            return EnumeratedContent(generation: generation, content: value)
+        }
+        try Task.checkCancellation()
+        guard content.generation == contentGeneration else { throw CaptureError.captureFailed }
+        return content.content
+    }
 
     /// Refresh the cache off the critical path (launch, after each shot, display changes).
     @MainActor static func prefetchShareableContent() {
         guard !refreshing else { return }
         refreshing = true
         Task {
-            let c = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-            if let c { cachedContent = c }
+            #if DEBUG
+            trace("prefetch.begin")
+            #endif
+            _ = try? await fullScreenContent()
+            #if DEBUG
+            trace("prefetch.wait.end")
+            #endif
             refreshing = false
         }
     }
 
     @MainActor static func invalidateShareableContent() {
         cachedContent = nil
+        contentGeneration &+= 1
     }
 
     // MARK: - Capture
@@ -105,6 +148,9 @@ enum ScreenCapture {
     static func capture(
         target: CaptureTarget, maxLongEdge: CGFloat = 1568, excludingWindowID: CGWindowID? = nil
     ) async -> Result<Shot, CaptureError> {
+        #if DEBUG
+        trace("capture.begin permission=\(CGPreflightScreenCaptureAccess())")
+        #endif
         guard case .app(let bundleID) = target else {
             return await captureFullScreen(maxLongEdge: maxLongEdge, excludingWindowID: excludingWindowID)
         }
@@ -112,8 +158,17 @@ enum ScreenCapture {
         // App targets enumerate off-screen windows too, so minimized ones are found.
         let content: SCShareableContent
         do {
-            content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: false)
+            #if DEBUG
+            trace("app.enumeration.begin")
+            #endif
+            content = try await appEnumeration.run {
+                try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: false)
+            }
+            #if DEBUG
+            trace("app.enumeration.end")
+            #endif
         } catch {
+            if error is CaptureSystemOperationError { return .failure(.captureTimedOut) }
             return .failure(.noPermission)
         }
 
@@ -155,20 +210,31 @@ enum ScreenCapture {
         // Fast path: the cached enumeration. Any failure — stale display handle, panel window
         // missing — falls through to a fresh enumeration below.
         if let cached = await MainActor.run(body: { cachedContent }) {
+            #if DEBUG
+            trace("fullscreen.cache.hit")
+            #endif
             let r = await attemptFullScreen(content: cached, maxLongEdge: maxLongEdge,
                                             excludingWindowID: excludingWindowID)
             if case .success = r {
                 await MainActor.run { prefetchShareableContent() } // keep the next press warm
                 return r
             }
+            if case .failure(.captureTimedOut) = r { return r }
         }
         let content: SCShareableContent
         do {
-            content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            #if DEBUG
+            trace("fullscreen.enumeration.begin")
+            #endif
+            content = try await fullScreenContent()
+            #if DEBUG
+            trace("fullscreen.enumeration.end")
+            #endif
         } catch {
+            if error is CaptureSystemOperationError { return .failure(.captureTimedOut) }
+            if let error = error as? CaptureError { return .failure(error) }
             return .failure(.noPermission)
         }
-        await MainActor.run { cachedContent = content }
         return await attemptFullScreen(content: content, maxLongEdge: maxLongEdge,
                                        excludingWindowID: excludingWindowID)
     }
@@ -230,9 +296,8 @@ enum ScreenCapture {
            let grid = await attemptHashGrid(content: cached, excludingWindowID: excludingWindowID) {
             return grid
         }
-        guard let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        guard let content = try? await fullScreenContent()
         else { return nil }
-        await MainActor.run { cachedContent = content }
         return await attemptHashGrid(content: content, excludingWindowID: excludingWindowID)
     }
 
@@ -252,7 +317,9 @@ enum ScreenCapture {
         let config = SCStreamConfiguration()
         config.showsCursor = false
         setDimensions(config, width: CGFloat(display.width), height: CGFloat(display.height), maxLongEdge: 128)
-        guard let cg = try? await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+        guard let cg = try? await hashCapture.run(operation: {
+            try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+        })
         else { return nil }
         return ScreenHasher.lumaGrid(from: cg)
     }
@@ -272,12 +339,28 @@ enum ScreenCapture {
         filter: SCContentFilter, config: SCStreamConfiguration, maxLongEdge: CGFloat, blankThreshold: Int
     ) async -> Result<Shot, CaptureError> {
         do {
-            let cg = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+            #if DEBUG
+            trace("image.begin")
+            #endif
+            let cg = try await imageCapture.run {
+                try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+            }
+            try Task.checkCancellation()
+            #if DEBUG
+            trace("image.end")
+            #endif
             guard let shot = encode(cg, maxLongEdge: maxLongEdge, blankThreshold: blankThreshold)
             else { return .failure(.captureFailed) }
+            #if DEBUG
+            trace("encode.end")
+            #endif
             return .success(shot)
         } catch {
             // Window vanished mid-capture (closed / app quit), or capture was refused.
+            #if DEBUG
+            trace("image.error code=\((error as NSError).code)")
+            #endif
+            if error is CaptureSystemOperationError { return .failure(.captureTimedOut) }
             return .failure(.captureFailed)
         }
     }

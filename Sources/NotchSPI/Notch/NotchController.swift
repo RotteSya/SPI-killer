@@ -1349,6 +1349,9 @@ final class NotchController: NSObject {
     /// `withContext` (tutor mode only): send the remembered ⌘⇧1 shot together with the fresh
     /// capture, so a question whose passage has scrolled away still gets its context.
     private func runTapped(mode: String, withContext: Bool = false, chooseRegion: Bool = false, fromAuto: Bool = false) {
+        #if DEBUG
+        ScreenCapture.trace("run.enter running=\(running)")
+        #endif
         guard !terminating else { return }
         synchronizeMaterialScope()
         guard !running else { return }
@@ -1383,7 +1386,13 @@ final class NotchController: NSObject {
             officialTask = Task { @MainActor [weak self] in
                 guard let self, self.runGeneration == generation else { return }
                 guard self.makeRequestBinding(mode: Settings.shared.mode) == registrationBinding else { self.newQuestionGroup(); return }
+                #if DEBUG
+                ScreenCapture.trace("registration.begin")
+                #endif
                 let result = await OfficialAPI.registerIfNeeded()
+                #if DEBUG
+                ScreenCapture.trace("registration.end cancelled=\(Task.isCancelled)")
+                #endif
                 guard !Task.isCancelled, self.runGeneration == generation else { return }
                 let current = self.makeRequestBinding(mode: Settings.shared.mode)
                 guard current.selectionID == registrationBinding.selectionID else { self.newQuestionGroup(); return }
@@ -1903,6 +1912,10 @@ final class NotchController: NSObject {
             return L10n.t("截屏失败，目标窗口可能刚被关闭，请重试。",
                           "キャプチャに失敗しました。対象ウィンドウが閉じられた可能性があります。再試行してください。",
                           "Capture failed — the target window may have just closed. Please try again.")
+        case .captureTimedOut:
+            return L10n.t("系统截图服务响应超时，请稍后重试；若持续出现，请重启应用。",
+                          "画面収録サービスがタイムアウトしました。しばらくして再試行し、続く場合はアプリを再起動してください。",
+                          "The system capture service timed out. Try again shortly; if this continues, restart the app.")
         }
     }
 
