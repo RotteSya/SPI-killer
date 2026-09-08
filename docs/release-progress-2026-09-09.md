@@ -1,6 +1,6 @@
 # 2026-09-09 发布进度
 
-本轮完成框选、答案辅助功能及临时截图清理修复。最新客户端与测试提交为 `645c1de3825a6e15168c99a994fb36a72112bcd6`。**尚未公开发布，生产服务及数据库未切换。**
+本轮完成框选、答案辅助功能、临时截图清理及系统截图等待保护。最新客户端与测试提交为 `be9676c355b5c84c661749958816741885455fbb`。**尚未公开发布，生产服务及数据库未切换。**
 
 ## 实施与验证
 
@@ -36,9 +36,9 @@
 
 本节证据目录：`.release-evidence/2026-09-09/capture-chain/`。关键文件包括 `local-settlement-validation.json`、`readable-result.png`、`cleanup-live-validation.json`、`material-lifetime-before.log` / `material-lifetime-after.log`、`hidden-material-before.log`、`swift-hidden-final.log`、`transport-repeat.log`、`stopped-qa-cleanup.json` 及 CI 完整日志。`deletion-fixed-validation.json` 是第二个隐藏视图问题修复前的失败证据，不能引用为通过。
 
-## 当前可核对的安装包
+## 截图清理阶段的安装包
 
-最终客户端提交 `645c1de3825a6e15168c99a994fb36a72112bcd6` 对应 `dist/NotchSPI.dmg`，版本 2.12 / build 19，arm64、最低 macOS 14.0；4,038,862 字节，SHA-256 `cac71ab3180de9d4108b85a74caa1a0f696608248797e8323ca3ee453f9c49d2`。Apple 公证 `3b3d98d0-1cfd-4d2b-a380-ca9ff425a9c8` 已 Accepted，装订、HFS+ 映像完整性、只读挂载后 strict codesign 与 Gatekeeper 均通过。60 个客户端/资源/打包输入摘要与该提交一致，包含新增 CaptureFileLifecycle.swift。
+客户端提交 `645c1de3825a6e15168c99a994fb36a72112bcd6` 的包现保存为 `.release-evidence/2026-09-09/pre-deadline-dist/NotchSPI.dmg`，版本 2.12 / build 19，arm64、最低 macOS 14.0；4,038,862 字节，SHA-256 `cac71ab3180de9d4108b85a74caa1a0f696608248797e8323ca3ee453f9c49d2`。Apple 公证 `3b3d98d0-1cfd-4d2b-a380-ca9ff425a9c8` 已 Accepted，装订、HFS+ 映像完整性、只读挂载后 strict codesign 与 Gatekeeper 均通过。60 个客户端/资源/打包输入摘要与该提交一致，包含新增 CaptureFileLifecycle.swift。
 
 完整证据为 `capture-chain/release-package-final.log`、`artifact-verification.log`、`notarized-artifact-manifest.json`。`pre-lifecycle-dist` 和 `pre-hidden-strip-dist` 是本轮中间已公证包，均不包含全部最终修复，不作为当前候选。当前包仍未上传公开 Release。
 
@@ -67,3 +67,21 @@ Vercel 只读 API 完整列出 41 个部署，分页 `next=null`、均 READY，�
 为排除同时使用界面截图工具的影响，确认所有前序 Computer Use 请求已终止后，使用现有 DEBUG `--qa-capture 3` 自动入口运行同一真实查题实现，期间没有 Computer Use 调用。进程运行 3 分 22 秒时仍为 0 captures、0 reservations、余额 30，随后停止 App 及本机服务。三次计划触发不能算成三次完成；后续触发可能被现有 running 防重入拦截。证据为 `capture-isolated-status.json`、`capture-isolated-client.log` 和 `capture-isolated-server.log`。
 
 现有证据确认了长等待及请求未提交，尚未定位到共享窗口枚举、截图 API、注册后的状态转换中的具体等待点；也不能推断只是 Computer Use 同时截图导致。**候选未通过运行性能验收，公开发布继续暂停。** 下一步需对实际等待阶段加有界诊断，查明回调、取消和缓存刷新路径，再验证恢复与失败提示；不得用延长等待或单次成功替代修复。产品源代码本轮未改，已公证包和通过的 CI 仍对应 `645c1de`，它们证明打包与已有检查通过，不证明此运行问题已解决。
+
+## 后续定位与系统等待保护（当前结果）
+
+`capture-diagnostic/client.log` 确认注册约 213ms 完成、屏幕权限已授权，随后启动预热与正式捕获都等待 `SCShareableContent`。在仅保留一次枚举的诊断尝试中，该接口约 52.376 秒才返回，而 `SCScreenshotManager` 实际图片获取约 332ms；因此已定位到系统窗口枚举的长等待。此对照没有证明重复请求是全部根因。临时禁用预热的诊断开关已移除。
+
+当前 `be9676c` 增加 CaptureSystemOperation：每个调用者最多等待系统操作 10 秒，取消立即结束其等待；不假设系统 API 会服从 Task 取消。底层操作实际完成前仍占用唯一槽位，避免反复超时后叠加无数系统请求。全屏预热、正常捕获和 hash 路径的同类窗口枚举共用一次在途调用；窗口目标保持独立的新枚举，图片请求不合并，避免将另一目标的图片交给新请求。迟到图片不继续编码或发送。后台迟到的窗口列表可预热后续捕获，但显示器 generation 已变化时不能发布或返回旧列表。
+
+超时映射为三语“系统截图服务响应超时”提示，不再伪装成屏幕权限未授予；缓存图片获取超时不立即启动第二次系统截图。10 秒是单次系统操作的等待期限，不能外推为整个查题请求固定 10 秒。诊断日志需 DEBUG 且显式 `NSPI_CAPTURE_TRACE=1`、隔离凭证环境同时开启；仅记录阶段、单调时间、权限布尔值和错误码，不含窗口/题目/账户原文，Release 中排除。
+
+四项专项测试覆盖取消前不启动、取消时不等待系统回调、超时后继续阻止重叠调用、迟到结果不交付、底层完成后恢复、合并调用者的独立期限。完整 `NSPI_QA_EPHEMERAL=1 swift test -Xswiftc -warnings-as-errors`：294 项、2 项真实模型评测显式跳过、0 失败。[CI 34260080139](https://github.com/RotteSya/notch-SPI/actions/runs/34260080139) 已 10/10 成功，含 macOS、Node 22/24、PostgreSQL 16/17、Cloudflare 与 Linux/Vercel 包检查。日志为 `capture-diagnostic/deadline-tests.log`、`swift-full.log`、`ci-status.json` 和 `ci.log`。
+
+实际自动查题连续完成 12 次：截图阶段约 78.927–393.195ms，本机 mock 账户余额 30→18、累计查题 12、新增 capture 12。随后与 Computer Use 状态读取重叠的框选尝试再次遇到系统图片获取等待，客户端在约 10,076.61ms 结束等待，capture 数仍为 12，没有新增扣题。完整框选窗口读取继续超时，不能记为通过；当前 12 次成功也不替代蓝图正式 p95/质量门槛。证据 `bounded-runtime-validation.json` / `client-bounded.log`。系统错误原始日志单独保存为 0600 私有文件，未据未关联的跨进程日志推断根因。
+
+本轮所有 QA 与本机服务均停止，依据已记录文件清单清理 2 张测试图片、剩余 0，见 `cleanup-validation.json`。没有真实模型或支付调用。系统偶发慢响应、完整框选流程和正式多设备性能验收仍待完成；客户端无限等待与重复发起枚举的缺口已修复。
+
+## 当前可核对的候选包
+
+`dist/NotchSPI.dmg` 对应 `be9676c355b5c84c661749958816741885455fbb`，2.12 / build 19，arm64、最低 macOS 14.0，3,046,082 字节；SHA-256 `f3cdfd6992cc6e597b71b3760ee7fc59226699c0fffd8afdd24a2ad49e1dfaf9`。Apple 公证 `190f159a-5b64-4565-9f7e-00bcc7009905` Accepted，装订、完整性、strict codesign 与 Gatekeeper 通过。61 个客户端/资源/打包输入摘要与提交一致。证据为 `capture-diagnostic/release-package.log`、`artifact-verification.log`、`notarized-artifact-manifest.json`；未公开发布。
