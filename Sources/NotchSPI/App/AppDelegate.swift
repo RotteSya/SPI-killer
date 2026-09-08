@@ -2,6 +2,9 @@ import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var controller: NotchController?
+    #if DEBUG
+    private var qaRegionPicker: QuestionRegionPicker?
+    #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // MUST run before NotchController init: PersonaStore's migration writes persona keys
@@ -89,6 +92,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Starts an auto session through the production toggle path (hotkey-equivalent).
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                 controller.qaStartAutoMode()
+            }
+        }
+        // Open the production picker over an explicit local fixture for keyboard/AX QA.
+        if let i = args.firstIndex(of: "--qa-region-image"), i + 1 < args.count,
+           let image = NSImage(contentsOfFile: args[i + 1]) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                guard let self else { return }
+                self.qaRegionPicker = QuestionRegionPicker(image: image) { [weak self] region in
+                    if let region { print("[NotchSPI] QA region: \(region.x),\(region.y),\(region.width),\(region.height)") }
+                    else { print("[NotchSPI] QA region: cancelled") }
+                    self?.qaRegionPicker = nil
+                }
+                self.qaRegionPicker?.showWindow(nil)
+                self.qaRegionPicker?.window?.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
             }
         }
         #endif
