@@ -11,6 +11,7 @@ final class NotchController: NSObject {
     private var regionPicker: QuestionRegionPicker?
     private var selectedRegion: (rect: QuestionRegion, fingerprint: String)?
     private var officialTask: Task<Void, Never>?
+    private let capturePreparation = CapturePreparationTask()
     private var reconciliationTask: Task<Void, Never>?
     private var pendingRegistrationSelection: String?
     private var autoReviewPending = false
@@ -788,6 +789,7 @@ final class NotchController: NSObject {
     }
 
     private func invalidateQuestionContext(clearAnswer: Bool) {
+        capturePreparation.cancel()
         officialTask?.cancel()
         officialTask = nil
         reconciliationTask?.cancel(); reconciliationTask = nil
@@ -858,14 +860,18 @@ final class NotchController: NSObject {
         }
         beginRun()
         let generation = runGeneration
-        Task { @MainActor in
+        capturePreparation.start { [self] in
             let result = snapshot.captureTarget == .fullScreen
                 ? await self.captureFullScreenExcludingPanel() : await ScreenCapture.capture(target: snapshot.captureTarget)
             guard self.accepts(snapshot, generation: generation, requireCaptureID: false) else {
                 if case .success(let shot) = result { try? FileManager.default.removeItem(atPath: shot.path) }
                 return
             }
-            guard case .success(let shot) = result else { self.finishError(Self.message(for: .captureFailed)); return }
+            let shot: ScreenCapture.Shot
+            switch result {
+            case .success(let value): shot = value
+            case .failure(let error): self.finishError(Self.message(for: error)); return
+            }
             guard self.runGeneration == generation, !shot.blank else {
                 try? FileManager.default.removeItem(atPath: shot.path); self.endRun(); return
             }
@@ -1507,7 +1513,7 @@ final class NotchController: NSObject {
         refreshCLILabel()
         setExpanded(true) // expands to a small empty panel; grows as the answer streams
 
-        Task { @MainActor in
+        capturePreparation.start { [self] in
             guard self.accepts(snapshot, generation: generation) else { return }
             let runStartedAt = Date()
             // The screenshot takes a few hundred ms — use that window to warm the network path
@@ -1877,18 +1883,21 @@ final class NotchController: NSObject {
     /// window number, or SCK doesn't list it), fall back to the legacy hide → settle → shoot.
     @MainActor
     private func captureFullScreenExcludingPanel() async -> Result<ScreenCapture.Shot, CaptureError> {
+        guard !Task.isCancelled else { return .failure(.captureFailed) }
         if panel.windowNumber > 0 {
             let r = await ScreenCapture.capture(target: .fullScreen,
                                                 excludingWindowID: CGWindowID(panel.windowNumber))
             if case .failure(.panelNotExcludable) = r {} else { return r }
         }
+        guard !Task.isCancelled else { return .failure(.captureFailed) }
         #if DEBUG
         print("[NotchSPI] panel exclusion unavailable; falling back to hide+capture")
         #endif
         panel.orderOut(nil)
-        try? await Task.sleep(nanoseconds: 130_000_000)
+        defer { if visible && !terminating { panel.orderFrontRegardless() } }
+        do { try await Task.sleep(nanoseconds: 130_000_000) }
+        catch { return .failure(.captureFailed) }
         let r = await ScreenCapture.capture(target: .fullScreen)
-        panel.orderFrontRegardless()
         return r
     }
 
@@ -2059,6 +2068,7 @@ final class NotchController: NSObject {
     private static let runDeadline: TimeInterval = 110
 
     private func beginRun() {
+        capturePreparation.cancel()
         reconciliationTask?.cancel(); reconciliationTask = nil
         running = true
         runGeneration &+= 1
@@ -2069,6 +2079,7 @@ final class NotchController: NSObject {
             // states that rather than deferring the recovery by a hop.
             MainActor.assumeIsolated {
                 guard let self, self.running else { return }
+                self.capturePreparation.cancel()
                 self.officialTask?.cancel()
                 self.runGeneration &+= 1 // orphan the stuck run's callbacks
                 self.regionPicker?.close(); self.regionPicker = nil
