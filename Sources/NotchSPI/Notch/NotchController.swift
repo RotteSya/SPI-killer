@@ -261,7 +261,10 @@ final class NotchController: NSObject {
     /// Visual-QA hook: drive one full capture programmatically (same path as the hotkey),
     /// so the whole pipeline — screenshot → official channel → stream → quota status line —
     /// can be exercised and screenshotted without pressing keys.
-    func qaTriggerCapture() { runTapped(mode: "tutor") }
+    func qaTriggerCapture(chooseRegion: Bool = false) {
+        if chooseRegion { selectQuestionRegion() }
+        else { runTapped(mode: "tutor") }
+    }
 
     /// Visual-QA hook: toggle an auto session through the production start/stop path.
     func qaStartAutoMode() { autoModeTapped() }
