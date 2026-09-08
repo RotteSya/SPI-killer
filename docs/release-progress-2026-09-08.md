@@ -4,9 +4,9 @@
 
 ## 已实施与外部配置
 
-- `scheduler/` 是独立 Cloudflare Worker。一个 tick 只调用一次固定 Vercel 恢复接口；45 秒截止、禁止重定向、最多读取 4 KiB、严格核验返回计数，部分失败会让任务失败。HTTP 外部访问不能触发恢复，日志不含凭证或业务正文。当前 Worker `notchspi-reaper` 部署 ID 为 `082c40757f7f424ea498c4d247e73b8c`，公开/预览 URL 关闭，定时触发列表为空。新服务和迁移验收后才启用每分钟调度。未购买 Cloudflare 付费套餐。
+- `scheduler/` 是独立 Cloudflare Worker。一个 tick 只调用一次固定 Vercel 恢复接口；45 秒截止、禁止重定向、最多读取 4 KiB、严格核验返回计数，部分失败会让任务失败。HTTP 外部访问不能触发恢复，日志不含凭证或业务正文。当前 Worker `notchspi-reaper` 部署 ID 为 `082c40757f7f424ea498c4d247e73b8c`，公开/预览 URL 关闭，定时触发列表为空。新服务和迁移验收后才启用每分钟调度。已在账户后台确认当前方案为 Free / $0，未购买付费套餐，见 `cloudflare-free-plan.json`。
 - 两端的 `CRON_SECRET` 已设置。Vercel 生产环境已写入并回读核对 9 项预算/价格设置，见 `deploy/production-model-budget.json`。每日限额为 CNY 20,000,000 micros，上海时间零点重置；所有官方查题、解释和恢复共用持久账本。实际生效需要新版服务部署，不代表旧版本已受到新上限限制。
-- 价格表补齐 Claude Opus 4.8 与 DeepSeek vision；按 8 CNY/USD 的保守估值和 DeepSeek 高峰未命中价格核算。历史 USD 记录不改币种。单次暂留 CNY 10，已知用量结算后释放差额；未知费用保留上界，临近每日上限可能提前拒收新调用。首周观察不自动涨额度。模型预算不是固定扣费，也不包含服务器费用。价格来源、上界推导及启用条件见 `docs/cloudflare-scheduler.md`。
+- 价格表补齐 Claude Opus 4.8 与 DeepSeek vision；按 8 CNY/USD 的保守估值和 DeepSeek 高峰未命中价格核算。历史 USD 记录不改币种。单次暂留 CNY 10，已知用量结算后释放差额；未知费用保留上界，临近每日上限可能提前拒收新调用。首周观察不自动涨额度。已建立本任务每日费用复查 `notchspi`，只在实际启用后计算七天；未上线或状态不变时保持安静，七天报告后暂停。模型预算不是固定扣费，也不包含服务器费用。价格来源、上界推导及启用条件见 `docs/cloudflare-scheduler.md`。
 - Mac 实测发现首次引导自绘按钮/语言选择缺失辅助功能语义。现已添加可读名称、按钮/单选角色、选择状态、可执行操作、键盘处理及焦点描边；禁用、隐藏、纯确认状态不触发操作。免费额度数字也可被辅助功能读取，并移除 30 前面的填充零。三语文案修正了绝对隐身及“截图用完即删”的不准确承诺。
 
 ## 验证
@@ -26,6 +26,8 @@
 | 仓库健康/空白 | 通过 | 本轮执行输出 |
 
 Worker 运行时测试最初失败：Cloudflare 不接受 Fetch 的 `redirect: error`，虽然 Node 测试接受。改为 `manual` 并拒绝所有非 200 状态后，workerd 复验通过。初次追加 esbuild 版本的低风险开发服务器问题也已通过升级到 0.28.2 消除。
+
+代码提交 `81f69b0b6d41cd0ffcb622f42a4bbc1353a1c8c4` 的 [GitHub CI 34241607923](https://github.com/RotteSya/notch-SPI/actions/runs/34241607923) 已 10/10 成功：Node 22.18/24.20、Postgres 16/17 四组合、macOS 15、AL2023 1 GiB 原生资源、实际 Vercel Linux 函数包及 Cloudflare 调度。两个 Node 组合各 509 通过，四个 PostgreSQL 组合各 630 通过，均无失败或跳过。完整 CI 日志、测试 TAP 与函数包已下载保存；551 个函数文件摘要逐项一致，静态目录仅 robots.txt。公证包的 59 个客户端输入摘要与该提交全部一致。
 
 当前正式候选：`dist/NotchSPI.dmg`，SHA-256 `9fbff1929096ae0468dd4a4af9dab79ff94895b328b2d4f79f9965f4674afa61`。只读挂载后重新核验 App 的签名、版本、最低系统、4 个文件摘要和 Gatekeeper；59 个客户端输入已登记。原 `dist` 的 5 个文件已保存到私有证据目录并逐项记录摘要。此包未上传 GitHub Release、未发布更新通知。
 

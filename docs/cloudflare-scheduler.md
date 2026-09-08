@@ -14,7 +14,7 @@ Deployment order:
 4. Allow trigger propagation and collect successful real scheduled events, including a controlled expired reservation. Confirm exactly one release/settlement in the persistent ledger.
 5. Record activation time, deployment ID and evidence. Rollback removes the schedule first; the server's durable sweep tolerates overlaps and retries.
 
-Cloudflare documents [Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/), [free-plan limits](https://developers.cloudflare.com/workers/platform/limits/) and [pricing](https://developers.cloudflare.com/workers/platform/pricing/). A minute schedule makes 1,440 invocations/day; deployment does not subscribe the account to a paid plan. Account billing-read permission is unavailable in the connector, so the account's subscription status still needs a dashboard check before activation.
+Cloudflare documents [Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/), [free-plan limits](https://developers.cloudflare.com/workers/platform/limits/) and [pricing](https://developers.cloudflare.com/workers/platform/pricing/). A minute schedule makes 1,440 invocations/day; deployment does not subscribe the account to a paid plan. The authenticated Workers plans dashboard confirmed this account's current plan is **Free / $0** on 2026-09-08; evidence is `cloudflare-free-plan.json`. The connector's billing-read limitation does not block this verification.
 
 ## Initial model budget
 
