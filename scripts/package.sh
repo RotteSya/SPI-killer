@@ -168,7 +168,11 @@ echo "==> Staging DMG contents"
 ln -s /Applications "$STAGING/Applications"
 
 echo "==> Creating DMG"
-hdiutil create -volname "$APP_NAME" -srcfolder "$STAGING" -ov -format UDZO "$OUT/$APP_NAME.dmg" >/dev/null
+# Pin the distribution filesystem instead of inheriting the host's APFS default.
+# The read-only installer volume needs only the app and Applications link.
+hdiutil create -volname "$APP_NAME" -fs HFS+ -srcfolder "$STAGING" -ov -format UDZO "$OUT/$APP_NAME.dmg" >/dev/null
+echo "==> Verifying DMG integrity"
+hdiutil verify "$OUT/$APP_NAME.dmg"
 
 if [[ "$UNSIGNED" == 1 || -z "$SIGN_ID" ]]; then
   echo "==> Unsigned DMG (ad-hoc). Recipients must bypass Gatekeeper."
