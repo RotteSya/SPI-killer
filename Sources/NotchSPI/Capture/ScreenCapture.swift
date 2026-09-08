@@ -307,12 +307,11 @@ enum ScreenCapture {
             return nil
         }
         let blank = jpg.count < blankThreshold
-        let file = NSTemporaryDirectory() + "notch-tutor-\(UUID().uuidString).jpg"
         do {
-            try jpg.write(to: URL(fileURLWithPath: file))
+            let file = try CaptureFileLifecycle.shared.writeJPEG(jpg)
+            return Shot(path: file, blank: blank)
         } catch {
             return nil
         }
-        return Shot(path: file, blank: blank)
     }
 }

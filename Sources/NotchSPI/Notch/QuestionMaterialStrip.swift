@@ -19,7 +19,8 @@ final class QuestionMaterialStrip: NSView {
         subviews.forEach { $0.removeFromSuperview() }
         buttons = []
         for (ordinal, asset) in next.enumerated() {
-            let button = MaterialActionButton(title: "\(ordinal + 1) ×") { [weak self] in self?.onRemove?(asset.id) }
+            let assetID = asset.id
+            let button = MaterialActionButton(title: "\(ordinal + 1) ×") { [weak self] in self?.onRemove?(assetID) }
             button.image = NSImage(contentsOf: asset.file.url)
             button.imagePosition = .imageAbove
             button.imageScaling = .scaleProportionallyDown
@@ -55,6 +56,14 @@ final class QuestionMaterialStrip: NSView {
 
 private final class MaterialActionButton: NSButton {
     private let actionBlock: () -> Void
+    // The notch deliberately cannot become key; material actions must still accept clicks.
+    override var needsPanelToBecomeKey: Bool { false }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func accessibilityPerformPress() -> Bool {
+        guard isEnabled, !isHiddenOrHasHiddenAncestor else { return false }
+        actionBlock()
+        return true
+    }
     init(title: String, action: @escaping () -> Void) {
         self.actionBlock = action
         super.init(frame: .zero)

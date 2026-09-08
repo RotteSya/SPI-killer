@@ -21,6 +21,7 @@ final class NotchController: NSObject {
     private var hovering = false
     private var pinned = false
     private var running = false
+    private var terminating = false
     /// Guarantees `running` always comes back — see `beginRun()`.
     private var runWatchdog: Timer?
     /// Bumped for every capture, so a run abandoned by the watchdog can't reach back in and
@@ -841,6 +842,7 @@ final class NotchController: NSObject {
     }
 
     @objc private func saveMaterial() {
+        guard !terminating else { return }
         synchronizeMaterialScope()
         guard !running else { return }
         officialTask?.cancel(); model.explanationLoading = false
@@ -938,6 +940,13 @@ final class NotchController: NSObject {
     @objc private func quitApp() {
         NSApp.terminate(nil)
     }
+
+    func prepareForTermination() {
+        terminating = true
+        newQuestionGroup()
+    }
+
+    func cancelTermination() { terminating = false }
 
     // MARK: - Settings window
 
@@ -1340,6 +1349,7 @@ final class NotchController: NSObject {
     /// `withContext` (tutor mode only): send the remembered ⌘⇧1 shot together with the fresh
     /// capture, so a question whose passage has scrolled away still gets its context.
     private func runTapped(mode: String, withContext: Bool = false, chooseRegion: Bool = false, fromAuto: Bool = false) {
+        guard !terminating else { return }
         synchronizeMaterialScope()
         guard !running else { return }
         officialTask?.cancel()

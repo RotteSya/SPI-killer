@@ -2,6 +2,7 @@ import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var controller: NotchController?
+    private var terminationPending = false
     #if DEBUG
     private var qaRegionPicker: QuestionRegionPicker?
     #endif
@@ -116,6 +117,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
             UpdateChecker.autoCheckIfDue()
         }
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard !terminationPending else { return .terminateLater }
+        terminationPending = true
+        controller?.prepareForTermination()
+        Task { @MainActor in
+            let cleaned = await Task.detached(priority: .userInitiated) {
+                CaptureFileLifecycle.shared.removeAllForTermination()
+            }.value
+            terminationPending = false
+            if !cleaned { controller?.cancelTermination() }
+            sender.reply(toApplicationShouldTerminate: cleaned)
+            if !cleaned {
+                let alert = NSAlert()
+                alert.messageText = L10n.t("临时截图未能清理", "一時画像を削除できませんでした", "Temporary images could not be removed")
+                alert.informativeText = L10n.t("应用尚未退出，请重试退出。", "アプリはまだ終了していません。もう一度終了してください。", "The app is still open. Please try quitting again.")
+                alert.runModal()
+            }
+        }
+        return .terminateLater
     }
 
     private static func makeMainMenu() -> NSMenu {

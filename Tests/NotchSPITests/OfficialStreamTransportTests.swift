@@ -9,6 +9,8 @@ private final class LocalStreamServer: @unchecked Sendable {
     private var connections: [NWConnection] = []
     private let chunks: [Data]
     private let complete: Bool
+    private var bodyBytes = 0
+    var receivedBodyBytes: Int { queue.sync { bodyBytes } }
 
     init(bytes: Data, complete: Bool) throws {
         let parameters = NWParameters.tcp
@@ -43,7 +45,16 @@ private final class LocalStreamServer: @unchecked Sendable {
             guard let self, error == nil, let bytes else { connection.cancel(); return }
             let request = accumulated + bytes
             guard request.count <= 65_536 else { connection.cancel(); return }
-            if request.range(of: Data("\r\n\r\n".utf8)) != nil {
+            if let boundary = request.range(of: Data("\r\n\r\n".utf8)) {
+                let headers = String(decoding: request[..<boundary.lowerBound], as: UTF8.self)
+                let lengthLine = headers.components(separatedBy: "\r\n").first { $0.lowercased().hasPrefix("content-length:") }
+                let bodyLength = lengthLine.flatMap { Int($0.dropFirst("content-length:".count).trimmingCharacters(in: .whitespaces)) } ?? 0
+                guard bodyLength >= 0, boundary.upperBound + bodyLength <= 65_536 else { connection.cancel(); return }
+                guard request.count >= boundary.upperBound + bodyLength else {
+                    if ended { connection.cancel() } else { self.receive(connection, accumulated: request) }
+                    return
+                }
+                self.bodyBytes = bodyLength
                 let header = Data("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream; charset=utf-8\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n".utf8)
                 connection.send(content: header, completion: .contentProcessed { [weak self] error in
                     if error != nil { connection.cancel() } else { self?.send(connection, index: 0) }
@@ -54,9 +65,11 @@ private final class LocalStreamServer: @unchecked Sendable {
     }
     private func send(_ connection: NWConnection, index: Int) {
         if index == chunks.count {
-            if complete {
-                connection.send(content: Data("0\r\n\r\n".utf8), completion: .contentProcessed { _ in connection.cancel() })
-            } else { connection.cancel() }
+            // Finish the TCP write side rather than cancelling queued bytes. The incomplete
+            // case still omits the HTTP terminator and DONE, while delivering its usage event.
+            connection.send(content: complete ? Data("0\r\n\r\n".utf8) : nil,
+                            contentContext: .finalMessage, isComplete: true,
+                            completion: .contentProcessed { error in if error != nil { connection.cancel() } })
             return
         }
         let chunk = chunks[index], packet = Data((String(chunk.count, radix: 16) + "\r\n").utf8) + chunk + Data("\r\n".utf8)
@@ -83,7 +96,8 @@ final class OfficialStreamTransportTests: XCTestCase {
     func testRealHTTPChunkBoundariesPreserveUnicodeAndOneSettlement() async throws {
         let id = UUID(), server = try LocalStreamServer(bytes: response(id: id, done: true), complete: true)
         defer { server.stop() }
-        var request = URLRequest(url: try await server.start()); request.httpMethod = "POST"; request.httpBody = Data("{}".utf8); request.timeoutInterval = 5
+        var request = URLRequest(url: try await server.start()); request.httpMethod = "POST"
+        request.httpBody = Data(repeating: 32, count: 32_768); request.timeoutInterval = 5
         let session = URLSession(configuration: .ephemeral); defer { session.invalidateAndCancel() }
         let (bytes, response) = try await session.bytes(for: request)
         XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
@@ -92,6 +106,7 @@ final class OfficialStreamTransportTests: XCTestCase {
             if case .delta(let chunk) = event { text += chunk }; if case .usage = event { receipts += 1 }
         }
         XCTAssertEqual(text, "中文 🔎 FINAL: B"); XCTAssertEqual(receipts, 1); XCTAssertTrue(outcome.hasContent)
+        XCTAssertEqual(server.receivedBodyBytes, 32_768)
     }
     func testRealSocketCloseAfterSettlementCannotCompleteAnswerDelivery() async throws {
         let id = UUID(), server = try LocalStreamServer(bytes: response(id: id, done: false), complete: false)

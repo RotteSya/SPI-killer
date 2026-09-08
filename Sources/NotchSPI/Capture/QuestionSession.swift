@@ -55,7 +55,7 @@ final class QuestionSessionStore {
         DispatchQueue.global(qos: .utility).async {
             let fm = FileManager.default
             for url in (try? fm.contentsOfDirectory(at: parent, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
-                where url.lastPathComponent.hasPrefix("notchspi-questions-") {
+                where url.lastPathComponent.hasPrefix("notchspi-questions-") || url.lastPathComponent.hasPrefix("notchspi-capture-") {
                 if let modified = try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
                    modified < cutoff { try? fm.removeItem(at: url) }
             }
@@ -109,7 +109,6 @@ final class QuestionSessionStore {
         let capturedAt = now()
         let asset = try await Task.detached(priority: .userInitiated) {
             let fm = FileManager.default
-            try fm.createDirectory(at: destinationDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
             let source = URL(fileURLWithPath: path)
             guard let data = try? Data(contentsOf: source),
                   let image = CGImageSourceCreateWithData(data as CFData, nil),
@@ -118,8 +117,10 @@ final class QuestionSessionStore {
                   let height = properties[kCGImagePropertyPixelHeight] as? Int,
                   width > 0, height > 0, width * height <= 16_000_000 else { throw SessionError.unreadable }
             let id = UUID(), destination = destinationDirectory.appendingPathComponent(id.uuidString + ".jpg")
-            try fm.moveItem(at: source, to: destination)
-            try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
+            try CaptureFileLifecycle.shared.withWritableDirectory(destinationDirectory) {
+                try fm.moveItem(at: source, to: destination)
+                try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
+            }
             return ContextAsset(id: id, sessionID: expectedSession, file: QuestionAssetFile(url: destination),
                                 sha256: SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined(),
                                 width: width, height: height, byteCount: data.count,
