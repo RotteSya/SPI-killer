@@ -1,6 +1,6 @@
 # 2026-09-09 发布进度
 
-本轮完成框选窗口的键盘操作、比例与坐标修复，客户端与测试提交为 `7dfed7bd039e413415ebb050ab71dcc2b6bc9117`，随后打包脚本提交为 `1a2c140`。**尚未公开发布，生产服务及数据库未切换。**
+本轮完成框选、答案辅助功能及临时截图清理修复。最新客户端与测试提交为 `645c1de3825a6e15168c99a994fb36a72112bcd6`。**尚未公开发布，生产服务及数据库未切换。**
 
 ## 实施与验证
 
@@ -18,13 +18,33 @@
 
 打包脚本改为显式 HFS+ / UDZO，并在签名前执行 `hdiutil verify`。重新生成后的完整性、签名和公证格式检查通过，已上传 Apple，提交编号 `9c29c37f-e49a-4e95-872a-5b5b7ae25fae`；Apple 已返回 Accepted，装订与校验通过。没有使用 `--force` 跳过验证。执行会话 `20066` 已完成，日志为 `ui/release-package.log`。原失败日志 `release-package-first.log`、原映像 `rejected-apfs.dmg` 和进程采样均保留。
 
-**最新候选**为 `dist/NotchSPI.dmg`，3,996,192 字节，SHA-256 `4323d5177b78ff611f251591b26f501559d31a86bf6011f1a4f24de54c3c7a08`。只读挂载后 App strict codesign、Gatekeeper 和 DMG stapler 均通过；59 个客户端/打包输入摘要与 `1a2c1401955b35c4263b390fab5576ce483a02a7` 一致，见 `notarized-artifact-manifest.json`。未公开发布。
+**框选修复阶段的候选**现保存在 `.release-evidence/2026-09-09/pre-answer-dist/NotchSPI.dmg`，3,996,192 字节，SHA-256 `4323d5177b78ff611f251591b26f501559d31a86bf6011f1a4f24de54c3c7a08`。只读挂载后 App strict codesign、Gatekeeper 和 DMG stapler 均通过；59 个客户端/打包输入摘要与 `1a2c1401955b35c4263b390fab5576ce483a02a7` 一致，见 `notarized-artifact-manifest.json`。未公开发布。
 
 上一轮已公证且核验通过的安装包保存在 `.release-evidence/2026-09-09/pre-region-dist/NotchSPI.dmg`，SHA-256 `1f6ce5824a83d1b3b16fa008c89064c79b72bfae08521e03cc752922bf36436f`；它不包含本轮框选修复。
 
+
+## 实机捕获、辅助功能与隐私清理
+
+- `3c09b33`：StreamingAnswerView 将实际合成后的可见文本提供给辅助功能，包括折叠/展开状态；复制和展开操作走现有真实回调并重新检查可用性。两个测试及实际返回答案的辅助功能树核验通过。
+- `6d9f369`：MaterialActionButton 支持不成为 key window 的 NotchPanel 与辅助功能操作。删除闭包仅持有材料 UUID，避免辅助功能客户端保留旧按钮时连带保留图片。新增测试先复现失败，再在修复后通过。
+- `645c1de`：真实删除最后一张材料仍残留文件，进一步发现隐藏的 QuestionMaterialStrip 跳过更新并保留旧 assets。现在隐藏时仍同步材料状态；完整 NotchView 回归同样先失败后通过。最终实机验证不能由这两个自动测试替代。
+- CaptureFileLifecycle 将 JPEG 与题组目录注册到本进程所有权集合，写入和退出清理共用锁，禁止退出后迟到写入重新创建文件。目录 0700、图片 0600；正常 App 退出等待后台清理，失败取消退出并给出重试提示。启动清理包含过期的 capture 目录。并发写入、无关文件保留及迟到写入拒绝测试通过。
+- 真实捕获后的 Cmd-Q 曾确认 App exit 0，所跟踪的 1 张图片与其目录都不存在，见 `cleanup-live-validation.json`。不把后续 SIGINT 停止记作正常退出验收。
+- 真实捕获耗时出现 295/312/325ms 及 10,591ms；材料保存另观察到约 20–21 秒等待。工具取状态的延迟不能直接归因于 App 死锁，也不能据此宣布性能达标。
+- 最终本地命令 `NSPI_QA_EPHEMERAL=1 swift test -Xswiftc -warnings-as-errors` 执行 290 项、2 项显式真实模型评测跳过、0 失败。没有把跳过项计为质量通过。日志 `swift-hidden-final.log`。
+- CI 34252218494 除 artifact 上传 403 外，还暴露 loopback HTTP 测试 -1005。修复测试服务：读完整 POST body 再应答，使用 TCP 最终发送而不是取消连接截断队列；仍严格测试缺 DONE 的失败。32KiB 请求体验证和连续 5 轮通过，未修改生产流解码器。[CI 34255328679](https://github.com/RotteSya/notch-SPI/actions/runs/34255328679) 已 10/10 成功。最终隐藏材料修复提交的 [CI 34255765664](https://github.com/RotteSya/notch-SPI/actions/runs/34255765664) 也已 10/10 成功；状态与完整日志为 `ci-final-status.json` / `ci-final.log`。其中 macOS 290 项、2 跳过、0 失败；Node 22/24 各 509 项通过；PostgreSQL 16/17 × Node 22/24 四组各 630 项通过。CI 中 TypeScript typecheck、依赖审计、Swift warnings-as-errors、Cloudflare 构建与 Linux/Vercel 原生包检查均通过。
+
+本节证据目录：`.release-evidence/2026-09-09/capture-chain/`。关键文件包括 `local-settlement-validation.json`、`readable-result.png`、`cleanup-live-validation.json`、`material-lifetime-before.log` / `material-lifetime-after.log`、`hidden-material-before.log`、`swift-hidden-final.log`、`transport-repeat.log`、`stopped-qa-cleanup.json` 及 CI 完整日志。`deletion-fixed-validation.json` 是第二个隐藏视图问题修复前的失败证据，不能引用为通过。
+
+## 当前可核对的安装包
+
+最终客户端提交 `645c1de3825a6e15168c99a994fb36a72112bcd6` 对应 `dist/NotchSPI.dmg`，版本 2.12 / build 19，arm64、最低 macOS 14.0；4,038,862 字节，SHA-256 `cac71ab3180de9d4108b85a74caa1a0f696608248797e8323ca3ee453f9c49d2`。Apple 公证 `3b3d98d0-1cfd-4d2b-a380-ca9ff425a9c8` 已 Accepted，装订、HFS+ 映像完整性、只读挂载后 strict codesign 与 Gatekeeper 均通过。60 个客户端/资源/打包输入摘要与该提交一致，包含新增 CaptureFileLifecycle.swift。
+
+完整证据为 `capture-chain/release-package-final.log`、`artifact-verification.log`、`notarized-artifact-manifest.json`。`pre-lifecycle-dist` 和 `pre-hidden-strip-dist` 是本轮中间已公证包，均不包含全部最终修复，不作为当前候选。当前包仍未上传公开 Release。
+
 ## 未完成验收与外部条件
 
-完整捕获→框选→请求流程尚未通过本轮实机验收。保存材料后的 Computer Use 状态读取重复超时，最后一次 Node 运行时重置；材料删除和清空不能记为通过。测试 App 与 localhost mock 服务已停止，没有真实模型或支付调用。完整 VoiceOver 语音、其他显示器/设备仍待验证。
+实际全屏捕获→localhost mock 请求→答案显示与结算已通过，四个隔离测试账户各从 30 变为 29、累计查题 1，4 个预留均 settled、无 held。这只证明传输与 UI/结算链路，不能证明模型质量；完整捕获→框选→请求组合仍待验收。材料操作暴露了下述两个真实文件持有问题，修复后自动测试通过，最终版实机删除/清空尚未验收。Computer Use 状态读取再次超时并重置 Node 运行时；正常退出测试已单独成功一次，最后一个旧版 QA 进程通过 SIGINT 停止，仅其已记录的测试文件由脚本清理。测试 App 与 localhost mock 服务均已停止，没有真实模型或支付调用。完整 VoiceOver 语音、其他显示器/设备仍待验证。
 
 400 道新增授权留出题、80 份独立解释复核、同候选 240 题基线、正式旧写入隔离及数据切换、支付端到端对账、生产恢复调度、反馈删除演练和分档观察门槛仍未完成，详情继承 [9 月 8 日发布记录](release-progress-2026-09-08.md)。生产新能力保持关闭，Cloudflare 定时触发仍暂停；CNY 20/日模型预算待新版生产部署后才生效。
 

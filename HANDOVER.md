@@ -47,7 +47,7 @@ SQLite 在切换 WAL 时可能绕过 busy handler 直接返回 SQLITE_BUSY；初
 
 注册重试同时受 token 与注册凭证的唯一性约束。SQL 插入处理两个唯一索引的并发冲突后，按 token 锁定并核验原凭证绑定，只在实际插入时创建 trial lot/ledger；Memory 执行同一不可重绑检查。冲突不能新发试用额度，也不能返回其他凭证所属设备。
 
-2026-09-09：框选窗口的鼠标/键盘选择与取消已完成实机窗口验收；安装盘格式固定 HFS+ / UDZO 并增加完整性检查。最新候选重新公证、装订及 Gatekeeper 验收通过，仍未公开发布。最新证据与剩余条件见 [9 月 9 日发布记录](docs/release-progress-2026-09-09.md)。
+2026-09-09：框选窗口鼠标/键盘已完成实机验收；实际截图→localhost mock→答案/结算链路通过。答案辅助功能、材料删除闭包和隐藏材料栏的文件持有、正常退出临时文件清理已修复；完整 Swift 290 项、2 项真实模型评测跳过、0 失败。最终版实机删除/清空与性能验收仍缺。安装盘固定 HFS+ / UDZO；最终候选 `645c1de` 已重新公证、装订及 Gatekeeper 验收，60 个输入摘要与代码匹配，仍未公开发布。最新证据与剩余条件见 [9 月 9 日发布记录](docs/release-progress-2026-09-09.md)。
 
 2026-09-08：2.12 / build 19 已生成公证并装订的正式候选 DMG，未公开发布。Cloudflare `notchspi-reaper` 已部署，生产接口就绪前保持无定时触发；Vercel 生产环境已配置 CNY 20/日、上海零点重置的成本预算，部署新版后才生效。部署记录与当前剩余闸门见 [本轮发布记录](docs/release-progress-2026-09-08.md)，恢复任务说明见 [Cloudflare 调度](docs/cloudflare-scheduler.md)。
 
