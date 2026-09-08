@@ -3,6 +3,31 @@ import XCTest
 @testable import NotchSPI
 
 final class MaterialActionAccessibilityTests: XCTestCase {
+    @MainActor func testHidingTheLastMaterialReleasesItsFileFromTheCompleteView() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("material.png")
+        try Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aGaQAAAAASUVORK5CYII=")!.write(to: file)
+        let model = TutorModel()
+        model.mode = "tutor"
+        model.materials = [ContextAsset(id: UUID(), sessionID: UUID(), file: QuestionAssetFile(url: file),
+                                       sha256: "test", width: 1, height: 1, byteCount: 68,
+                                       targetFingerprint: "test", capturedAt: Date())]
+        let view = NotchView(model: model, frameProvider: { _ in NSRect(x: 0, y: 0, width: 600, height: 300) },
+                             onHover: { _ in }, onCycleDepth: {}, onEditPersona: {}, onSettings: {},
+                             onToggleReasoning: {}, onCopyAnswer: {}, onStopAuto: {})
+        XCTAssertTrue(model.showMaterialStrip)
+        model.materials = []
+        XCTAssertFalse(model.showMaterialStrip)
+        for _ in 0..<20 where FileManager.default.fileExists(atPath: file.path) {
+            try await Task.sleep(nanoseconds: 25_000_000)
+        }
+        withExtendedLifetime(view) {
+            XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+        }
+    }
+
     @MainActor func testRemovedButtonCannotKeepTheDeletedMaterialFileAlive() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

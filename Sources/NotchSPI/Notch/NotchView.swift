@@ -205,7 +205,8 @@ final class NotchView: NSView {
         lastAnswerLen = model.answer.count
 
         materialStrip.isHidden = !model.showMaterialStrip
-        if model.showMaterialStrip { materialStrip.update(model.materials, explanationAvailable: model.explanationAvailable) }
+        // Hidden views still own their assets; clearing the last material must release them.
+        materialStrip.update(model.materials, explanationAvailable: model.explanationAvailable)
         statusText.stringValue = model.statusText
         statusText.textColor = model.resultState == .review
             ? NSColor(calibratedRed: 0.95, green: 0.66, blue: 0.20, alpha: 1)
