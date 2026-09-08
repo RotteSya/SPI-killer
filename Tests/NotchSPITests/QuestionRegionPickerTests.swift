@@ -59,7 +59,11 @@ final class QuestionRegionPickerTests: XCTestCase {
         for _ in 0..<150 { try key(124, view: view, shift: true); try key(125, view: view, shift: true) }
         XCTAssertTrue(view.accessibilityPerformPress())
         let region = try XCTUnwrap(result)
-        XCTAssertEqual(region, QuestionRegion(x: 0, y: 0, width: 1, height: 1))
+        XCTAssertTrue(region.isValid)
+        XCTAssertEqual(region.x, 0, accuracy: 0.000001)
+        XCTAssertEqual(region.y, 0, accuracy: 0.000001)
+        XCTAssertEqual(region.width, 1, accuracy: 0.000001)
+        XCTAssertEqual(region.height, 1, accuracy: 0.000001)
     }
 
     @MainActor func testLetterboxIsExcludedAndMouseUpUsesItsFinalPosition() throws {
