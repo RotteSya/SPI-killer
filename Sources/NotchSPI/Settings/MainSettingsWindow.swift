@@ -81,6 +81,7 @@ final class MainSettingsWindowController: NSWindowController, NSWindowDelegate {
         window.titleVisibility = .hidden
         window.sharingType = ScreenShareGuard.windowSharingType
         window.isReleasedWhenClosed = false
+        window.autorecalculatesKeyViewLoop = true
         super.init(window: window)
         window.delegate = self
         buildChrome()
@@ -136,6 +137,14 @@ final class MainSettingsWindowController: NSWindowController, NSWindowDelegate {
         var y: CGFloat = 52 // clear the (hidden-title) titlebar / traffic lights
         for page in Page.allCases {
             let row = SidebarRowButton(page: page) { [weak self] in self?.show(page: $0) }
+            row.onNavigate = { [weak self] direction in
+                guard let self else { return }
+                let index = page.rawValue + direction
+                guard let next = Page(rawValue: index),
+                      let target = self.rowButtons.first(where: { $0.page == next }) else { return }
+                self.window?.makeFirstResponder(target)
+                self.show(page: next)
+            }
             row.frame = NSRect(x: 10, y: y, width: Self.sidebarWidth - 20, height: 34)
             sidebar.addSubview(row)
             rowButtons.append(row)
@@ -144,6 +153,7 @@ final class MainSettingsWindowController: NSWindowController, NSWindowDelegate {
         restyleChrome()
         movePill(to: current, animated: false)
         highlightRows()
+        window?.initialFirstResponder = rowButtons.first(where: { $0.page == current })
     }
 
     private func highlightRows() {
@@ -307,6 +317,7 @@ final class MainSettingsWindowController: NSWindowController, NSWindowDelegate {
 
     func open(page: Page) {
         show(page: page)
+        if let row = rowButtons.first(where: { $0.page == page }) { window?.makeFirstResponder(row) }
         window?.center()
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -322,7 +333,13 @@ final class MainSettingsWindowController: NSWindowController, NSWindowDelegate {
 
 private final class SidebarRowButton: NSControl {
     let page: MainSettingsWindowController.Page
-    var isChosen = false { didSet { needsDisplay = true } }
+    var isChosen = false {
+        didSet {
+            needsDisplay = true
+            if isChosen != oldValue { NSAccessibility.post(element: self, notification: .valueChanged) }
+        }
+    }
+    var onNavigate: ((Int) -> Void)?
     private let onPick: (MainSettingsWindowController.Page) -> Void
     private var hovering = false { didSet { needsDisplay = true } }
     private var trackingAreaRef: NSTrackingArea?
@@ -336,6 +353,30 @@ private final class SidebarRowButton: NSControl {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     override var isFlipped: Bool { true }
+    override var acceptsFirstResponder: Bool { isEnabled && !isHiddenOrHasHiddenAncestor }
+    override var canBecomeKeyView: Bool { acceptsFirstResponder }
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .radioButton }
+    override func accessibilityLabel() -> String? { page.localizedTitle }
+    override func accessibilityValue() -> Any? { isChosen ? 1 : 0 }
+    override func isAccessibilityEnabled() -> Bool { isEnabled }
+    override func accessibilityPerformPress() -> Bool {
+        guard acceptsFirstResponder else { return false }
+        window?.makeFirstResponder(self)
+        onPick(page)
+        return true
+    }
+    override func keyDown(with event: NSEvent) {
+        guard acceptsFirstResponder else { return }
+        switch event.keyCode {
+        case 36, 49, 76: _ = accessibilityPerformPress()
+        case 125: onNavigate?(1)
+        case 126: onNavigate?(-1)
+        default: super.keyDown(with: event)
+        }
+    }
+    override func becomeFirstResponder() -> Bool { needsDisplay = true; return super.becomeFirstResponder() }
+    override func resignFirstResponder() -> Bool { needsDisplay = true; return super.resignFirstResponder() }
 
     override func draw(_ dirtyRect: NSRect) {
         // The chosen backdrop is the window's shared selection pill (it glides between rows);
@@ -357,6 +398,12 @@ private final class SidebarRowButton: NSControl {
         let title = page.localizedTitle as NSString
         let ts = title.size(withAttributes: attrs)
         title.draw(at: NSPoint(x: 38, y: bounds.midY - ts.height / 2), withAttributes: attrs)
+        if window?.firstResponder === self {
+            NSColor.keyboardFocusIndicatorColor.setStroke()
+            let ring = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 8, yRadius: 8)
+            ring.lineWidth = 2
+            ring.stroke()
+        }
     }
 
     override func updateTrackingAreas() {
@@ -371,7 +418,7 @@ private final class SidebarRowButton: NSControl {
     override func mouseEntered(with event: NSEvent) { hovering = true }
     override func mouseExited(with event: NSEvent) { hovering = false }
     override func mouseUp(with event: NSEvent) {
-        if bounds.contains(convert(event.locationInWindow, from: nil)) { onPick(page) }
+        if bounds.contains(convert(event.locationInWindow, from: nil)) { _ = accessibilityPerformPress() }
     }
 }
 
@@ -834,7 +881,12 @@ private final class AppearancePageController: NSViewController, SettingsPage {
 /// One accent color dot with its name beneath; a ring marks the chosen one.
 private final class AccentSwatch: NSControl {
     let theme: AccentTheme
-    var isChosen = false { didSet { needsDisplay = true } }
+    var isChosen = false {
+        didSet {
+            needsDisplay = true
+            if isChosen != oldValue { NSAccessibility.post(element: self, notification: .valueChanged) }
+        }
+    }
     private let onPick: (AccentTheme) -> Void
     private var hovering = false { didSet { needsDisplay = true } }
     private var trackingAreaRef: NSTrackingArea?
@@ -849,6 +901,26 @@ private final class AccentSwatch: NSControl {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     override var isFlipped: Bool { true }
+
+    override var acceptsFirstResponder: Bool { isEnabled && !isHiddenOrHasHiddenAncestor }
+    override var canBecomeKeyView: Bool { acceptsFirstResponder }
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .radioButton }
+    override func accessibilityLabel() -> String? { theme.localizedName }
+    override func accessibilityValue() -> Any? { isChosen ? 1 : 0 }
+    override func isAccessibilityEnabled() -> Bool { isEnabled }
+    override func accessibilityPerformPress() -> Bool {
+        guard acceptsFirstResponder else { return false }
+        window?.makeFirstResponder(self)
+        onPick(theme)
+        return true
+    }
+    override func keyDown(with event: NSEvent) {
+        if [UInt16(36), 49, 76].contains(event.keyCode) { _ = accessibilityPerformPress() }
+        else { super.keyDown(with: event) }
+    }
+    override func becomeFirstResponder() -> Bool { needsDisplay = true; return super.becomeFirstResponder() }
+    override func resignFirstResponder() -> Bool { needsDisplay = true; return super.resignFirstResponder() }
 
     override func draw(_ dirtyRect: NSRect) {
         let dotRect = NSRect(x: bounds.midX - 14, y: 2, width: 28, height: 28)
@@ -868,6 +940,12 @@ private final class AccentSwatch: NSControl {
         let name = theme.localizedName as NSString
         let ts = name.size(withAttributes: attrs)
         name.draw(at: NSPoint(x: bounds.midX - ts.width / 2, y: 40), withAttributes: attrs)
+        if window?.firstResponder === self {
+            NSColor.keyboardFocusIndicatorColor.setStroke()
+            let ring = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 6, yRadius: 6)
+            ring.lineWidth = 2
+            ring.stroke()
+        }
     }
 
     override func updateTrackingAreas() {
@@ -882,7 +960,7 @@ private final class AccentSwatch: NSControl {
     override func mouseEntered(with event: NSEvent) { hovering = true }
     override func mouseExited(with event: NSEvent) { hovering = false }
     override func mouseUp(with event: NSEvent) {
-        if bounds.contains(convert(event.locationInWindow, from: nil)) { onPick(theme) }
+        if bounds.contains(convert(event.locationInWindow, from: nil)) { _ = accessibilityPerformPress() }
     }
 }
 
@@ -1151,6 +1229,13 @@ final class QuotaRingView: NSView {
     private var arcTween: DisplayTween?
     private var numberTween: DisplayTween?
 
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .staticText }
+    override func accessibilityLabel() -> String? {
+        guard let balance else { return L10n.t("剩余额度尚未获取", "残りの利用枠は未取得です", "Remaining quota unavailable") }
+        return L10n.t("\(balance) 题可用", "\(balance)問利用可能", "\(balance) questions left")
+    }
+
     /// The progress ring: a conic gradient sheet masked to a round-capped arc whose strokeEnd is
     /// the live sweep. CG has no conic API, so the gradient rides a CAGradientLayer above the
     /// view's own drawing (track + number), which is exactly the right stacking anyway.
@@ -1177,7 +1262,9 @@ final class QuotaRingView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func setBalance(_ newBalance: Int?, animated: Bool) {
+        let changed = balance != newBalance
         balance = newBalance
+        if changed { NSAccessibility.post(element: self, notification: .valueChanged) }
         let target = CGFloat(min(1, max(0, Double(newBalance ?? 0) / 30.0)))
         if arcTween == nil {
             arcTween = DisplayTween(host: self, value: 0)
