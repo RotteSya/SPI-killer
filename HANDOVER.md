@@ -49,6 +49,8 @@ SQLite 在切换 WAL 时可能绕过 busy handler 直接返回 SQLITE_BUSY；初
 
 2026-09-08：2.12 / build 19 已生成公证并装订的正式候选 DMG，未公开发布。Cloudflare `notchspi-reaper` 已部署，生产接口就绪前保持无定时触发；Vercel 生产环境已配置 CNY 20/日、上海零点重置的成本预算，部署新版后才生效。部署记录与当前剩余闸门见 [本轮发布记录](docs/release-progress-2026-09-08.md)，恢复任务说明见 [Cloudflare 调度](docs/cloudflare-scheduler.md)。
 
+Neon 资源 `neon-rose-lens` 的实际快照已恢复到独立分支，并完成 pg_dump/pg_restore、44 账户额度迁移与全历史字段摘要核验。生产 main 未迁移或切换，正式停流备份与旧写入隔离仍需完成，见 [恢复演练记录](docs/neon-restore-rehearsal-2026-09-08.md)。
+
 2.12 / build 19 是尚未发布的候选。题组、区域选择、解释、恢复及新合约仍受放行开关控制；完整蓝图进度与未完成闸门见 [发布进度记录](docs/release-progress-2026-09-06.md)。不得将本地软件测试通过视为新场景模型评测或生产灰度通过。
 
 SPI 与阅读练习页面分别为 `/spi`、`/reading-practice`，三语共用实际定价与下载；未完成评测的阅读范围明确显示未开放/内部测试。引导新增可跳过的自报来源：先本地持久化、再绑定当前 host/device 同步，只有确认后标记 self_reported，跳过保持 unknown。它不改变题目模式、额度或功能。
