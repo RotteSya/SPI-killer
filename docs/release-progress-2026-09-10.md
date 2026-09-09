@@ -94,3 +94,10 @@ QA 与 localhost 服务均已停止，所有工具调用已终结。核对 uid�
 评测入口修复提交 `debf6f1cbf7ea9609a702973d6430e3352ee74fc` 的 [CI 34381448379](https://github.com/RotteSya/notch-SPI/actions/runs/34381448379) 已 **10/10 成功**：Node 22.18/24.20 各 514 项；Postgres 16/17 × Node 22/24 四组各 635 项；Swift 302 项、2 项真实模型评测跳过、0 失败；Cloudflare 14 项；原生 AL2023 资源验证与 Vercel Linux 函数构建均通过。Swift 使用 warnings-as-errors，TypeScript/仓库一致性/脚本语法检查通过。GitHub 的旧版 action 仍有 Node 20 运行时弃用提示（实际强制使用 Node 24），不是编译失败；未宣称 CI 全无提示。
 
 该提交与已部署 `402d265` 的 App、Resources、Package.swift、server/src、server/api、依赖锁、打包脚本和 VERSION.env 无差异。完整 CI 日志 `ci.log`、状态 `ci-status.json` 及 SHA-256 已纳入 `candidate-deployment-record.json`；候选不会因为只有评测工具/测试/文档变化而重新切换产品二进制。
+
+
+## 400 道候选题与答案复核入口
+
+新增 3 道带官方评分标准的历史排序题后，公开材料为 313 题。按用户授权另自主编制 87 道排序练习，固定六个模板家族、分开题本和答案本，并以穷举唯一性和第二实现的可见题面重算核验真值。当前共 400 道待复核题、四题型各 100、518 张输入图、228 个保守家族；所有图片摘要/解码及 522 个本地链接已验证。六类自编首题已视觉检查，174 页 PDF 字符边界通过；不把同族 87 题称为 87 个独立家族，不自动签署或宣称正式 holdout 达标。
+
+详情与来源见 [题集获取记录](public-corpus-acquisition-2026-09-09.md)。本机总复核入口 `.release-evidence/2026-09-10/evaluation-review/REVIEW-INDEX.md`；自编题原文/穷举证据/独立计算验证/题图与答案本在 `authored-ordering/`。仍需独立复核、风险和真实布局覆盖、冻结家族划分、成本与执行准入，才可开始完整模型评测。本轮模型费用 0，没有修改产品代码、生产环境、候选部署、预算账本或公证安装盘；上一轮 CI `34381448379` 的 10/10 验证仍对应当前产品/评测工具实现。
