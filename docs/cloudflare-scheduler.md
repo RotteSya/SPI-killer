@@ -25,3 +25,8 @@ Model attempts retain their own currency/pricing version; historical USD rows ar
 The initial per-attempt hold is CNY 10. For the current Claude control route, two 32,000-UTF-16-unit text limits imply at most 192,000 UTF-8 bytes, four images at most 19,136 visual tokens, plus an overhead margin and 4,096 output tokens; the conservative total remains below CNY 10. DeepSeek's entire 1M context plus 4,096 output tokens is below CNY 4 at these prices. Unknown usage retains the hold. A hold is released down to observed usage after success; near the daily limit, new requests may stop before CNY 20 if the remaining balance cannot cover a full hold. Do not raise the daily cap to compensate.
 
 Before activation, validate the **actual** provider/model IDs, endpoints, output limits, price coverage and per-attempt bound. Recheck the FX ceiling and published prices; stale or mismatched assumptions block activation. Freeze currency, budget timezone and pricing throughout a live budget window. Changing them can create a different window and must be performed only after draining calls with a reconciled transition. Existing data remains intact.
+
+
+## 2026-09-10 开发依赖安全修复
+
+调度器的 Miniflare 依赖固定旧 sharp 0.35.2，触发 [GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c)。package.json 使用精确 override `sharp: 0.35.4`，lockfile 同步其各平台原生依赖。Wrangler/Miniflare 版本保持原锁定；待上游直接使用修复版本后可评估移除 override。重新安装、0 漏洞审计、类型检查、14 项含 workerd 的测试及 dry-run 构建通过，最终 CI 10/10。此变更只修复本地/CI 工具依赖，不自动启用或重新部署生产定时任务；细节见 [发布记录](release-progress-2026-09-10.md)。
