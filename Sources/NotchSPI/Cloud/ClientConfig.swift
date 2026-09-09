@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 struct ObjectiveExperimentConfig: Codable, Equatable {
     let variant: String
@@ -84,40 +85,99 @@ struct NotchClientConfig: Codable, Equatable {
 @MainActor
 final class ClientConfigService {
     static let shared = ClientConfigService()
-    private struct Cache: Codable { let fetchedAt: Date; let config: NotchClientConfig }
-    private let cacheKey = "clientConfig.v1.cache"
-    private(set) var current: NotchClientConfig = .base
-    private var refreshing = false
+    private struct Cache: Codable {
+        let binding: String
+        let fetchedAt: Date
+        let config: NotchClientConfig
+    }
+    private let cacheKey = "clientConfig.v2.cache"
+    private let defaults: UserDefaults
+    private let account: () -> OfficialAPI.CaptureAccount?
+    private let now: () -> Date
+    private let session: URLSession
+    private var owner: OfficialAPI.CaptureAccount?
+    private var observedOwner = false
+    private var cache: Cache?
+    private var requestID: UUID?
+    private var refreshTask: Task<Void, Never>?
 
-    private init() {
-        if let data = UserDefaults.standard.data(forKey: cacheKey),
-           let cache = try? JSONDecoder().decode(Cache.self, from: data),
-           Date().timeIntervalSince(cache.fetchedAt) <= 24 * 60 * 60,
-           cache.config.accepted {
-            current = cache.config
+    var current: NotchClientConfig {
+        synchronizeOwner()
+        guard let cache else { return .base }
+        guard isFresh(cache) else {
+            self.cache = nil
+            defaults.removeObject(forKey: cacheKey)
+            return .base
+        }
+        return cache.config
+    }
+
+    init(defaults: UserDefaults = .standard,
+         account: @escaping () -> OfficialAPI.CaptureAccount? = { OfficialAPI.accountState.account },
+         now: @escaping () -> Date = Date.init, session: URLSession = .shared) {
+        self.defaults = defaults; self.account = account; self.now = now; self.session = session
+        // V1 had no account/service binding and cannot safely be migrated.
+        defaults.removeObject(forKey: "clientConfig.v1.cache")
+        synchronizeOwner()
+    }
+
+    deinit { refreshTask?.cancel() }
+
+    private func binding(_ owner: OfficialAPI.CaptureAccount) -> String {
+        // Length-prefixed fields keep the persisted digest unambiguous without storing a token.
+        let fields = [owner.baseURL, owner.token].map { "\($0.utf8.count):\($0)" }.joined()
+        return SHA256.hash(data: Data(fields.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func isFresh(_ cache: Cache) -> Bool {
+        let age = now().timeIntervalSince(cache.fetchedAt)
+        return age.isFinite && age >= 0 && age <= 24 * 60 * 60 && cache.config.accepted
+    }
+
+    private func synchronizeOwner() {
+        let next = account()
+        guard !observedOwner || next != owner else { return }
+        let firstObservation = !observedOwner
+        observedOwner = true
+        refreshTask?.cancel(); refreshTask = nil; requestID = nil
+        owner = next; cache = nil
+        if firstObservation, let next,
+           let data = defaults.data(forKey: cacheKey), data.count <= 131_072,
+           let saved = try? JSONDecoder().decode(Cache.self, from: data),
+           saved.binding == binding(next), isFresh(saved) {
+            cache = saved
+        } else {
+            defaults.removeObject(forKey: cacheKey)
         }
     }
 
-    func refresh() {
-        guard !refreshing, let token = OfficialAPI.deviceToken,
-              let url = URL(string: OfficialAPI.baseURL + "/v1/client-config") else { return }
-        refreshing = true
+    @discardableResult
+    func refresh() -> Task<Void, Never>? {
+        synchronizeOwner()
+        guard let owner, let url = URL(string: owner.baseURL + "/v1/client-config") else { return nil }
+        if let refreshTask { return refreshTask }
+        let id = UUID()
+        requestID = id
         var request = URLRequest(url: url)
         request.timeoutInterval = 8
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(owner.token)", forHTTPHeaderField: "Authorization")
         request.setValue(OfficialAPI.appVersion, forHTTPHeaderField: "X-App-Version")
-        Task {
-            defer { refreshing = false }
-            guard let (data, response) = try? await URLSession.shared.data(for: request),
-                  (response as? HTTPURLResponse)?.statusCode == 200,
+        let task = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                // A cancelled request may finish after its replacement has started.
+                if self.requestID == id { self.refreshTask = nil; self.requestID = nil }
+            }
+            guard let (status, data) = try? await OfficialAPI.readAccountHTTP(request, session: self.session),
+                  !Task.isCancelled, self.requestID == id, self.account() == owner,
+                  status == 200,
                   let decoded = try? JSONDecoder().decode(NotchClientConfig.self, from: data),
                   decoded.accepted else { return }
-            if decoded != current {
-                current = decoded
-            }
-            if let cache = try? JSONEncoder().encode(Cache(fetchedAt: Date(), config: decoded)) {
-                UserDefaults.standard.set(cache, forKey: cacheKey)
-            }
+            let saved = Cache(binding: self.binding(owner), fetchedAt: self.now(), config: decoded)
+            self.cache = saved
+            if let data = try? JSONEncoder().encode(saved) { self.defaults.set(data, forKey: self.cacheKey) }
         }
+        refreshTask = task
+        return task
     }
 }

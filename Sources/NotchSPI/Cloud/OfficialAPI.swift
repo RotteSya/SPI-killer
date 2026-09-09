@@ -483,7 +483,7 @@ enum OfficialAPI {
 
     /// Small JSON endpoints cannot grow an unbounded Data buffer or silently follow a redirect
     /// carrying a credential to another service. All early exits cancel the underlying task.
-    private static func readAccountHTTP(_ request: URLRequest, session: URLSession) async throws -> (Int, Data) {
+    static func readAccountHTTP(_ request: URLRequest, session: URLSession) async throws -> (Int, Data) {
         try Task.checkCancellation()
         var request = request
         request.cachePolicy = .reloadIgnoringLocalCacheData
