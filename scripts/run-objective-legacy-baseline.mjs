@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { composeObjectiveResult, normalizeObjectiveAnswer } from '../server/src/objective-result.ts';
 import { objectiveEvalAnswerHit } from '../server/src/objective-eval-scoring.ts';
 import { openEvaluationBudget } from './lib/evaluation-budget.mts';
+import { openEvaluationAccess } from './lib/evaluation-access.mts';
 
 if (process.env.NSPI_RUN_OBJECTIVE_EVAL !== '1') {
   console.error('Set NSPI_RUN_OBJECTIVE_EVAL=1 to run the paid 240-call baseline.');
@@ -42,6 +43,7 @@ const baseURL = process.env.NSPI_EVAL_BASE_URL.replace(/\/$/u, '');
 const budget = openEvaluationBudget(root, process.env.NSPI_EVAL_MODEL, baseURL);
 process.once('exit', () => budget.close());
 console.log('CNY budget preflight:', budget.checkWholeRun(manifest.fixtures.length));
+const evaluationAccess = await openEvaluationAccess(baseURL, process.env.NSPI_EVAL_VERCEL_SHARE_TOKEN);
 const outputDir = resolve(root, 'objective-eval-output');
 await mkdir(outputDir, { recursive: true });
 const stamp = new Date().toISOString().replaceAll(':', '-');
@@ -54,7 +56,7 @@ for (const [index, fixture] of manifest.fixtures.entries()) {
   const started = performance.now();
   const response = await budget.fetchText('/v1/captures', {
     method: 'POST',
-    headers: {
+    headers: { ...evaluationAccess.headersFor(baseURL + '/v1/captures'),
       authorization: `Bearer ${process.env.NSPI_EVAL_DEVICE_TOKEN}`,
       'content-type': 'application/json', 'x-app-version': process.env.NSPI_EVAL_APP_VERSION,
     },

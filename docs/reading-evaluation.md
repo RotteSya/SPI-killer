@@ -37,8 +37,11 @@ candidate 时间为规范 UTC ISO（含毫秒），最多 24h，URL 只允许 HT
 | `NSPI_EVAL_EXECUTOR` | 本次执行身份 |
 | `NSPI_EVAL_CANDIDATE_ATTESTATION` / `NSPI_EVAL_CANDIDATE_EVIDENCE` | 候选签署与实际核验材料路径 |
 | `NSPI_EVAL_DEVICE_TOKEN` | 专用于隔离候选的官方设备 token；该工具不需要本机直接持有厂商 key |
+| `NSPI_EVAL_VERCEL_SHARE_TOKEN` | 可选；受保护 Vercel 预览地址的临时访问 token，仅用于传输鉴权 |
 | `NSPI_EVAL_COST_BOUND` | 绑定该候选的有效成本上界文件 |
 | `NSPI_READING_EVAL_OUT` | 尚不存在的私有输出目录 |
+
+受保护预览使用同一个 `evaluation-access.mts` 入口取得 Cookie，供账户准入、答案和解释请求使用。交换最多等待 15 秒，不跟随重定向；Cookie 只可发送至已绑定的同一 origin，过期立即停止。访问 token/Cookie 不进入候选声明、费用账本或评测归档。生产域名或未保护的诊断服务省略该变量。此入口同时用于 Objective treatment 和 legacy 基线，不能为了运行基线关闭部署保护。
 
 执行器先 GET account、client-config、healthz：余额须能覆盖全部答案、持有为 0，设备已分到 objective_v1，阅读合约能力/范围/配置修订匹配；holdout 拒绝 mock 和降级 provider。此检查不能替代真实隔离部署核验。之后按 manifest 原顺序运行一次，每题固定新 UUID，实时保留失败，不自动重试或恢复。
 

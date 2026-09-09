@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {readEvidenceFile,loadReadingCorpus,evidenceJSON} from './lib/reading-evaluation.mts';
 import {runReadingEvaluation,validateReadingCandidate} from './lib/reading-runner.mts';
 import {openEvaluationBudget} from './lib/evaluation-budget.mts';
+import {openEvaluationAccess} from './lib/evaluation-access.mts';
 
 async function main() {
   if(process.env.NSPI_RUN_READING_EVAL!=='1')throw new Error('Set NSPI_RUN_READING_EVAL=1 only for an authorized isolated full-corpus evaluation');
@@ -16,7 +17,8 @@ async function main() {
   const candidateEvidenceBytes=await readEvidenceFile(resolve(root,process.env.NSPI_EVAL_CANDIDATE_EVIDENCE),1024*1024);
   const budget=openEvaluationBudget(root,candidate.model,candidate.base_url);
   try {
-    const completion=await runReadingEvaluation({corpus,candidate,budget,executor:process.env.NSPI_EVAL_EXECUTOR,
+    const evaluationAccess=await openEvaluationAccess(candidate.base_url,process.env.NSPI_EVAL_VERCEL_SHARE_TOKEN);
+    const completion=await runReadingEvaluation({corpus,candidate,budget,evaluationAccess,executor:process.env.NSPI_EVAL_EXECUTOR,
       deviceToken:process.env.NSPI_EVAL_DEVICE_TOKEN,outputDir:resolve(root,process.env.NSPI_READING_EVAL_OUT),candidateBytes,candidateEvidenceBytes,
       progress:(done,total)=>console.log('Reading evaluation cases: '+done+'/'+total)});
     console.log(JSON.stringify({complete:completion.complete,answer_cases:completion.answer_cases,explanation_calls:completion.explanation_calls,

@@ -21,6 +21,7 @@ import {EvaluationBudget,type EvaluationCallBound} from '../../scripts/lib/evalu
 import {bytesSHA,loadReadingCorpus,parseReadingManifest,parseReadingStream,readingManifestSubject,scoreReadingCase,
   type ReadingManifest,type ReadingCase} from '../../scripts/lib/reading-evaluation.mts';
 import {runReadingEvaluation,type ReadingCandidate} from '../../scripts/lib/reading-runner.mts';
+import {openEvaluationAccess} from '../../scripts/lib/evaluation-access.mts';
 import {loadReadingArchive,prepareReadingQuality} from '../../scripts/lib/reading-quality.mts';
 
 // Synthetic diagnostics stay in temporary test directories and never count as product evidence.
@@ -54,11 +55,13 @@ async function corpusFixture(dir:string,count=4,explanations=1) {
   };
   await save();return {manifest,save,path:join(dir,'manifest.json')};
 }
-type Behavior={responses?:string[];statusAt?:number;status?:number;mimeAt?:number;breakAt?:number;tokenAt?:number;quota?:number;configuration?:string;negativeFails?:boolean;mutate?:()=>Promise<void>};
+type Behavior={protected?:boolean;responses?:string[];statusAt?:number;status?:number;mimeAt?:number;breakAt?:number;tokenAt?:number;quota?:number;configuration?:string;negativeFails?:boolean;mutate?:()=>Promise<void>};
 async function fixture(t:{after:(fn:()=>unknown)=>void},behavior:Behavior={},count=4,explanations=1) {
   const dir=await mkdtemp(join(tmpdir(),'nspi-reading-test-')),source=await corpusFixture(dir,count,explanations),requests:Array<{path:string;body:Record<string,unknown>}>=[];
   const send=(res:ServerResponse,body:unknown,status=200)=>{res.writeHead(status,{'content-type':'application/json'});res.end(JSON.stringify(body));};
   const server=createServer(async(req,res)=>{
+    if(behavior.protected&&req.url==='/?_vercel_share=synthetic-access') {res.writeHead(302,{'location':'/','set-cookie':'_vercel_jwt=synthetic-cookie; Max-Age=300'});res.end();return;}
+    if(behavior.protected&&(req.headers.cookie!=='_vercel_jwt=synthetic-cookie'||req.headers.authorization!=='Bearer synthetic-test-token'))return send(res,{error:'protected'},401);
     if(req.method==='GET') {
       if(req.url==='/v1/account')return send(res,{balance_questions:behavior.quota??1000,held_questions:0});
       if(req.url==='/v1/client-config')return send(res,{revision:behavior.configuration??'test-r1',objective_result_v1:{protocol:'objective_v1'},screen_query:{support_revision:SCREEN_QUERY_VERSION,capabilities:['screen_query_v1'],enabled_profiles:['reading_practice']}});
@@ -84,7 +87,7 @@ async function fixture(t:{after:(fn:()=>unknown)=>void},behavior:Behavior={},cou
   const budget=new EvaluationBudget(join(dir,'budget.sqlite3'),{schema_version:1,campaign_id:'test-only',currency:'CNY',limit_micros:100_000_000},bound,candidate.model,base);
   t.after(async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));budget.close();await rm(dir,{recursive:true,force:true});});
   const output=join(dir,'run');
-  const run=async()=>runReadingEvaluation({corpus:await loadReadingCorpus(source.path,'executor'),candidate,budget,executor:'executor',deviceToken:'synthetic-test-token',outputDir:output,
+  const run=async()=>runReadingEvaluation({evaluationAccess:behavior.protected?await openEvaluationAccess(base,'synthetic-access'):undefined,corpus:await loadReadingCorpus(source.path,'executor'),candidate,budget,executor:'executor',deviceToken:'synthetic-test-token',outputDir:output,
     candidateBytes:json(candidate),candidateEvidenceBytes:evidence});
   return {dir,source,requests,budget,bound,candidate,evidence,output,run};
 }
@@ -268,3 +271,13 @@ for(const kind of ['memory','sqlite'] as const) {
     assert.equal(archive.draft.cases[2]!.parser_path,'legacy_fallback');assert.equal(archive.rejection_checks.every(c=>c.rejected),true);
   });
 }
+
+
+test('reading protected admission, answers and explanations share transport access without archiving credentials',async t=>{
+  const f=await fixture(t,{protected:true});const completion=await f.run();
+  assert.equal(completion.complete,true);assert.equal(f.requests.length,8);
+  for(const name of ['run.json','candidate.json','completion.json']) {
+    const text=await readFile(join(f.output,name),'utf8');
+    assert.ok(!text.includes('synthetic-access')&&!text.includes('synthetic-cookie')&&!text.includes('synthetic-test-token'));
+  }
+});

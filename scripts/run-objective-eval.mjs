@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 import { composeObjectiveResult, normalizeObjectiveAnswer } from '../server/src/objective-result.ts';
 import { objectiveEvalAnswerHit } from '../server/src/objective-eval-scoring.ts';
 import { openEvaluationBudget } from './lib/evaluation-budget.mts';
+import { openEvaluationAccess } from './lib/evaluation-access.mts';
 
 if (process.env.NSPI_RUN_OBJECTIVE_EVAL !== '1') {
   console.error('Set NSPI_RUN_OBJECTIVE_EVAL=1 to run the paid 240-call release evaluation.');
@@ -39,16 +40,7 @@ console.log('CNY budget preflight:', budget.checkWholeRun(manifest.fixtures.leng
 // Preview deployments stay protected. A temporary Vercel share token is exchanged once for the
 // HttpOnly deployment cookie, then every evaluation request carries that cookie. Production or
 // otherwise-unprotected candidates omit NSPI_EVAL_VERCEL_SHARE_TOKEN and use no extra header.
-const evaluationHeaders = {};
-if (process.env.NSPI_EVAL_VERCEL_SHARE_TOKEN) {
-  const access = await fetch(
-    `${baseURL}/?_vercel_share=${encodeURIComponent(process.env.NSPI_EVAL_VERCEL_SHARE_TOKEN)}`,
-    { redirect: 'manual' },
-  );
-  const match = /(?:^|[, ])(_vercel_jwt=[^;]+)/u.exec(access.headers.get('set-cookie') ?? '');
-  if (!match) throw new Error('Vercel share token did not produce a deployment access cookie');
-  evaluationHeaders.cookie = match[1];
-}
+const evaluationAccess = await openEvaluationAccess(baseURL, process.env.NSPI_EVAL_VERCEL_SHARE_TOKEN);
 
 // Read the prompt from the Swift SSOT rather than maintaining an evaluation-only copy.
 const SYSTEM = execFileSync('swift', ['run', 'NotchSPI', '--print-objective-eval-prompt'], {
@@ -63,7 +55,7 @@ for (const [index, fixture] of manifest.fixtures.entries()) {
   const image = (await readFile(resolve(fixtureRoot, fixture.image))).toString('base64');
   const started = performance.now();
   const response = await budget.fetchText('/v1/captures', {
-    method: 'POST', headers: { ...evaluationHeaders,
+    method: 'POST', headers: { ...evaluationAccess.headersFor(baseURL + '/v1/captures'),
       authorization: `Bearer ${process.env.NSPI_EVAL_DEVICE_TOKEN}`,
       'content-type': 'application/json', 'x-app-version': process.env.NSPI_EVAL_APP_VERSION },
     body: JSON.stringify({ system: SYSTEM, task: TASK,

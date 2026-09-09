@@ -3,6 +3,7 @@ import {mkdir,open} from 'node:fs/promises';
 import {dirname,resolve} from 'node:path';
 import {qualityDigest,qualityReviewSubject,type QualityCase,type QualityRun} from '../../server/src/quality.ts';
 import {composeScreenQuery} from '../../server/src/screen-query.ts';
+import type {EvaluationAccess} from './evaluation-access.mts';
 import type {EvaluationBudget} from './evaluation-budget.mts';
 import {ReadingEvidenceError,bytesSHA,evidenceJSON,corpusFile,readingImages,parseReadingStream,scoreReadingCase,
   type LoadedReadingCorpus,type ReadingCase,type ReadingDraft,type ReadingStream} from './reading-evaluation.mts';
@@ -52,8 +53,8 @@ export interface ReadingCompletion {
   answer_cases:number;explanation_calls:number;rejection_checks:number;
   unresolved_dispatches:number;
 }
-async function candidateJSON(base:string,path:string,token:string):Promise<Record<string,unknown>> {
-  const response=await fetch(base+path,{headers:{authorization:'Bearer '+token},redirect:'error',signal:AbortSignal.timeout(15_000)});
+async function candidateJSON(base:string,path:string,token:string,access?:EvaluationAccess):Promise<Record<string,unknown>> {
+  const response=await fetch(base+path,{headers:{...access?.headersFor(base+path),authorization:'Bearer '+token},redirect:'error',signal:AbortSignal.timeout(15_000)});
   if(!response.ok||response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase()!=='application/json') {
     await response.body?.cancel();throw new ReadingEvidenceError('Candidate preflight refused');
   }
@@ -62,9 +63,9 @@ async function candidateJSON(base:string,path:string,token:string):Promise<Recor
   let data:unknown;try{data=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{throw new ReadingEvidenceError('Candidate preflight JSON invalid');}
   if(!data||typeof data!=='object'||Array.isArray(data))throw new ReadingEvidenceError('Candidate preflight body invalid');return data as Record<string,unknown>;
 }
-async function admitCandidate(corpus:LoadedReadingCorpus,candidate:ReadingCandidate,token:string):Promise<ReadingRunPlan['admission']> {
-  const account=await candidateJSON(candidate.base_url,'/v1/account',token),configuration=await candidateJSON(candidate.base_url,'/v1/client-config',token);
-  const health=await candidateJSON(candidate.base_url,'/healthz',token),screen=configuration.screen_query as Record<string,unknown>|undefined;
+async function admitCandidate(corpus:LoadedReadingCorpus,candidate:ReadingCandidate,token:string,access?:EvaluationAccess):Promise<ReadingRunPlan['admission']> {
+  const account=await candidateJSON(candidate.base_url,'/v1/account',token,access),configuration=await candidateJSON(candidate.base_url,'/v1/client-config',token,access);
+  const health=await candidateJSON(candidate.base_url,'/healthz',token,access),screen=configuration.screen_query as Record<string,unknown>|undefined;
   const objective=configuration.objective_result_v1 as Record<string,unknown>|undefined;
   if(typeof account.balance_questions!=='number'||!Number.isSafeInteger(account.balance_questions)||account.balance_questions<corpus.manifest.cases.length||account.held_questions!==0)
     throw new ReadingEvidenceError('Isolated device needs enough quota and no in-flight capture');
@@ -97,7 +98,7 @@ export function draftReadingRun(corpus:LoadedReadingCorpus,plan:ReadingRunPlan,r
 }
 
 export async function runReadingEvaluation(input:{corpus:LoadedReadingCorpus;candidate:ReadingCandidate;budget:EvaluationBudget;
-  executor:string;deviceToken:string;outputDir:string;candidateBytes:Buffer;candidateEvidenceBytes:Buffer;progress?:(completed:number,total:number)=>void}):Promise<ReadingCompletion> {
+  evaluationAccess?:EvaluationAccess;executor:string;deviceToken:string;outputDir:string;candidateBytes:Buffer;candidateEvidenceBytes:Buffer;progress?:(completed:number,total:number)=>void}):Promise<ReadingCompletion> {
   const {corpus,budget,executor}=input,candidate=validateReadingCandidate(input.candidate,corpus.manifest.scope_version);
   const bound=budget.candidateIdentity();
   if(bound.model!==candidate.model||bound.baseURL!==candidate.base_url||input.candidateBytes.length>1024*1024||
@@ -107,7 +108,7 @@ export async function runReadingEvaluation(input:{corpus:LoadedReadingCorpus;can
   if(!input.deviceToken||input.deviceToken.length>512||/[\s\r\n]|\[SENSITIVE\]|\[REDACTED\]|placeholder|changeme/i.test(input.deviceToken))throw new ReadingEvidenceError('An isolated evaluation device credential is required');
   const totalCalls=corpus.manifest.cases.length+4*corpus.manifest.explanations_per_kind+2;
   budget.checkWholeRun(totalCalls);
-  const admission=await admitCandidate(corpus,candidate,input.deviceToken);
+  const admission=await admitCandidate(corpus,candidate,input.deviceToken,input.evaluationAccess);
   validateReadingCandidate(candidate,corpus.manifest.scope_version);
   if(Date.parse(corpus.review.expires_at)<=Date.now())throw new ReadingEvidenceError('Corpus authorization expired during admission');
   const allocation=budget.checkWholeRun(totalCalls);
@@ -149,7 +150,7 @@ export async function runReadingEvaluation(input:{corpus:LoadedReadingCorpus;can
     dispatches++;
     let status:number|null=null,contentType:string|null=null,responseBody='',failure:ReadingResponse['failure']=null;
     try {
-      const response=await budget.fetchText(path,{method:'POST',headers:{authorization:'Bearer '+input.deviceToken,
+      const response=await budget.fetchText(path,{method:'POST',headers:{...input.evaluationAccess?.headersFor(candidate.base_url+path),authorization:'Bearer '+input.deviceToken,
         'content-type':'application/json','x-app-version':candidate.app_version},body},item.id,purpose==='answer'?'answer':'explain',dispatchID);
       status=response.status;contentType=response.contentType;responseBody=response.body;
     } catch {failure=budget.dispatchEvidence(dispatchID)?'transport_failed':'not_dispatched';if(failure==='not_dispatched')halt='budget_or_dispatch_gate';}

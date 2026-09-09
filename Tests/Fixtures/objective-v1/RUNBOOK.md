@@ -36,6 +36,8 @@ node scripts/run-objective-eval.mjs
 export NSPI_EVAL_VERCEL_SHARE_TOKEN=<temporary-share-token>
 ```
 
+Treatment 和 legacy baseline 现在共用有 15 秒期限的访问交换入口。Cookie 绑定同一 origin，过期、跨域重定向或访问失败均停止，不自动续期或重试；临时凭证不写入结果。
+
 Runner 对每张图片只调用一次，原始结果写入忽略跟踪的 `objective-eval-output/`。复核者只签署
 已有评分；不得重跑失败题来挑选较好结果。正式归档只保留脱敏 JSONL 和 Markdown 摘要。
 

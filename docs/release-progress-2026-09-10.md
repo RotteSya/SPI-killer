@@ -74,3 +74,18 @@ QA 与 localhost 服务均已停止，所有工具调用已终结。核对 uid�
 额外准备 3 个真实 PDF 双题同屏风险变体，待核验预期为 `no_result / multiple_targets`；它们与对应单题绑定同一家族，不计为新增独立题。统一索引和风险索引共 448 个本地链接已验证。详细来源、答案、截图和归属证据见 [公开题集记录](public-corpus-acquisition-2026-09-09.md)。仍无正式独立签署或模型质量分数，本轮付费模型调用 0。产品代码、公证包和 CI 对应关系保持 `402d265`；只增加评测准备与文档，无需重新编译或打包。
 
 尚未收到整机重启确认，未再启动 GUI 测试或重启整机。实机环境、正式留出集/解释复核及生产放行条件继续保留。
+
+
+## 隔离候选部署与受保护评测入口
+
+- 已将产品代码 `402d2657590bf19987f04f48c27a9781fa1dbee3` 的 CI `34375451627` Linux 产物部署为受保护 **Preview**，部署 ID `dpl_3FHcw9x9bXGBsPYDoebnLuDhJEwC`，状态 READY。唯一部署地址 `https://notchspi-ckatjw33a-rottesyas-projects.vercel.app`；专用别名 `https://notchspi-reading-eval-20260910.vercel.app`。
+- 551 个函数文件的长度和 SHA-256 全部匹配 CI manifest；归档 SHA-256 `253e756f6c62af113af7441db250d51b13d7ec6e6e7760207e49f3246687bc22`。仅 `robots.txt` 静态公开，线上源码和测试路径均 404。生产部署仍为 `dpl_BStwrGFdwhRC7FP3g2m6snSpcgfC`，未切流、未公开新版安装包。
+- 发现全局 preview 原本继承生产 Postgres/Stripe 凭证，部署前以本次部署专属变量覆盖清空。使用已有独立 EVAL Neon 项目 `quiet-fog-35366490`，新建空库及账号 `notchspi_eval_20260910`；账号无建库/建角色/管理员/复制/绕过 RLS 权限，不属于其他角色。已验证能在自己库内执行事务，不能切换管理员，不能读取原有 EVAL 表。没有使用生产库副本或真实客户数据。
+- 专用 HMAC、管理员及恢复凭证仅存私有 0600 文件和部署变量；只继承现有 Anthropic 模型凭证。候选两路均配置 `claude-opus-4-8`，4096 输出上限；配置修订 `candidate-402d265-reading-20260910`，仅隔离候选开放 reading_practice 合约和解释。CNY 20/日、上海零点、单次保守预留 CNY 10；评测仍必须受原有 CNY 100 整轮账本准入，未重置账本。
+- 实际未登录访问唯一地址与别名均 302 到 Vercel SSO；授权健康检查 200、Postgres、Anthropic 两路健康、payments=disabled。Checkout、stub 和 webhook 均 404。注册重试返回同一个设备和 30 题；SQL 在新库核对 1 设备、1 lot、1 初始 ledger，capture/model_attempts/attempt_costs/budget_windows/usage/topups 全为 0。鉴权 `/api/internal/reap` 实际 200、无待处理任务。
+- 补齐 `evaluation-access.mts` 并接入 Objective、legacy、reading 三个执行器：15 秒交换期限、响应取消、单 origin Cookie、有效期检查、拒绝跨域与重复/无效 Cookie、错误不泄漏凭证。reading 的健康/账户/配置准入和答案/解释调用均使用它。4 项访问边界测试，加 1 项完整受保护阅读执行/归档无凭证测试；针对性 25/25、完整服务端 514/514、TypeScript 通过。未改 App 或服务端生产模块，因此当前公证 DMG 与产品候选仍对应 `402d265`。
+- 前置命令曾因 preview 不支持 `--skip-domain` 被 CLI 拒绝，移除仅适用于 production 的参数后 dry-run/deploy 通过；首轮恢复探针路径误写 `/internal/reap` 得到 404，改用实际 `/api/internal/reap` 后通过。两次原始失败记录保留，没有把它们计为产品运行失败或隐去。
+
+本轮未请求模型、未扣测试题、未发起支付。READY 与上述检查只证明候选部署/存储/鉴权/配置可用，尚未证明供应商实际回答、完整图片解码、准确率或延迟。正式评测仍缺完整已复核题集、独立签署、绑定候选的有效成本上界和完整计划准入；当前测试账号仅 30 题，未提前授予批量额度。候选定时恢复尚未自动调度，付费跑题前须接好专用调度并验证实际到期恢复；生产 Cloudflare 调度继续暂停。实机截图的最终 UI 验收仍待系统环境恢复，整机重启未擅自执行。
+
+原始证据保存在本机 `.release-evidence/2026-09-10/candidate-deployment/`：`artifact-integrity.json`、`candidate-db-provisioning.json`、`deployment-plan.json`、`preview-health.json`、`preview-verification.json`、`alias-protection.json`、`access-reading-tests.log`、`node-full.log`、`typecheck.log`。`private/` 中的数据库连接、访问 Cookie/token 和 CLI 原始响应不得上传 Git 或发布资产。
