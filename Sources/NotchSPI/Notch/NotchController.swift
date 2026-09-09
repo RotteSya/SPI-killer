@@ -637,7 +637,9 @@ final class NotchController: NSObject {
             defer { withExtendedLifetime(capture) {} }
             guard let self, self.accepts(run, generation: generation) else { return }
             self.model.explanationLoading = false
-            if !ok {
+            if ok {
+                self.model.statusText = L10n.t("解释已生成", "解説を生成しました", "Explanation ready")
+            } else {
                 self.model.statusText = L10n.t("解释生成失败；原答案保留，本次不会自动重试。", "解説を生成できませんでした。元の回答を保持します。", "Explanation failed. The original answer is preserved; no automatic retry will run.")
             }
             self.resizeToFit()
