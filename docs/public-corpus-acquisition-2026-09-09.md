@@ -43,3 +43,7 @@ ARC、GSM8K 和 ScholarBench 图片是原题文字重新排版的卡片，不能
 6 份原卷与配套评分标准均已目视核对，分数、混合数、连线及钟面未依赖 PDF 纯文本推断。3 张多题原页另用原 PDF 渲染完整目标区域，保留像素裁切坐标与原页引用，完整题目和作答区均可见。原页与裁切仍属于同一题，不能重复计数。2025/2026 对应版权报告及 [2024 KS2 版权报告](https://www.gov.uk/government/publications/key-stage-2-tests-2024-mathematics-test-materials/2024-copyright-ownership-key-stage-2-national-curriculum-tests)明确数学材料没有第三方内容；每题记录指定归属文字与 OGL v3.0 链接。
 
 `sta/ordering-review-cases.json` 绑定源 URL、原卷/评分标准 SHA-256、页码、输入图片及答案。`sta/pdf-downloads.json` 记录 19 份 PDF 的完整字节与本地摘要；没有出版方摘要的文件不能声称通过上游摘要匹配。8 份初次短传输经有界 Range 补取后通过总长度及 PDF 完整性检查。以上检查由实施工程代理执行，独立复核者为空，正式 holdout 标志仍为 false。
+
+## 9 月 10 日统一复核索引
+
+私有 `REVIEW-INDEX.md` 将全部 306 题按题型列出题图/材料、来源标准答案及候选家族。配套 `unified-review-index.json` 绑定 3 份原始题目记录的 SHA-256 和条目索引，并保留归属、答案页及材料风险标记。重新解码/核验 424 张输入图片，434 个本地链接全部存在；候选家族 215，仍需独立审查后按家族划分。图表引用标记不能单独证明缺材料或材料完整。独立签署为空、formal_holdout_approved 全为 false；题目数量及正式评测缺口没有因索引生成而改变。验证记录为 `unified-review-validation.json`。

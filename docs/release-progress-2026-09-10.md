@@ -50,3 +50,19 @@ QA 用 SIGINT 停止，不计正常退出；localhost 服务正常关闭。依�
 本轮证据统一位于 `.release-evidence/2026-09-09/new-contract-ui/`（跨午夜继续同一次测试）：`runtime-validation.json`、`before-fix-validation.json`、客户端/代理日志、`cleanup.json`、Swift 日志、两次 CI 状态与日志、调度器修复前后审计/测试/构建、`notarized-artifact-manifest.json` 和 `release-input-compatibility.json`。原始 App 采样及临时文件清单为 0600 私有文件；测试服务和受控响应不进入发布 payload。
 
 账号配置修复的证据单独位于 `.release-evidence/2026-09-10/config-isolation/`：`focused.log`、`swift-full.log`、`ci-status.json`、`ci.log`、`release-package.log`、`package-inputs.json`、`artifact-verification.log` 和 `notarized-artifact-manifest.json`。没有新增付费模型调用，也没有更改生产预算或触发器。
+
+## 当前候选实机复验与观察环境阻断
+
+对 `402d265` 的真实 DEBUG 二进制再执行两次隔离启动；受控 provider、生产请求路由/存储及故障代理在 localhost，未调用厂商模型或真实支付。首次启动第一张实际截图成功（捕获到编码 466.176ms），第二张图片接口在 10,392.761ms 超时，第三个计划触发因已有任务运行而未新增查题。账户保持 29 题、累计 1 题；正常退出快捷键生效，进程退出码 0。
+
+按用户已有授权重启当前用户 replayd，第二次启动避开截图期间的界面观察，连续三张实际截图成功，耗时 451.149、221.125、169.714ms。前两次是旧协议预热和新协议查题，第三次为新协议已结算后故障代理断流。实际界面确认“本次已结算。可从设置菜单恢复答案，不另扣题”，设置菜单显示剩余 27 题与恢复操作；点击后真实 recovery 请求完成，余额仍为 27，累计主查题 3。共 5 个请求记录（4 solve、1 recover），只有 4 个 settled 额度预留，恢复为 usable/released，无 held。没有新增解释调用。
+
+恢复结果界面读取再次长时间超时。保留的两秒 App 采样显示主线程处在正常事件循环；同时 replayd 的 connectionManagerQueue 持续执行集合插入和字典比较，与之前症状一致。这是相关诊断证据，尚不能判定是 App、界面观察工具或系统多客户端交互的根因。等所有观察调用明确结束后，仅重启截图服务并保留 App 的恢复现场；按 bundle ID 和准确 App 路径读取仍超时。故恢复答案可见性、修复后的解释完成标题和整体稳定性继续不通过。第二个 App 的正常退出工具请求亦未返回，最后为结束本轮测试发送 SIGINT，退出码 130，不能记作正常退出验收。
+
+QA 与 localhost 服务均已停止，所有工具调用已终结。核对 uid、文件类型、大小及创建/修改时间后清理 1 张本轮遗留图，临时截图/题组文件合计 0；SQLite WAL 已 checkpoint，integrity_check=ok。证据位于 `.release-evidence/2026-09-10/final-ui/`，包括原始请求/捕获日志、断线辅助功能记录、两份私有采样、重启记录、`runtime-validation.json` 和 `cleanup.json`。这些样本不构成 p95 性能或全部设备配置通过。
+
+下一步实机验收需要恢复可靠的系统/观察环境。仅重启截图服务尚未奏效；可在保存工作后重启整台 Mac，或改用另一台已授权测试 Mac。整机重启会影响所有应用，区别于已授权且执行过的截图服务重启，尚未执行。题集复核和其他独立准备可以继续，生产新能力仍不放行。
+
+## 题库统一复核入口
+
+为现有 306 题生成私有 `public-corpus/REVIEW-INDEX.md` 与 `unified-review-index.json`，逐行关联题图/材料、来源标准答案、原始记录 SHA-256、候选家族和优先待审事项。424 张输入图片全部重新解码并匹配既有摘要，434 个 Markdown 本地链接均存在。单选/多选/短填各 100、排序 6；保守家族候选 215，仍待题源关系核验。所有独立复核者字段为空、正式 holdout 标志为 false，没有把索引生成或图片完整性检查当成真值验收。源码和安装包未变，无需以文档更新重新打包。
