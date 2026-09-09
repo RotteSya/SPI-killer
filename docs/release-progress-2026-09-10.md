@@ -89,3 +89,8 @@ QA 与 localhost 服务均已停止，所有工具调用已终结。核对 uid�
 本轮未请求模型、未扣测试题、未发起支付。READY 与上述检查只证明候选部署/存储/鉴权/配置可用，尚未证明供应商实际回答、完整图片解码、准确率或延迟。正式评测仍缺完整已复核题集、独立签署、绑定候选的有效成本上界和完整计划准入；当前测试账号仅 30 题，未提前授予批量额度。候选定时恢复尚未自动调度，付费跑题前须接好专用调度并验证实际到期恢复；生产 Cloudflare 调度继续暂停。实机截图的最终 UI 验收仍待系统环境恢复，整机重启未擅自执行。
 
 原始证据保存在本机 `.release-evidence/2026-09-10/candidate-deployment/`：`artifact-integrity.json`、`candidate-db-provisioning.json`、`deployment-plan.json`、`preview-health.json`、`preview-verification.json`、`alias-protection.json`、`access-reading-tests.log`、`node-full.log`、`typecheck.log`。`private/` 中的数据库连接、访问 Cookie/token 和 CLI 原始响应不得上传 Git 或发布资产。
+
+
+评测入口修复提交 `debf6f1cbf7ea9609a702973d6430e3352ee74fc` 的 [CI 34381448379](https://github.com/RotteSya/notch-SPI/actions/runs/34381448379) 已 **10/10 成功**：Node 22.18/24.20 各 514 项；Postgres 16/17 × Node 22/24 四组各 635 项；Swift 302 项、2 项真实模型评测跳过、0 失败；Cloudflare 14 项；原生 AL2023 资源验证与 Vercel Linux 函数构建均通过。Swift 使用 warnings-as-errors，TypeScript/仓库一致性/脚本语法检查通过。GitHub 的旧版 action 仍有 Node 20 运行时弃用提示（实际强制使用 Node 24），不是编译失败；未宣称 CI 全无提示。
+
+该提交与已部署 `402d265` 的 App、Resources、Package.swift、server/src、server/api、依赖锁、打包脚本和 VERSION.env 无差异。完整 CI 日志 `ci.log`、状态 `ci-status.json` 及 SHA-256 已纳入 `candidate-deployment-record.json`；候选不会因为只有评测工具/测试/文档变化而重新切换产品二进制。
