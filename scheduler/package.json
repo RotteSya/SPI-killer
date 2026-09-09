@@ -17,5 +17,8 @@
     "typecheck": "wrangler types --check && tsc --noEmit",
     "build": "wrangler deploy --dry-run",
     "types": "wrangler types"
+  },
+  "overrides": {
+    "sharp": "0.35.4"
   }
 }
