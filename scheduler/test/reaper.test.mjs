@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../src/index.ts';
+import { createReaper } from '../src/index.ts';
 
 const secret = 'test-only-reaper-credential-0123456789';
 const controller = { scheduledTime: 1_788_825_600_000, cron: '* * * * *' };
@@ -75,5 +76,33 @@ test('more work remains visible and is deferred to the next scheduled tick', asy
 test('public HTTP requests cannot trigger maintenance', async t => {
   const h = harness(t, async () => { throw new Error('unexpected request'); });
   assert.equal((await worker.fetch()).status, 404);
+  assert.equal(h.fetchMock.mock.callCount(), 0);
+});
+
+test('candidate authenticates to its immutable deployment; production never sends the protection secret', async t => {
+  const bypass = '0123456789abcdefghijklmnopqrstuv';
+  const requests = [];
+  const h = harness(t, async (url, init) => {
+    requests.push({url, headers:init.headers});
+    return Response.json({ ...result, private_field: bypass });
+  });
+  const env = { CRON_SECRET: secret, VERCEL_AUTOMATION_BYPASS_SECRET: bypass,
+    REAP_URL: 'https://untrusted.invalid/', ENVIRONMENT: 'production' };
+  await createReaper('candidate').scheduled(controller, env);
+  await worker.scheduled(controller, env);
+  assert.equal(requests[0].url, 'https://notchspi-ckatjw33a-rottesyas-projects.vercel.app/api/internal/reap');
+  assert.equal(requests[0].headers['x-vercel-protection-bypass'], bypass);
+  assert.equal(requests[0].headers.Authorization, `Bearer ${secret}`);
+  assert.equal(requests[1].url, 'https://notchspi-api.vercel.app/api/internal/reap');
+  assert.equal(requests[1].headers['x-vercel-protection-bypass'], undefined);
+  assert.ok(!JSON.stringify(h.logs).includes(bypass));
+});
+
+test('candidate refuses missing or malformed protection credentials before any request', async t => {
+  const h = harness(t, async () => Response.json(result));
+  for (const value of [undefined, '', 'x'.repeat(31), 'x'.repeat(33), 'x'.repeat(31)+'\n', 'x'.repeat(31)+'_']) {
+    await assert.rejects(createReaper('candidate').scheduled(controller,
+      { CRON_SECRET: secret, VERCEL_AUTOMATION_BYPASS_SECRET: value }), /^Error: reaper_failed$/);
+  }
   assert.equal(h.fetchMock.mock.callCount(), 0);
 });

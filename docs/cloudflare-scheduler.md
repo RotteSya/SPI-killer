@@ -30,3 +30,14 @@ Before activation, validate the **actual** provider/model IDs, endpoints, output
 ## 2026-09-10 开发依赖安全修复
 
 调度器的 Miniflare 依赖固定旧 sharp 0.35.2，触发 [GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c)。package.json 使用精确 override `sharp: 0.35.4`，lockfile 同步其各平台原生依赖。Wrangler/Miniflare 版本保持原锁定；待上游直接使用修复版本后可评估移除 override。重新安装、0 漏洞审计、类型检查、14 项含 workerd 的测试及 dry-run 构建通过，最终 CI 10/10。此变更只修复本地/CI 工具依赖，不自动启用或重新部署生产定时任务；细节见 [发布记录](release-progress-2026-09-10.md)。
+
+
+## Isolated candidate scheduler
+
+`scheduler/wrangler.candidate.jsonc` builds `notchspi-reaper-eval-20260910` from a separate entrypoint. Its target is the immutable candidate deployment `https://notchspi-ckatjw33a-rottesyas-projects.vercel.app/api/internal/reap`, not an alias. The shared implementation retains the bounded single request, safe counters and no redirects. The production entrypoint still targets production and never sends a Vercel protection credential; environment variables cannot switch either target.
+
+The candidate requires its own `CRON_SECRET` and the project's existing automation protection secret in Cloudflare secret bindings. Vercel documents the [automation protection header](https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation). No project protection rule was removed or changed. Actual candidate probes returned 302 anonymously, 401 with protection access alone, and 200 with both credentials. Secret values are absent from Worker source, public URLs and logs. Tests cover target isolation, invalid/missing bypass credentials, production header exclusion and both entrypoints running under workerd; 17 tests, typecheck and both dry-run builds passed locally.
+
+On 2026-09-10, Cloudflare rejected the first trigger activation with code 10063 because the account had no workers.dev subdomain. The account namespace `notchspi-maintenance` was registered through the supported API, then activation succeeded. Both production and candidate Workers retain `enabled=false` and `previews_enabled=false`; the production schedule remains empty. Creating this namespace did not subscribe to a paid plan or expose either Worker. Cloudflare warns that [schedule propagation can take up to 15 minutes](https://developers.cloudflare.com/workers/configuration/cron-triggers/).
+
+The source config starts with an empty schedule so a normal deployment cannot silently activate evaluation maintenance. Activation and expiry-proof evidence are recorded separately in `.release-evidence/2026-09-10/candidate-scheduler/`. Before paid evaluation, verify the candidate deployment/database identities, both credentials, a live minute schedule and its actual successful ticks. Pause the candidate schedule outside evaluation; leave production scheduling subject to the production rollout gates.

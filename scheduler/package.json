@@ -15,7 +15,7 @@
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "typecheck": "wrangler types --check && tsc --noEmit",
-    "build": "wrangler deploy --dry-run",
+    "build": "wrangler deploy --dry-run && wrangler deploy --config wrangler.candidate.jsonc --dry-run",
     "types": "wrangler types"
   },
   "overrides": {

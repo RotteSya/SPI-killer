@@ -1,4 +1,8 @@
-const REAP_URL = 'https://notchspi-api.vercel.app/api/internal/reap';
+const REAP_URLS = {
+  production: 'https://notchspi-api.vercel.app/api/internal/reap',
+  candidate: 'https://notchspi-ckatjw33a-rottesyas-projects.vercel.app/api/internal/reap',
+} as const;
+type ReaperEnv = { CRON_SECRET: string; VERCEL_AUTOMATION_BYPASS_SECRET?: string };
 const MAX_RESPONSE_BYTES = 4096;
 const DEADLINE_MS = 45_000;
 const COUNTERS = ['processed', 'refunds_reconciled', 'refunds_failed', 'checkouts_credited',
@@ -38,18 +42,29 @@ async function readResult(response: Response): Promise<Record<string, unknown>> 
   return record;
 }
 
-export default {
+export function createReaper(target: keyof typeof REAP_URLS) {
+  return {
   fetch() { return new Response(null, { status: 404 }); },
-  async scheduled(controller, env) {
+  async scheduled(controller: ScheduledController, env: ReaperEnv) {
     const started = Date.now();
     let status = 0;
     try {
       if (!/^[A-Za-z0-9_-]{32,256}$/.test(env.CRON_SECRET ?? '')) throw new Error('reaper_missing_secret');
-      // Fixed origin and no redirects prevent sending the credential to another service.
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${env.CRON_SECRET}`, Accept: 'application/json', 'Cache-Control': 'no-store',
+      };
+      if (target === 'candidate') {
+        if (!/^[A-Za-z0-9]{32}$/.test(env.VERCEL_AUTOMATION_BYPASS_SECRET ?? '')) {
+          throw new Error('reaper_missing_protection_secret');
+        }
+        headers['x-vercel-protection-bypass'] = env.VERCEL_AUTOMATION_BYPASS_SECRET!;
+      }
+      // The entrypoint fixes the origin; environment bindings cannot redirect credentials.
+      // The candidate uses an immutable deployment URL, never a movable alias.
       // Each tick makes one attempt; the server's durable, idempotent sweep owns recovery.
-      const response = await fetch(REAP_URL, {
+      const response = await fetch(REAP_URLS[target], {
         method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(DEADLINE_MS),
-        headers: { Authorization: `Bearer ${env.CRON_SECRET}`, Accept: 'application/json', 'Cache-Control': 'no-store' },
+        headers,
       });
       status = response.status;
       if (status !== 200) {
@@ -69,4 +84,7 @@ export default {
       throw new Error('reaper_failed');
     }
   },
-} satisfies ExportedHandler<Env>;
+  } satisfies ExportedHandler<ReaperEnv>;
+}
+
+export default createReaper('production');
